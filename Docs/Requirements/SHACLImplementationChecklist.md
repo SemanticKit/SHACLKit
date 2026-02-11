@@ -45,6 +45,7 @@ Legend:
 - [x] `REQ-SHACL-011` Constraint components: shape references (`sh:node`, `sh:property`, qualified value shape family).
   - Implemented `sh:node` evaluation for referenced node shapes.
   - Implemented `sh:property` linked property-shape evaluation and reference diagnostics.
+  - Implemented property-shape-to-property-shape nesting (`sh:property` on property shapes) for value-node traversal.
   - Implemented qualified value shape counts (`sh:qualifiedValueShape`, `sh:qualifiedMinCount`, `sh:qualifiedMaxCount`).
 - [x] `REQ-SHACL-012` Enforce recursion/termination safeguards for cyclic shapes.
 - [x] `REQ-SHACL-013` Emit stable machine-readable diagnostics (focus node, path, value, source shape, source constraint).

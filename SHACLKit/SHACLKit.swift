@@ -2558,6 +2558,28 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
 
+            if !propertyShape.propertyShapeIRIs.isEmpty {
+                for valueNode in values {
+                    let wrapperShape = SHACLShapeDefinition(
+                        shapeIRI: "\(propertyShape.shapeIRI)#property-wrapper",
+                        kind: .nodeShape,
+                        severity: severity,
+                        targets: [],
+                        propertyShapeIRIs: propertyShape.propertyShapeIRIs
+                    )
+                    let nestedViolations = evaluate(
+                        nodeShape: wrapperShape,
+                        focusNode: valueNode,
+                        dataGraph: dataGraph,
+                        shapesByIRI: shapesByIRI,
+                        nodeExpressionsByIRI: nodeExpressionsByIRI,
+                        depth: depth + 1,
+                        visited: &visited
+                    )
+                    violations.append(contentsOf: nestedViolations)
+                }
+            }
+
             if !propertyShape.andShapeIRIs.isEmpty {
                 for valueNode in values {
                     let matchesAll = propertyShape.andShapeIRIs.allSatisfy { shapeIRI in
