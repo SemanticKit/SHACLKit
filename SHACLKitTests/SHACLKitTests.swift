@@ -453,6 +453,31 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(distinctFocusNode == Set(["http://example.com/Aldi"]))
 }
 
+@Test func nodeExpressionEvaluatorEvaluatesInstancesOf() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let graphData = try fixtureData("nodeExpressionInstancesOfDefinitions.ttl")
+    let shapesGraph = try loader.load(from: graphData)
+    let dataGraph = try dataLoader.load(from: graphData)
+    let evaluator = SHACLNodeExpressionEvaluator()
+
+    let organizations = evaluator.evaluate(
+        expressionIRI: "http://example.com/OrganizationsExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(organizations == Set(["http://example.com/Org1", "http://example.com/Company1", "http://example.com/Company2"]))
+
+    let companies = evaluator.evaluate(
+        expressionIRI: "http://example.com/CompaniesExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(companies == Set(["http://example.com/Company1", "http://example.com/Company2"]))
+}
+
 @Test func nodeExpressionEvaluatorEvaluatesMinAndMax() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionMinMaxDefinitions.ttl"))
@@ -668,6 +693,27 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("expressionConstraintVarInvalidShapes.ttl")
     let dataGraph = try fixtureData("expressionConstraintVarValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
+@Test func coreValidatorConformsForInstancesOfExpressionConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintInstancesOfShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintInstancesOfValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsInstancesOfExpressionConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintInstancesOfInvalidShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintInstancesOfValidData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)

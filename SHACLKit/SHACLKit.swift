@@ -207,6 +207,7 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case count(inputTerm: String, staticListLength: Int?)
     case variable(String)
     case distinct(inputTerm: String, staticListMembers: [String]?)
+    case instancesOf(String)
     case min(inputTerm: String, staticListMembers: [String]?)
     case max(inputTerm: String, staticListMembers: [String]?)
     case sum(inputTerm: String, staticListMembers: [String]?)
@@ -510,6 +511,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var countObjects: Set<String> = []
             var variableNames: Set<String> = []
             var distinctObjects: Set<String> = []
+            var instancesOfObjects: Set<String> = []
             var minObjects: Set<String> = []
             var maxObjects: Set<String> = []
             var sumObjects: Set<String> = []
@@ -724,6 +726,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.distinctObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexInstancesOf {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.instancesOfObjects.insert(object)
+                nodeExpressions[subject] = expression
             } else if predicate == SHACLIRIs.shnexMin {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.minObjects.insert(object)
@@ -818,6 +824,13 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .distinct(inputTerm: resolvedDistinctInput, staticListMembers: staticListMembers)
+                )
+            }
+
+            if let classTerm = resolveShapeReferenceIRIs(partial.instancesOfObjects, triplesBySubject: triplesBySubject).sorted().first {
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .instancesOf(classTerm)
                 )
             }
 
@@ -1511,6 +1524,17 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 depth: depth + 1,
                 visited: &visited
             )
+        case .instancesOf(let classIRI):
+            guard let dataGraph else {
+                return []
+            }
+            let subclasses = transitiveSubclasses(of: classIRI, dataGraph: dataGraph)
+            let matchingClasses = subclasses.union([classIRI])
+            return Set(
+                dataGraph.triples
+                    .filter { $0.predicate == SHACLIRIs.rdfType && matchingClasses.contains($0.object) }
+                    .map(\.subject)
+            )
         case .min(let inputTerm, let staticListMembers):
             let output = staticListMembers.map(Set.init) ?? evaluateTerm(
                 inputTerm,
@@ -1747,6 +1771,27 @@ private func evaluatePropertyPathValues(
         }
         return reached
     }
+}
+
+private func transitiveSubclasses(of classIRI: String, dataGraph: SHACLDataGraph) -> Set<String> {
+    var descendants: Set<String> = []
+    var frontier: Set<String> = [classIRI]
+
+    while !frontier.isEmpty {
+        let next = Set(
+            dataGraph.triples
+                .filter { frontier.contains($0.object) && $0.predicate == SHACLIRIs.rdfsSubClassOf }
+                .map(\.subject)
+        )
+        let delta = next.subtracting(descendants)
+        if delta.isEmpty {
+            break
+        }
+        descendants.formUnion(delta)
+        frontier = delta
+    }
+
+    return descendants
 }
 
 public struct SHACLCoreValidator: SHACLValidator {
@@ -3966,6 +4011,7 @@ private enum SHACLIRIs {
     static let shnexCount = "http://www.w3.org/ns/shacl-node-expr#count"
     static let shnexVar = "http://www.w3.org/ns/shacl-node-expr#var"
     static let shnexDistinct = "http://www.w3.org/ns/shacl-node-expr#distinct"
+    static let shnexInstancesOf = "http://www.w3.org/ns/shacl-node-expr#instancesOf"
     static let shnexMin = "http://www.w3.org/ns/shacl-node-expr#min"
     static let shnexMax = "http://www.w3.org/ns/shacl-node-expr#max"
     static let shnexSum = "http://www.w3.org/ns/shacl-node-expr#sum"
