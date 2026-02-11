@@ -1,0 +1,15 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:FocusShape
+    a sh:NodeShape ;
+    sh:targetNode ex:alice ;
+    sh:property ex:FocusProperty .
+
+ex:FocusProperty
+    sh:expression ex:FocusExpr ;
+    sh:hasValue ex:bob .
+
+ex:FocusExpr
+    shnex:var "focusNode" .

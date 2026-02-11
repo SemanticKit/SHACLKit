@@ -205,6 +205,7 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case nodes([String])
     case exists(String)
     case count(inputTerm: String, staticListLength: Int?)
+    case variable(String)
     case distinct(inputTerm: String, staticListMembers: [String]?)
     case min(inputTerm: String, staticListMembers: [String]?)
     case max(inputTerm: String, staticListMembers: [String]?)
@@ -507,6 +508,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var nodesObjects: Set<String> = []
             var existsObjects: Set<String> = []
             var countObjects: Set<String> = []
+            var variableNames: Set<String> = []
             var distinctObjects: Set<String> = []
             var minObjects: Set<String> = []
             var maxObjects: Set<String> = []
@@ -714,6 +716,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.countObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexVar {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.variableNames.insert(object)
+                nodeExpressions[subject] = expression
             } else if predicate == SHACLIRIs.shnexDistinct {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.distinctObjects.insert(object)
@@ -793,6 +799,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .count(inputTerm: resolvedCountInput, staticListLength: staticListLength)
+                )
+            }
+
+            if let variableNameTerm = partial.variableNames.sorted().first {
+                let variableName = parsedLiteralLexicalForm(variableNameTerm) ?? variableNameTerm
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .variable(variableName)
                 )
             }
 
@@ -1483,6 +1497,11 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 visited: &visited
             )
             return ["\(output.count)"]
+        case .variable(let variableName):
+            if variableName == "focusNode" {
+                return [focusNode]
+            }
+            return []
         case .distinct(let inputTerm, let staticListMembers):
             return staticListMembers.map(Set.init) ?? evaluateTerm(
                 inputTerm,
@@ -3945,6 +3964,7 @@ private enum SHACLIRIs {
     static let shnexNodes = "http://www.w3.org/ns/shacl-node-expr#nodes"
     static let shnexExists = "http://www.w3.org/ns/shacl-node-expr#exists"
     static let shnexCount = "http://www.w3.org/ns/shacl-node-expr#count"
+    static let shnexVar = "http://www.w3.org/ns/shacl-node-expr#var"
     static let shnexDistinct = "http://www.w3.org/ns/shacl-node-expr#distinct"
     static let shnexMin = "http://www.w3.org/ns/shacl-node-expr#min"
     static let shnexMax = "http://www.w3.org/ns/shacl-node-expr#max"
