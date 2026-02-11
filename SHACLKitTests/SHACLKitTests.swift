@@ -690,6 +690,39 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(orderByNumeric == Set(["2"]))
 }
 
+@Test func nodeExpressionEvaluatorEvaluatesOrderByPathValues() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let graphData = try fixtureData("nodeExpressionOrderByPathDefinitions.ttl")
+    let shapesGraph = try loader.load(from: graphData)
+    let dataGraph = try dataLoader.load(from: graphData)
+    let evaluator = SHACLNodeExpressionEvaluator()
+
+    let earliestBirthday = evaluator.evaluate(
+        expressionIRI: "http://example.com/OrderByBirthdayAscLimitExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(earliestBirthday == Set(["http://example.com/Person1"]))
+
+    let latestBirthday = evaluator.evaluate(
+        expressionIRI: "http://example.com/OrderByBirthdayDescLimitExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(latestBirthday == Set(["http://example.com/Person2"]))
+
+    let missingHeightFirst = evaluator.evaluate(
+        expressionIRI: "http://example.com/OrderByHeightAscLimitExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(missingHeightFirst == Set(["http://example.com/Person3"]))
+}
+
 @Test func nodeExpressionEvaluatorEvaluatesMinAndMax() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionMinMaxDefinitions.ttl"))
