@@ -25,6 +25,7 @@ Legend:
 - [x] `TEST-SHACL-015` Focus-node resolution tests over RDF triples for single and multi-shape target sets.
 - [x] `TEST-SHACL-011` Node shape validation pass/fail matrix.
   - Covered node-shape-level `sh:class` and `sh:nodeKind` pass/fail fixtures with matrix assertions.
+  - Added curated W3C node-shape conformance subset coverage for `closed-001` and `closed-002`.
 - [x] `TEST-SHACL-012` Property shape validation pass/fail matrix.
   - Covered fixture matrix assertions across implemented property-shape constraint components.
   - Added curated W3C node-shape conformance subset coverage for property-pair constraints (`equals-001`, `disjoint-001`).

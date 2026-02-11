@@ -55,6 +55,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let languageInValues: [String]
     public let equalsIRI: String?
     public let disjointIRI: String?
+    public let isClosed: Bool
+    public let ignoredPropertyIRIs: [String]
     public let nodeByExpressionIRI: String?
     public let nodeShapeReferenceIRI: String?
     public let andShapeIRIs: [String]
@@ -94,6 +96,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         languageInValues: [String] = [],
         equalsIRI: String? = nil,
         disjointIRI: String? = nil,
+        isClosed: Bool = false,
+        ignoredPropertyIRIs: [String] = [],
         nodeByExpressionIRI: String? = nil,
         nodeShapeReferenceIRI: String? = nil,
         andShapeIRIs: [String] = [],
@@ -132,6 +136,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.languageInValues = languageInValues
         self.equalsIRI = equalsIRI
         self.disjointIRI = disjointIRI
+        self.isClosed = isClosed
+        self.ignoredPropertyIRIs = ignoredPropertyIRIs
         self.nodeByExpressionIRI = nodeByExpressionIRI
         self.nodeShapeReferenceIRI = nodeShapeReferenceIRI
         self.andShapeIRIs = andShapeIRIs
@@ -438,6 +444,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var languageInValues: Set<String> = []
             var equalsIRI: String?
             var disjointIRI: String?
+            var isClosed = false
+            var ignoredPropertyIRIs: Set<String> = []
             var nodeByExpressionIRI: String?
             var nodeShapeReferenceIRI: String?
             var andShapeIRIs: Set<String> = []
@@ -556,6 +564,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.equalsIRI = object
             } else if predicate == SHACLIRIs.disjoint {
                 current.disjointIRI = object
+            } else if predicate == SHACLIRIs.closed {
+                current.isClosed = isTrueBooleanTerm(object)
+            } else if predicate == SHACLIRIs.ignoredProperties {
+                current.ignoredPropertyIRIs.insert(object)
             } else if predicate == SHACLIRIs.nodeByExpression {
                 current.nodeByExpressionIRI = object
             } else if predicate == SHACLIRIs.node {
@@ -697,6 +709,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 languageInValues: resolveInValues(partial.languageInValues, triplesBySubject: triplesBySubject).sorted(),
                 equalsIRI: partial.equalsIRI,
                 disjointIRI: partial.disjointIRI,
+                isClosed: partial.isClosed,
+                ignoredPropertyIRIs: resolveShapeReferenceIRIs(partial.ignoredPropertyIRIs, triplesBySubject: triplesBySubject).sorted(),
                 nodeByExpressionIRI: partial.nodeByExpressionIRI,
                 nodeShapeReferenceIRI: partial.nodeShapeReferenceIRI,
                 andShapeIRIs: resolveShapeReferenceIRIs(partial.andShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
@@ -806,6 +820,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         default:
             return nil
         }
+    }
+
+    private func isTrueBooleanTerm(_ term: String) -> Bool {
+        term == "true"
+            || term == "1"
+            || term == "\"true\""
+            || term == "\"true\"^^\(SHACLIRIs.xsdBoolean)"
+            || term == "\"1\"^^\(SHACLIRIs.xsdBoolean)"
     }
 
     private func parsedLiteralLexicalForm(_ value: String) -> String? {
@@ -1259,6 +1281,14 @@ public struct SHACLCoreValidator: SHACLValidator {
             return true
         }
         return Int(term) != nil
+    }
+
+    private func isTrueBooleanTerm(_ term: String) -> Bool {
+        term == "true"
+            || term == "1"
+            || term == "\"true\""
+            || term == "\"true\"^^\(SHACLIRIs.xsdBoolean)"
+            || term == "\"1\"^^\(SHACLIRIs.xsdBoolean)"
     }
 
     private func resolveFocusNodes(
@@ -1825,6 +1855,31 @@ public struct SHACLCoreValidator: SHACLValidator {
                         valueNode: focusNode,
                         sourceConstraintIRI: SHACLIRIs.disjoint,
                         message: "disjoint violation: value \(focusNode) overlaps predicate \(disjointIRI)"
+                    )
+                )
+            }
+        }
+
+        if nodeShape.isClosed {
+            let allowedPredicates = Set(
+                nodeShape.propertyShapeIRIs.compactMap { propertyShapeIRI in
+                    shapesByIRI[propertyShapeIRI]?.pathIRI
+                }
+            )
+            let ignoredPredicates = Set(nodeShape.ignoredPropertyIRIs)
+            for triple in dataGraph.triples where triple.subject == focusNode {
+                if allowedPredicates.contains(triple.predicate) || ignoredPredicates.contains(triple.predicate) {
+                    continue
+                }
+                violations.append(
+                    SHACLViolation(
+                        severity: nodeSeverity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: triple.predicate,
+                        valueNode: triple.object,
+                        sourceConstraintIRI: SHACLIRIs.closed,
+                        message: "closed violation: predicate \(triple.predicate) is not permitted by closed shape"
                     )
                 )
             }
@@ -2925,6 +2980,8 @@ private enum SHACLIRIs {
     static let languageIn = "http://www.w3.org/ns/shacl#languageIn"
     static let equals = "http://www.w3.org/ns/shacl#equals"
     static let disjoint = "http://www.w3.org/ns/shacl#disjoint"
+    static let closed = "http://www.w3.org/ns/shacl#closed"
+    static let ignoredProperties = "http://www.w3.org/ns/shacl#ignoredProperties"
     static let node = "http://www.w3.org/ns/shacl#node"
     static let nodeByExpression = "http://www.w3.org/ns/shacl#nodeByExpression"
     static let and = "http://www.w3.org/ns/shacl#and"

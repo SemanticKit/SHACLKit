@@ -17,6 +17,8 @@ core-node-in-001	data-shapes-test-suite/tests/core/node/in-001.ttl	data-shapes-t
 core-node-languageIn-001	data-shapes-test-suite/tests/core/node/languageIn-001.ttl	data-shapes-test-suite/tests/core/node/languageIn-001.ttl	false	Node languageIn language-tag filtering.
 core-node-equals-001	data-shapes-test-suite/tests/core/node/equals-001.ttl	data-shapes-test-suite/tests/core/node/equals-001.ttl	false	Node equals property-pair constraint checks.
 core-node-disjoint-001	data-shapes-test-suite/tests/core/node/disjoint-001.ttl	data-shapes-test-suite/tests/core/node/disjoint-001.ttl	false	Node disjoint property-pair constraint checks.
+core-node-closed-001	data-shapes-test-suite/tests/core/node/closed-001.ttl	data-shapes-test-suite/tests/core/node/closed-001.ttl	false	Node closed constraint without ignored properties.
+core-node-closed-002	data-shapes-test-suite/tests/core/node/closed-002.ttl	data-shapes-test-suite/tests/core/node/closed-002.ttl	false	Node closed constraint with ignored rdf:type property.
 core-node-class-001	data-shapes-test-suite/tests/core/node/class-001.ttl	data-shapes-test-suite/tests/core/node/class-001.ttl	false	Node class constraint over mixed typed and untyped focus nodes.
 core-node-class-002	data-shapes-test-suite/tests/core/node/class-002.ttl	data-shapes-test-suite/tests/core/node/class-002.ttl	false	Node class with literal and blank-node targets.
 core-node-class-003	data-shapes-test-suite/tests/core/node/class-003.ttl	data-shapes-test-suite/tests/core/node/class-003.ttl	false	Node class with multiple class constraints and overlapping targets.

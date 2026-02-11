@@ -24,6 +24,7 @@ Legend:
   - Implemented target-to-focus-node resolution over parsed RDF triples.
   - Implemented node/property evaluation path for `sh:minCount` and `sh:maxCount`.
   - Implemented node-shape-level `sh:class` and `sh:nodeKind` checks on focus nodes.
+  - Implemented node-shape `sh:closed` enforcement with optional `sh:ignoredProperties`.
 - [x] `REQ-SHACL-004` Support SHACL severity levels and result reporting model.
 - [x] `REQ-SHACL-005` Generate deterministic validation reports (conforms + detailed results).
 - [x] `REQ-SHACL-006` Constraint components: cardinality (`sh:minCount`, `sh:maxCount`).
