@@ -34,6 +34,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let severity: SHACLSeverity?
     public let targets: [SHACLTargetSelector]
     public let propertyShapeIRIs: [String]
+    public let tripleRuleIRIs: [String]
     public let pathIRI: String?
     public let expressionIRI: String?
     public let classIRI: String?
@@ -64,6 +65,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         severity: SHACLSeverity? = nil,
         targets: [SHACLTargetSelector],
         propertyShapeIRIs: [String] = [],
+        tripleRuleIRIs: [String] = [],
         pathIRI: String? = nil,
         expressionIRI: String? = nil,
         classIRI: String? = nil,
@@ -93,6 +95,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.severity = severity
         self.targets = targets
         self.propertyShapeIRIs = propertyShapeIRIs
+        self.tripleRuleIRIs = tripleRuleIRIs
         self.pathIRI = pathIRI
         self.expressionIRI = expressionIRI
         self.classIRI = classIRI
@@ -122,10 +125,16 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
 public struct SHACLShapesGraph: Sendable, Equatable {
     public let shapes: [SHACLShapeDefinition]
     public let nodeExpressions: [SHACLNodeExpressionDefinition]
+    public let tripleRules: [SHACLTripleRuleDefinition]
 
-    public init(shapes: [SHACLShapeDefinition], nodeExpressions: [SHACLNodeExpressionDefinition] = []) {
+    public init(
+        shapes: [SHACLShapeDefinition],
+        nodeExpressions: [SHACLNodeExpressionDefinition] = [],
+        tripleRules: [SHACLTripleRuleDefinition] = []
+    ) {
         self.shapes = shapes
         self.nodeExpressions = nodeExpressions
+        self.tripleRules = tripleRules
     }
 }
 
@@ -141,6 +150,28 @@ public struct SHACLNodeExpressionDefinition: Sendable, Hashable {
     public init(expressionIRI: String, kind: SHACLNodeExpressionKind) {
         self.expressionIRI = expressionIRI
         self.kind = kind
+    }
+}
+
+public struct SHACLTripleRuleDefinition: Sendable, Hashable {
+    public let ruleIRI: String
+    public let conditionShapeIRIs: [String]
+    public let subjectTerm: String
+    public let predicateTerm: String
+    public let objectTerm: String
+
+    public init(
+        ruleIRI: String,
+        conditionShapeIRIs: [String] = [],
+        subjectTerm: String,
+        predicateTerm: String,
+        objectTerm: String
+    ) {
+        self.ruleIRI = ruleIRI
+        self.conditionShapeIRIs = conditionShapeIRIs
+        self.subjectTerm = subjectTerm
+        self.predicateTerm = predicateTerm
+        self.objectTerm = objectTerm
     }
 }
 
@@ -309,6 +340,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var severity: SHACLSeverity?
             var targets: Set<SHACLTargetSelector> = []
             var propertyShapeIRIs: Set<String> = []
+            var ruleIRIs: Set<String> = []
             var pathIRI: String?
             var expressionIRI: String?
             var classIRI: String?
@@ -339,8 +371,17 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var intersectionMemberObjects: Set<String> = []
         }
 
+        struct PartialRule {
+            var isTripleRule = false
+            var conditionShapeIRIs: Set<String> = []
+            var subjectTerm: String?
+            var predicateTerm: String?
+            var objectTerm: String?
+        }
+
         var shapes: [String: PartialShape] = [:]
         var nodeExpressions: [String: PartialNodeExpression] = [:]
+        var rules: [String: PartialRule] = [:]
 
         for triple in triples {
             let subject = triple.subject
@@ -359,6 +400,11 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 } else if object == SHACLIRIs.propertyShape {
                     current.kind = .propertyShape
                 }
+                if object == SHACLIRIs.tripleRule {
+                    var rule = rules[subject] ?? PartialRule()
+                    rule.isTripleRule = true
+                    rules[subject] = rule
+                }
             } else if predicate == SHACLIRIs.targetClass {
                 current.targets.insert(.targetClass(object))
             } else if predicate == SHACLIRIs.targetNode {
@@ -371,6 +417,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.severity = parseSeverity(object)
             } else if predicate == SHACLIRIs.property {
                 current.propertyShapeIRIs.insert(object)
+            } else if predicate == SHACLIRIs.rule {
+                current.ruleIRIs.insert(object)
             } else if predicate == SHACLIRIs.path {
                 current.pathIRI = object
             } else if predicate == SHACLIRIs.expression {
@@ -441,6 +489,22 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                     throw SHACLError.invalidIntegerLiteral(object)
                 }
                 current.maxCount = count
+            } else if predicate == SHACLIRIs.condition {
+                var rule = rules[subject] ?? PartialRule()
+                rule.conditionShapeIRIs.insert(object)
+                rules[subject] = rule
+            } else if predicate == SHACLIRIs.subject {
+                var rule = rules[subject] ?? PartialRule()
+                rule.subjectTerm = object
+                rules[subject] = rule
+            } else if predicate == SHACLIRIs.predicate {
+                var rule = rules[subject] ?? PartialRule()
+                rule.predicateTerm = object
+                rules[subject] = rule
+            } else if predicate == SHACLIRIs.object {
+                var rule = rules[subject] ?? PartialRule()
+                rule.objectTerm = object
+                rules[subject] = rule
             }
 
             shapes[subject] = current
@@ -496,6 +560,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 severity: partial.severity,
                 targets: normalizedTargets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
+                tripleRuleIRIs: resolveShapeReferenceIRIs(partial.ruleIRIs, triplesBySubject: triplesBySubject).sorted(),
                 pathIRI: partial.pathIRI,
                 expressionIRI: partial.expressionIRI,
                 classIRI: partial.classIRI,
@@ -523,7 +588,33 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         }
         .sorted(by: { $0.shapeIRI < $1.shapeIRI })
 
-        return SHACLShapesGraph(shapes: definitions, nodeExpressions: expressionDefinitions)
+        let referencedRuleIRIs = Set(definitions.flatMap(\.tripleRuleIRIs))
+        let tripleRuleDefinitions = try referencedRuleIRIs.sorted().map { ruleIRI in
+            guard let partial = rules[ruleIRI] else {
+                throw SHACLError.invalidShapesGraph("Shape references missing rule \(ruleIRI)")
+            }
+            guard partial.isTripleRule else {
+                throw SHACLError.invalidShapesGraph("Rule \(ruleIRI) is missing rdf:type sh:TripleRule")
+            }
+            guard let subjectTerm = partial.subjectTerm else {
+                throw SHACLError.invalidShapesGraph("Rule \(ruleIRI) is missing sh:subject")
+            }
+            guard let predicateTerm = partial.predicateTerm else {
+                throw SHACLError.invalidShapesGraph("Rule \(ruleIRI) is missing sh:predicate")
+            }
+            guard let objectTerm = partial.objectTerm else {
+                throw SHACLError.invalidShapesGraph("Rule \(ruleIRI) is missing sh:object")
+            }
+            return SHACLTripleRuleDefinition(
+                ruleIRI: ruleIRI,
+                conditionShapeIRIs: resolveShapeReferenceIRIs(partial.conditionShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
+                subjectTerm: subjectTerm,
+                predicateTerm: predicateTerm,
+                objectTerm: objectTerm
+            )
+        }
+
+        return SHACLShapesGraph(shapes: definitions, nodeExpressions: expressionDefinitions, tripleRules: tripleRuleDefinitions)
     }
 
     private func targetSortKey(_ selector: SHACLTargetSelector) -> String {
@@ -780,6 +871,7 @@ public struct SHACLCoreValidator: SHACLValidator {
     private let dataLoader: any SHACLDataGraphLoading
     private let focusResolver: SHACLFocusNodeResolver
     private let maxReferenceDepth = 16
+    private let maxRuleIterations = 16
 
     public init(
         shapesLoader: any SHACLShapesGraphLoading = SHACLShapesGraphLoader(),
@@ -800,10 +892,15 @@ public struct SHACLCoreValidator: SHACLValidator {
     public func validate(dataGraph: SHACLDataGraph, shapesGraph: SHACLShapesGraph) throws -> SHACLValidationResult {
         try validateShapesGraph(shapesGraph)
         let parsedShapes = shapesGraph
-        let parsedData = dataGraph
-        let resolutions = focusResolver.resolve(dataGraph: parsedData, shapesGraph: parsedShapes)
         let shapeByIRI = Dictionary(uniqueKeysWithValues: parsedShapes.shapes.map { ($0.shapeIRI, $0) })
         let nodeExpressionsByIRI = Dictionary(uniqueKeysWithValues: parsedShapes.nodeExpressions.map { ($0.expressionIRI, $0) })
+        let parsedData = applyRules(
+            dataGraph: dataGraph,
+            shapesGraph: parsedShapes,
+            shapesByIRI: shapeByIRI,
+            nodeExpressionsByIRI: nodeExpressionsByIRI
+        )
+        let resolutions = focusResolver.resolve(dataGraph: parsedData, shapesGraph: parsedShapes)
 
         var violations: [SHACLViolation] = []
 
@@ -877,6 +974,7 @@ public struct SHACLCoreValidator: SHACLValidator {
     private func validateShapesGraph(_ shapesGraph: SHACLShapesGraph) throws {
         let byIRI = Dictionary(uniqueKeysWithValues: shapesGraph.shapes.map { ($0.shapeIRI, $0) })
         let expressionByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.nodeExpressions.map { ($0.expressionIRI, $0) })
+        let ruleByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.tripleRules.map { ($0.ruleIRI, $0) })
 
         for shape in shapesGraph.shapes where shape.kind == .nodeShape {
             if let expressionIRI = shape.expressionIRI, expressionByIRI[expressionIRI] == nil {
@@ -894,6 +992,20 @@ public struct SHACLCoreValidator: SHACLValidator {
                     throw SHACLError.invalidShapesGraph(
                         "Node shape \(shape.shapeIRI) references missing or non-property shape \(propertyShapeIRI)"
                     )
+                }
+            }
+            for ruleIRI in shape.tripleRuleIRIs {
+                guard let rule = ruleByIRI[ruleIRI] else {
+                    throw SHACLError.invalidShapesGraph(
+                        "Node shape \(shape.shapeIRI) references missing triple rule \(ruleIRI)"
+                    )
+                }
+                for conditionShapeIRI in rule.conditionShapeIRIs {
+                    guard let conditionShape = byIRI[conditionShapeIRI], conditionShape.kind == .nodeShape else {
+                        throw SHACLError.invalidShapesGraph(
+                            "Triple rule \(ruleIRI) references missing or non-node condition shape \(conditionShapeIRI)"
+                        )
+                    }
                 }
             }
         }
@@ -927,6 +1039,134 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
         }
+    }
+
+    private func applyRules(
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph,
+        shapesByIRI: [String: SHACLShapeDefinition],
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition]
+    ) -> SHACLDataGraph {
+        let ruleByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.tripleRules.map { ($0.ruleIRI, $0) })
+        let nodeShapesWithRules = shapesGraph.shapes
+            .filter { $0.kind == .nodeShape && !$0.tripleRuleIRIs.isEmpty }
+            .sorted(by: { $0.shapeIRI < $1.shapeIRI })
+
+        if nodeShapesWithRules.isEmpty || ruleByIRI.isEmpty {
+            return dataGraph
+        }
+
+        var triples = Set(dataGraph.triples)
+        let expressionGraph = SHACLShapesGraph(shapes: [], nodeExpressions: Array(nodeExpressionsByIRI.values))
+
+        for _ in 0..<maxRuleIterations {
+            let graphSnapshot = SHACLDataGraph(triples: Array(triples))
+            let resolutions = focusResolver.resolve(dataGraph: graphSnapshot, shapesGraph: shapesGraph)
+            let focusByShapeIRI = Dictionary(uniqueKeysWithValues: resolutions.map { ($0.shapeIRI, $0.focusNodes) })
+            var insertedAny = false
+
+            for nodeShape in nodeShapesWithRules {
+                let focusNodes = focusByShapeIRI[nodeShape.shapeIRI] ?? []
+                for focusNode in focusNodes {
+                    for ruleIRI in nodeShape.tripleRuleIRIs {
+                        guard let rule = ruleByIRI[ruleIRI] else {
+                            continue
+                        }
+                        if !ruleConditionsSatisfied(
+                            rule: rule,
+                            focusNode: focusNode,
+                            dataGraph: graphSnapshot,
+                            shapesByIRI: shapesByIRI,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI
+                        ) {
+                            continue
+                        }
+
+                        let subjects = evaluateRuleTerm(
+                            rule.subjectTerm,
+                            focusNode: focusNode,
+                            expressionGraph: expressionGraph,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI
+                        )
+                        let predicates = evaluateRuleTerm(
+                            rule.predicateTerm,
+                            focusNode: focusNode,
+                            expressionGraph: expressionGraph,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI
+                        )
+                        let objects = evaluateRuleTerm(
+                            rule.objectTerm,
+                            focusNode: focusNode,
+                            expressionGraph: expressionGraph,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI
+                        )
+
+                        for subject in subjects {
+                            for predicate in predicates {
+                                for object in objects {
+                                    let triple = SHACLDataTriple(subject: subject, predicate: predicate, object: object)
+                                    let inserted = triples.insert(triple).inserted
+                                    insertedAny = insertedAny || inserted
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !insertedAny {
+                break
+            }
+        }
+
+        let stableTriples = triples.sorted { lhs, rhs in
+            (lhs.subject, lhs.predicate, lhs.object) < (rhs.subject, rhs.predicate, rhs.object)
+        }
+        return SHACLDataGraph(triples: stableTriples)
+    }
+
+    private func ruleConditionsSatisfied(
+        rule: SHACLTripleRuleDefinition,
+        focusNode: String,
+        dataGraph: SHACLDataGraph,
+        shapesByIRI: [String: SHACLShapeDefinition],
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition]
+    ) -> Bool {
+        if rule.conditionShapeIRIs.isEmpty {
+            return true
+        }
+        var visited: Set<String> = []
+        return rule.conditionShapeIRIs.allSatisfy { conditionShapeIRI in
+            conforms(
+                valueNode: focusNode,
+                toNodeShapeIRI: conditionShapeIRI,
+                dataGraph: dataGraph,
+                shapesByIRI: shapesByIRI,
+                nodeExpressionsByIRI: nodeExpressionsByIRI,
+                depth: 0,
+                visited: &visited
+            )
+        }
+    }
+
+    private func evaluateRuleTerm(
+        _ term: String,
+        focusNode: String,
+        expressionGraph: SHACLShapesGraph,
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition]
+    ) -> [String] {
+        if term == SHACLIRIs.shThis {
+            return [focusNode]
+        }
+
+        if nodeExpressionsByIRI[term] != nil {
+            return SHACLNodeExpressionEvaluator()
+                .evaluate(expressionIRI: term, focusNode: focusNode, shapesGraph: expressionGraph)
+                .filter { !$0.isEmpty }
+                .sorted()
+        }
+
+        return [term]
     }
 
     private func evaluate(
@@ -1685,7 +1925,11 @@ private enum SHACLIRIs {
     static let qualifiedMinCount = "http://www.w3.org/ns/shacl#qualifiedMinCount"
     static let qualifiedMaxCount = "http://www.w3.org/ns/shacl#qualifiedMaxCount"
     static let rule = "http://www.w3.org/ns/shacl#rule"
+    static let tripleRule = "http://www.w3.org/ns/shacl#TripleRule"
     static let condition = "http://www.w3.org/ns/shacl#condition"
+    static let subject = "http://www.w3.org/ns/shacl#subject"
+    static let predicate = "http://www.w3.org/ns/shacl#predicate"
+    static let object = "http://www.w3.org/ns/shacl#object"
     static let sparql = "http://www.w3.org/ns/shacl#sparql"
     static let select = "http://www.w3.org/ns/shacl#select"
     static let ask = "http://www.w3.org/ns/shacl#ask"
@@ -1711,8 +1955,6 @@ private enum SHACLIRIs {
     static let xsdString = "http://www.w3.org/2001/XMLSchema#string"
     static let rdfLangString = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
     static let phaseGatedPredicates: Set<String> = [
-        rule,
-        condition,
         sparql,
         select,
         ask,

@@ -1,0 +1,16 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:LoopShape a sh:NodeShape ;
+  sh:targetNode ex:alice ;
+  sh:rule ex:SelfLoopRule ;
+  sh:property ex:LoopPropertyShape .
+
+ex:LoopPropertyShape a sh:PropertyShape ;
+  sh:path ex:loop ;
+  sh:hasValue ex:alice .
+
+ex:SelfLoopRule a sh:TripleRule ;
+  sh:subject sh:this ;
+  sh:predicate ex:loop ;
+  sh:object sh:this .

@@ -49,7 +49,8 @@ Legend:
   - Added invalid-shapes diagnostic coverage for unknown node-expression references.
   - Added fixtures/tests for `sh:expression` constraints on node shapes and path-backed property shapes.
   - Added fixtures/tests for first-slice `sh:nodeByExpression` behavior on node and property shapes.
-- [ ] `TEST-SHACL-210` Rule evaluation fixtures (order, repeatability, termination).
+- [~] `TEST-SHACL-210` Rule evaluation fixtures (order, repeatability, termination).
+  - Added `sh:TripleRule` fixtures and tests covering rule parsing, execution, repeatability, and self-loop termination behavior.
 
 ## Phase 3: SHACL SPARQL Extensions
 

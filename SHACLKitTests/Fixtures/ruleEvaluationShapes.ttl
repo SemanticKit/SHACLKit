@@ -1,0 +1,37 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:EmployeeRuleShape a sh:NodeShape ;
+  sh:targetClass ex:Employee ;
+  sh:rule ex:IssueBadgeRule, ex:PromoteRule ;
+  sh:property ex:BadgeRequiredShape .
+
+ex:BadgeRequiredShape a sh:PropertyShape ;
+  sh:path ex:badge ;
+  sh:hasValue "issued" .
+
+ex:PromoteRule a sh:TripleRule ;
+  sh:condition ex:AdultConditionShape ;
+  sh:subject sh:this ;
+  sh:predicate ex:status ;
+  sh:object "active" .
+
+ex:IssueBadgeRule a sh:TripleRule ;
+  sh:condition ex:ActiveConditionShape ;
+  sh:subject sh:this ;
+  sh:predicate ex:badge ;
+  sh:object "issued" .
+
+ex:AdultConditionShape a sh:NodeShape ;
+  sh:property ex:AdultAgeShape .
+
+ex:AdultAgeShape a sh:PropertyShape ;
+  sh:path ex:age ;
+  sh:minInclusive 18 .
+
+ex:ActiveConditionShape a sh:NodeShape ;
+  sh:property ex:ActiveStatusShape .
+
+ex:ActiveStatusShape a sh:PropertyShape ;
+  sh:path ex:status ;
+  sh:hasValue "active" .

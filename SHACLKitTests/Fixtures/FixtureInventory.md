@@ -3,7 +3,7 @@
 This directory contains SHACLKit test fixtures grouped by constraint family.
 
 Sync source of truth:
-- Canonical inbox path: `/Users/me/Sources/Codex/Knowledge/SHACL/Fixtures`
+- Canonical inbox path: `./Knowledge/SHACL/Fixtures`
 - Sync command: `./Scripts/SyncFixturesFromKnowledge.sh`
 
 Current local families:
@@ -17,3 +17,4 @@ Current local families:
 - Severity/report diagnostics
 - Invalid shapes graph diagnostics
 - Regression and smoke scenarios
+- Rules (`sh:TripleRule`) first-slice execution scenarios

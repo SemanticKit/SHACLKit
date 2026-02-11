@@ -82,6 +82,19 @@ private func fixtureData(_ name: String) throws -> Data {
     }
 }
 
+@Test func shapesLoaderParsesTripleRules() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("ruleEvaluationShapes.ttl"))
+
+    #expect(graph.tripleRules.count == 2)
+    let byIRI = Dictionary(uniqueKeysWithValues: graph.tripleRules.map { ($0.ruleIRI, $0) })
+    let promoteRule = try #require(byIRI["http://example.com/PromoteRule"])
+    #expect(promoteRule.subjectTerm == "http://www.w3.org/ns/shacl#this")
+    #expect(promoteRule.predicateTerm == "http://example.com/status")
+    #expect(promoteRule.objectTerm == "\"active\"")
+    #expect(promoteRule.conditionShapeIRIs == ["http://example.com/AdultConditionShape"])
+}
+
 @Test func nodeExpressionEvaluatorEvaluatesUnionIntersectionAndCycle() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionDefinitions.ttl"))
@@ -1021,7 +1034,7 @@ private struct TestShapesSource {
     }
 }
 
-@Test func coreValidatorThrowsForPhaseGatedRulePredicate() async throws {
+@Test func coreValidatorThrowsForMissingReferencedRule() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("phaseGatedRulesShapes.ttl")
     let dataGraph = try fixtureData("invalidShapesData.ttl")
@@ -1029,6 +1042,36 @@ private struct TestShapesSource {
     #expect(throws: SHACLError.self) {
         _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     }
+}
+
+@Test func coreValidatorConformsForRuleEvaluationFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("ruleEvaluationShapes.ttl")
+    let dataGraph = try fixtureData("ruleEvaluationData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorRuleEvaluationIsDeterministicAcrossRuns() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("ruleEvaluationShapes.ttl")
+    let dataGraph = try fixtureData("ruleEvaluationData.ttl")
+
+    let first = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    let second = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(first == second)
+}
+
+@Test func coreValidatorRuleEvaluationTerminatesForSelfLoopingRule() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("ruleTerminationShapes.ttl")
+    let dataGraph = try fixtureData("ruleTerminationData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
 }
 
 @Test func coreValidatorThrowsForPhaseGatedSparqlPredicate() async throws {

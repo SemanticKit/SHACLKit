@@ -57,8 +57,12 @@ Legend:
   - Added `sh:expression` constraint evaluation for node shapes and path-backed property shapes.
   - Added target resolution support for `sh:targetNode` values that reference node-expression definitions.
   - Added first-slice `sh:nodeByExpression` support for node-shape and property-shape conformance checks.
-- [ ] `REQ-SHACL-210` Implement SHACL 1.2 Rules execution model.
-- [ ] `REQ-SHACL-211` Define deterministic rule execution order/termination behavior.
+- [~] `REQ-SHACL-210` Implement SHACL 1.2 Rules execution model.
+  - Implemented first-slice `sh:TripleRule` support (`sh:rule`, `sh:condition`, `sh:subject`, `sh:predicate`, `sh:object`).
+  - Rules execute against resolved focus nodes and feed generated triples back into validation.
+- [~] `REQ-SHACL-211` Define deterministic rule execution order/termination behavior.
+  - Implemented deterministic ordering by shape IRI, focus node, and rule IRI.
+  - Added bounded fixpoint iteration with stop-on-no-growth semantics.
 
 ## Phase 3: SHACL SPARQL Extensions
 
