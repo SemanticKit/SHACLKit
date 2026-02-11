@@ -7,8 +7,8 @@ SHACL parsing and validation toolkit for RDF graphs.
 SHACLKit is a Swift package framework focused on Shapes Constraint Language (SHACL) validation. It is scoped to sit above RDF data model/IO layers and provide deterministic, testable conformance checks.
 
 Requirements are tracked in:
-- `Docs/Requirements/SHACL-Implementation-Checklist.md`
-- `Docs/Requirements/SHACL-Tests-Checklist.md`
+- `Docs/Requirements/SHACLImplementationChecklist.md`
+- `Docs/Requirements/SHACLTestsChecklist.md`
 
 ## Usage Sketch
 

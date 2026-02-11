@@ -19,5 +19,5 @@ Master copies of SHACL standards material live under `Knowledge/SHACL/RFCs`.
 
 Tracking documents:
 
-- `Docs/Requirements/SHACL-Implementation-Checklist.md`
-- `Docs/Requirements/SHACL-Tests-Checklist.md`
+- `Docs/Requirements/SHACLImplementationChecklist.md`
+- `Docs/Requirements/SHACLTestsChecklist.md`
