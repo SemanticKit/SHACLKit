@@ -202,6 +202,8 @@ public struct SHACLShapesGraph: Sendable, Equatable {
 public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case union([String])
     case intersection([String])
+    case nodes([String])
+    case exists(String)
     case pathValues(path: SHACLPropertyPath, focusNodeTerm: String?)
 }
 
@@ -496,6 +498,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         struct PartialNodeExpression {
             var unionMemberObjects: Set<String> = []
             var intersectionMemberObjects: Set<String> = []
+            var nodesObjects: Set<String> = []
+            var existsObjects: Set<String> = []
             var pathValuesObject: String?
             var pathValuesFocusNodeObject: String?
         }
@@ -684,6 +688,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                     expression.intersectionMemberObjects.insert(object)
                 }
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexNodes {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.nodesObjects.insert(object)
+                nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexExists {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.existsObjects.insert(object)
+                nodeExpressions[subject] = expression
             } else if predicate == SHACLIRIs.shnexPathValues {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.pathValuesObject = object
@@ -711,6 +723,21 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .intersection(intersectionMembers)
+                )
+            }
+
+            let nodesMembers = resolveShapeReferenceIRIs(partial.nodesObjects, triplesBySubject: triplesBySubject).sorted()
+            if !nodesMembers.isEmpty || partial.nodesObjects.contains(SHACLIRIs.rdfNil) {
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .nodes(nodesMembers)
+                )
+            }
+
+            if let existsInput = resolveShapeReferenceIRIs(partial.existsObjects, triplesBySubject: triplesBySubject).sorted().first {
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .exists(existsInput)
                 )
             }
 
@@ -1276,6 +1303,29 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     )
                 )
             }
+        case .nodes(let members):
+            return members.reduce(into: Set<String>()) { result, member in
+                result.formUnion(
+                    evaluateTerm(
+                        member,
+                        focusNode: focusNode,
+                        expressionsByIRI: expressionsByIRI,
+                        dataGraph: dataGraph,
+                        depth: depth + 1,
+                        visited: &visited
+                    )
+                )
+            }
+        case .exists(let input):
+            let output = evaluateTerm(
+                input,
+                focusNode: focusNode,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            return output.isEmpty ? ["false"] : ["true"]
         case .pathValues(let path, let focusNodeTerm):
             guard let dataGraph else {
                 return []
@@ -3577,6 +3627,8 @@ private enum SHACLIRIs {
     static let union = "http://www.w3.org/ns/shacl#union"
     static let intersection = "http://www.w3.org/ns/shacl#intersection"
     static let shThis = "http://www.w3.org/ns/shacl#this"
+    static let shnexNodes = "http://www.w3.org/ns/shacl-node-expr#nodes"
+    static let shnexExists = "http://www.w3.org/ns/shacl-node-expr#exists"
     static let shnexPathValues = "http://www.w3.org/ns/shacl-node-expr#pathValues"
     static let shnexFocusNode = "http://www.w3.org/ns/shacl-node-expr#focusNode"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"

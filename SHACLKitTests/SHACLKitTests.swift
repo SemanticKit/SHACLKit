@@ -304,6 +304,33 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(cycleResult == Set(["http://example.com/ConstD"]))
 }
 
+@Test func nodeExpressionEvaluatorEvaluatesNodesAndExists() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("nodeExpressionExistsDefinitions.ttl"))
+    let evaluator = SHACLNodeExpressionEvaluator()
+
+    let nodesResult = evaluator.evaluate(
+        expressionIRI: "http://example.com/ConstNodes",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(nodesResult == Set(["http://example.com/a", "42"]))
+
+    let existsTrueResult = evaluator.evaluate(
+        expressionIRI: "http://example.com/ExistsTrue",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(existsTrueResult == Set(["true"]))
+
+    let existsFalseResult = evaluator.evaluate(
+        expressionIRI: "http://example.com/ExistsFalse",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(existsFalseResult == Set(["false"]))
+}
+
 @Test func coreValidatorConformsForExpressionDerivedPropertyValues() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("nodeExpressionConstraintValidShapes.ttl")
@@ -344,6 +371,27 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(!result.conforms)
     let violation = try #require(result.violations.first)
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
+@Test func coreValidatorConformsForExistsExpressionConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintExistsShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintExistsValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsExistsExpressionConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintExistsShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintExistsInvalidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#expression")
 }
 
 @Test func coreValidatorConformsForPropertyExpressionConstraint() async throws {

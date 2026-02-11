@@ -1,0 +1,14 @@
+@prefix ex: <http://example.com/> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:ConstNodes
+    shnex:nodes ( ex:a 42 ) .
+
+ex:EmptyNodes
+    shnex:nodes () .
+
+ex:ExistsTrue
+    shnex:exists ex:ConstNodes .
+
+ex:ExistsFalse
+    shnex:exists ex:EmptyNodes .
