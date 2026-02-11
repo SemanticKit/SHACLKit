@@ -1,0 +1,13 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:FindFirstEmpty
+    shnex:findFirst [] ;
+    shnex:nodes [] .
+
+ex:FindFirstMinInclusive
+    shnex:findFirst [
+        sh:minInclusive 3 ;
+    ] ;
+    shnex:nodes ( 2 1 4 3 5 ) .

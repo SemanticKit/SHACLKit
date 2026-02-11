@@ -221,6 +221,7 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case flatMap(inputTerm: String, mapTerm: String, staticInputListMembers: [String]?)
     case limit(inputTerm: String, count: Int, staticListMembers: [String]?)
     case offset(inputTerm: String, count: Int, staticListMembers: [String]?)
+    case findFirst(inputTerm: String, shapeTerm: String, staticOrderedInputMembers: [String]?)
 }
 
 public struct SHACLNodeExpressionDefinition: Sendable, Hashable {
@@ -536,6 +537,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var flatMapObjects: Set<String> = []
             var limitObjects: Set<String> = []
             var offsetObjects: Set<String> = []
+            var findFirstObjects: Set<String> = []
         }
 
         struct PartialRule {
@@ -810,6 +812,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.offsetObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexFindFirst {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.findFirstObjects.insert(object)
+                nodeExpressions[subject] = expression
             }
         }
 
@@ -912,6 +918,18 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .offset(inputTerm: resolvedInput, count: offsetCount, staticListMembers: staticListMembers)
+                )
+            }
+
+            if let shapeTerm = resolveShapeReferenceIRIs(partial.findFirstObjects, triplesBySubject: triplesBySubject).sorted().first,
+               let inputObject = partial.nodesObjects.sorted().first {
+                let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
+                let staticOrderedInputMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveRDFListOrDirectValueOrdered(inputObject, triplesBySubject: triplesBySubject)
+                    : nil
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .findFirst(inputTerm: resolvedInput, shapeTerm: shapeTerm, staticOrderedInputMembers: staticOrderedInputMembers)
                 )
             }
 
@@ -1288,6 +1306,39 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 break
             }
             values.insert(first.object)
+            current = rest.object
+        }
+
+        return values
+    }
+
+    private func resolveRDFListOrDirectValueOrdered(
+        _ headOrValue: String,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> [String] {
+        if headOrValue == SHACLIRIs.rdfNil {
+            return []
+        }
+
+        guard let firstRestTriples = triplesBySubject[headOrValue],
+              firstRestTriples.contains(where: { $0.predicate == SHACLIRIs.rdfFirst }) else {
+            return [headOrValue]
+        }
+
+        var values: [String] = []
+        var current = headOrValue
+        var visited: Set<String> = []
+
+        while current != SHACLIRIs.rdfNil && !visited.contains(current) {
+            visited.insert(current)
+            guard let triples = triplesBySubject[current] else {
+                break
+            }
+            guard let first = triples.first(where: { $0.predicate == SHACLIRIs.rdfFirst }),
+                  let rest = triples.first(where: { $0.predicate == SHACLIRIs.rdfRest }) else {
+                break
+            }
+            values.append(first.object)
             current = rest.object
         }
 
@@ -1930,6 +1981,30 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             )
             let ordered = nodes.sorted()
             return Set(ordered.dropFirst(max(0, count)))
+        case .findFirst(let inputTerm, let shapeTerm, let staticOrderedInputMembers):
+            let orderedInputs = staticOrderedInputMembers ?? evaluateTerm(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            ).sorted()
+            if orderedInputs.isEmpty {
+                return []
+            }
+            let evaluationGraph = dataGraph ?? SHACLDataGraph(triples: [])
+            let matched = nodesMatching(
+                shapeIRI: shapeTerm,
+                candidates: Set(orderedInputs),
+                shapesGraph: shapesGraph,
+                dataGraph: evaluationGraph
+            )
+            guard let first = orderedInputs.first(where: { matched.contains($0) }) else {
+                return []
+            }
+            return [first]
         }
     }
 }
@@ -4424,6 +4499,7 @@ private enum SHACLIRIs {
     static let shnexFlatMap = "http://www.w3.org/ns/shacl-node-expr#flatMap"
     static let shnexLimit = "http://www.w3.org/ns/shacl-node-expr#limit"
     static let shnexOffset = "http://www.w3.org/ns/shacl-node-expr#offset"
+    static let shnexFindFirst = "http://www.w3.org/ns/shacl-node-expr#findFirst"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"
