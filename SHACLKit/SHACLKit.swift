@@ -52,6 +52,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let pattern: String?
     public let hasValue: String?
     public let inValues: [String]
+    public let languageInValues: [String]
     public let nodeByExpressionIRI: String?
     public let nodeShapeReferenceIRI: String?
     public let andShapeIRIs: [String]
@@ -88,6 +89,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         pattern: String? = nil,
         hasValue: String? = nil,
         inValues: [String] = [],
+        languageInValues: [String] = [],
         nodeByExpressionIRI: String? = nil,
         nodeShapeReferenceIRI: String? = nil,
         andShapeIRIs: [String] = [],
@@ -123,6 +125,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.pattern = pattern
         self.hasValue = hasValue
         self.inValues = inValues
+        self.languageInValues = languageInValues
         self.nodeByExpressionIRI = nodeByExpressionIRI
         self.nodeShapeReferenceIRI = nodeShapeReferenceIRI
         self.andShapeIRIs = andShapeIRIs
@@ -426,6 +429,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var pattern: String?
             var hasValue: String?
             var inValues: Set<String> = []
+            var languageInValues: Set<String> = []
             var nodeByExpressionIRI: String?
             var nodeShapeReferenceIRI: String?
             var andShapeIRIs: Set<String> = []
@@ -538,6 +542,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.hasValue = object
             } else if predicate == SHACLIRIs.in {
                 current.inValues.insert(object)
+            } else if predicate == SHACLIRIs.languageIn {
+                current.languageInValues.insert(object)
             } else if predicate == SHACLIRIs.nodeByExpression {
                 current.nodeByExpressionIRI = object
             } else if predicate == SHACLIRIs.node {
@@ -676,6 +682,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 pattern: partial.pattern,
                 hasValue: partial.hasValue,
                 inValues: resolveInValues(partial.inValues, triplesBySubject: triplesBySubject).sorted(),
+                languageInValues: resolveInValues(partial.languageInValues, triplesBySubject: triplesBySubject).sorted(),
                 nodeByExpressionIRI: partial.nodeByExpressionIRI,
                 nodeShapeReferenceIRI: partial.nodeShapeReferenceIRI,
                 andShapeIRIs: resolveShapeReferenceIRIs(partial.andShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
@@ -1756,6 +1763,23 @@ public struct SHACLCoreValidator: SHACLValidator {
             }
         }
 
+        if !nodeShape.languageInValues.isEmpty {
+            let languageRanges = nodeShape.languageInValues.compactMap { extractLiteralLexicalForm($0)?.lowercased() }
+            if !matchesLanguageIn(languageTag: extractLiteralLanguageTag(focusNode), ranges: languageRanges) {
+                violations.append(
+                    SHACLViolation(
+                        severity: nodeSeverity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.languageIn,
+                        message: "languageIn violation: value \(focusNode) language tag not in allowed set"
+                    )
+                )
+            }
+        }
+
         if !nodeShape.andShapeIRIs.isEmpty {
             let matchesAll = nodeShape.andShapeIRIs.allSatisfy { shapeIRI in
                 conforms(
@@ -2307,6 +2331,25 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
 
+            if !propertyShape.languageInValues.isEmpty {
+                let languageRanges = propertyShape.languageInValues.compactMap { extractLiteralLexicalForm($0)?.lowercased() }
+                for valueNode in values {
+                    if !matchesLanguageIn(languageTag: extractLiteralLanguageTag(valueNode), ranges: languageRanges) {
+                        violations.append(
+                            SHACLViolation(
+                                severity: severity,
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.languageIn,
+                                message: "languageIn violation: value \(valueNode) language tag not in allowed set"
+                            )
+                        )
+                    }
+                }
+            }
+
             if let nodeByExpressionIRI = propertyShape.nodeByExpressionIRI {
                 for valueNode in values {
                     let referencedShapeIRIs = SHACLNodeExpressionEvaluator()
@@ -2619,6 +2662,34 @@ public struct SHACLCoreValidator: SHACLValidator {
         return String(value[start..<closing])
     }
 
+    private func extractLiteralLanguageTag(_ value: String) -> String? {
+        guard value.hasPrefix("\"") else {
+            return nil
+        }
+        guard let closing = value.dropFirst().firstIndex(of: "\"") else {
+            return nil
+        }
+        let next = value.index(after: closing)
+        guard next < value.endIndex, value[next] == "@" else {
+            return nil
+        }
+        let start = value.index(after: next)
+        let languageTag = String(value[start...]).lowercased()
+        return languageTag.isEmpty ? nil : languageTag
+    }
+
+    private func matchesLanguageIn(languageTag: String?, ranges: [String]) -> Bool {
+        guard let languageTag else {
+            return false
+        }
+        for range in ranges {
+            if languageTag == range || languageTag.hasPrefix(range + "-") {
+                return true
+            }
+        }
+        return false
+    }
+
     private func extractIntegerValue(_ value: String) -> Int? {
         if let direct = Int(value) {
             return direct
@@ -2757,6 +2828,7 @@ private enum SHACLIRIs {
     static let pattern = "http://www.w3.org/ns/shacl#pattern"
     static let hasValue = "http://www.w3.org/ns/shacl#hasValue"
     static let `in` = "http://www.w3.org/ns/shacl#in"
+    static let languageIn = "http://www.w3.org/ns/shacl#languageIn"
     static let node = "http://www.w3.org/ns/shacl#node"
     static let nodeByExpression = "http://www.w3.org/ns/shacl#nodeByExpression"
     static let and = "http://www.w3.org/ns/shacl#and"

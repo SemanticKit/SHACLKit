@@ -44,6 +44,7 @@ Legend:
   - Covered integer range fixtures for `minInclusive` and `maxInclusive`, including non-numeric values.
 - [x] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
   - Covered `hasValue` and `in` fixtures, including RDF list-based `sh:in`.
+  - Added curated W3C node-shape conformance subset coverage for `languageIn-001`.
 - [x] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
   - Covered fixtures for `and`, `or`, `not`, and `xone` across direct shape references and RDF list syntax.
   - Added curated W3C node-shape logical conformance subset coverage (`and-001`, `and-002`, `or-001`, `not-001`, `not-002`, `xone-001`).
