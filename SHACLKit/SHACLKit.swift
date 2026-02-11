@@ -410,9 +410,9 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 hasValue: partial.hasValue,
                 inValues: resolveInValues(partial.inValues, triplesBySubject: triplesBySubject).sorted(),
                 nodeShapeReferenceIRI: partial.nodeShapeReferenceIRI,
-                andShapeIRIs: partial.andShapeIRIs.sorted(),
-                orShapeIRIs: partial.orShapeIRIs.sorted(),
-                xoneShapeIRIs: partial.xoneShapeIRIs.sorted(),
+                andShapeIRIs: resolveShapeReferenceIRIs(partial.andShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
+                orShapeIRIs: resolveShapeReferenceIRIs(partial.orShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
+                xoneShapeIRIs: resolveShapeReferenceIRIs(partial.xoneShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
                 notShapeIRI: partial.notShapeIRI,
                 qualifiedValueShapeIRI: partial.qualifiedValueShapeIRI,
                 qualifiedMinCount: partial.qualifiedMinCount,
@@ -483,6 +483,17 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
     }
 
     private func resolveInValues(
+        _ valueObjects: Set<String>,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> Set<String> {
+        var resolved: Set<String> = []
+        for object in valueObjects {
+            resolved.formUnion(resolveRDFListOrDirectValue(object, triplesBySubject: triplesBySubject))
+        }
+        return resolved
+    }
+
+    private func resolveShapeReferenceIRIs(
         _ valueObjects: Set<String>,
         triplesBySubject: [String: [SHACLTriple]]
     ) -> Set<String> {

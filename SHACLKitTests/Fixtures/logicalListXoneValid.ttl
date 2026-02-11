@@ -1,0 +1,4 @@
+@prefix ex: <http://example.com/> .
+
+ex:alice ex:profile ex:p1 .
+ex:p1 ex:level ex:Silver .

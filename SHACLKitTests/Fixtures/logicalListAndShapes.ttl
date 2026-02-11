@@ -1,0 +1,24 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:EntryShape a sh:NodeShape ;
+  sh:targetNode ex:alice ;
+  sh:property ex:MemberShape .
+
+ex:MemberShape a sh:PropertyShape ;
+  sh:path ex:member ;
+  sh:and ( ex:HasIdShape ex:HasLabelShape ) .
+
+ex:HasIdShape a sh:NodeShape ;
+  sh:property ex:IdPropShape .
+
+ex:IdPropShape a sh:PropertyShape ;
+  sh:path ex:id ;
+  sh:minCount 1 .
+
+ex:HasLabelShape a sh:NodeShape ;
+  sh:property ex:LabelPropShape .
+
+ex:LabelPropShape a sh:PropertyShape ;
+  sh:path ex:label ;
+  sh:minCount 1 .

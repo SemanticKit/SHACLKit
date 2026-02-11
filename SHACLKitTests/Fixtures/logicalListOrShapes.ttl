@@ -1,0 +1,24 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:EntryShape a sh:NodeShape ;
+  sh:targetNode ex:alice ;
+  sh:property ex:RoleShape .
+
+ex:RoleShape a sh:PropertyShape ;
+  sh:path ex:role ;
+  sh:or ( ex:AdminShape ex:EditorShape ) .
+
+ex:AdminShape a sh:NodeShape ;
+  sh:property ex:TypeAdminShape .
+
+ex:TypeAdminShape a sh:PropertyShape ;
+  sh:path ex:type ;
+  sh:hasValue ex:Admin .
+
+ex:EditorShape a sh:NodeShape ;
+  sh:property ex:TypeEditorShape .
+
+ex:TypeEditorShape a sh:PropertyShape ;
+  sh:path ex:type ;
+  sh:hasValue ex:Editor .
