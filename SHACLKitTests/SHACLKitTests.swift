@@ -486,6 +486,19 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     ])
 }
 
+@Test func focusNodeResolverResolvesPathValuesTargetNodeExpression() async throws {
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let resolver = SHACLFocusNodeResolver()
+
+    let shapes = try shapesLoader.load(from: fixtureData("targetNodeExpressionPathValuesShapes.ttl"))
+    let dataGraph = try dataLoader.load(from: fixtureData("nodeExpressionPathValuesData.ttl"))
+    let resolutions = resolver.resolve(dataGraph: dataGraph, shapesGraph: shapes)
+
+    let resolution = try #require(resolutions.first(where: { $0.shapeIRI == "http://example.com/FriendShape" }))
+    #expect(resolution.focusNodes == ["http://example.com/bob"])
+}
+
 @Test func focusNodeResolverIgnoresEmptyTargetNodeExpressionOutputs() async throws {
     let shapesLoader = SHACLShapesGraphLoader()
     let dataLoader = SHACLDataGraphLoader()
