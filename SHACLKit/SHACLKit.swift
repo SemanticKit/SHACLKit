@@ -386,6 +386,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             shapes[subject] = current
         }
 
+        let triplesBySubject = Dictionary(grouping: triples, by: \.subject)
+
         let definitions = shapes.compactMap { shapeIRI, partial -> SHACLShapeDefinition? in
             guard let kind = partial.kind else {
                 return nil
@@ -406,7 +408,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 maxInclusive: partial.maxInclusive,
                 pattern: partial.pattern,
                 hasValue: partial.hasValue,
-                inValues: partial.inValues.sorted(),
+                inValues: resolveInValues(partial.inValues, triplesBySubject: triplesBySubject).sorted(),
                 nodeShapeReferenceIRI: partial.nodeShapeReferenceIRI,
                 andShapeIRIs: partial.andShapeIRIs.sorted(),
                 orShapeIRIs: partial.orShapeIRIs.sorted(),
@@ -478,6 +480,50 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         }
         let start = value.index(after: value.startIndex)
         return String(value[start..<closing])
+    }
+
+    private func resolveInValues(
+        _ valueObjects: Set<String>,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> Set<String> {
+        var resolved: Set<String> = []
+        for object in valueObjects {
+            resolved.formUnion(resolveRDFListOrDirectValue(object, triplesBySubject: triplesBySubject))
+        }
+        return resolved
+    }
+
+    private func resolveRDFListOrDirectValue(
+        _ headOrValue: String,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> Set<String> {
+        if headOrValue == SHACLIRIs.rdfNil {
+            return []
+        }
+
+        guard let firstRestTriples = triplesBySubject[headOrValue],
+              firstRestTriples.contains(where: { $0.predicate == SHACLIRIs.rdfFirst }) else {
+            return [headOrValue]
+        }
+
+        var values: Set<String> = []
+        var current = headOrValue
+        var visited: Set<String> = []
+
+        while current != SHACLIRIs.rdfNil && !visited.contains(current) {
+            visited.insert(current)
+            guard let triples = triplesBySubject[current] else {
+                break
+            }
+            guard let first = triples.first(where: { $0.predicate == SHACLIRIs.rdfFirst }),
+                  let rest = triples.first(where: { $0.predicate == SHACLIRIs.rdfRest }) else {
+                break
+            }
+            values.insert(first.object)
+            current = rest.object
+        }
+
+        return values
     }
 }
 
@@ -1219,6 +1265,9 @@ public struct SHACLCoreValidator: SHACLValidator {
 
 private enum SHACLIRIs {
     static let rdfType = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    static let rdfFirst = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first"
+    static let rdfRest = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"
+    static let rdfNil = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"
     static let nodeShape = "http://www.w3.org/ns/shacl#NodeShape"
     static let propertyShape = "http://www.w3.org/ns/shacl#PropertyShape"
     static let targetClass = "http://www.w3.org/ns/shacl#targetClass"
@@ -1292,12 +1341,19 @@ private struct SHACLTurtleSubsetParser {
         let statements = splitStatements(from: parsed.body)
 
         var triples: [SHACLTriple] = []
+        var listCounter = 0
 
         for statement in statements {
             if statement.isEmpty {
                 continue
             }
-            triples.append(contentsOf: try parseStatement(statement, prefixes: parsed.prefixes))
+            triples.append(
+                contentsOf: try parseStatement(
+                    statement,
+                    prefixes: parsed.prefixes,
+                    listCounter: &listCounter
+                )
+            )
         }
 
         return triples
@@ -1370,7 +1426,11 @@ private struct SHACLTurtleSubsetParser {
         return statements
     }
 
-    private func parseStatement(_ statement: String, prefixes: [String: String]) throws -> [SHACLTriple] {
+    private func parseStatement(
+        _ statement: String,
+        prefixes: [String: String],
+        listCounter: inout Int
+    ) throws -> [SHACLTriple] {
         let tokens = try tokenize(statement)
         guard !tokens.isEmpty else {
             return []
@@ -1412,14 +1472,41 @@ private struct SHACLTurtleSubsetParser {
                 throw SHACLError.invalidStatement(statement)
             }
 
-            var objects: [String] = [try resolveTerm(firstObjectToken, prefixes: prefixes)]
+            let firstObject: String
+            if firstObjectToken == "(" {
+                firstObject = try parseObjectList(
+                    tokens: tokens,
+                    index: &index,
+                    prefixes: prefixes,
+                    triples: &triples,
+                    listCounter: &listCounter,
+                    statement: statement
+                )
+            } else {
+                firstObject = try resolveTerm(firstObjectToken, prefixes: prefixes)
+            }
+
+            var objects: [String] = [firstObject]
 
             while index < tokens.count, tokens[index] == "," {
                 _ = takeToken()
                 guard let nextObject = takeToken(), nextObject != ";", nextObject != "," else {
                     throw SHACLError.invalidStatement(statement)
                 }
-                objects.append(try resolveTerm(nextObject, prefixes: prefixes))
+                if nextObject == "(" {
+                    objects.append(
+                        try parseObjectList(
+                            tokens: tokens,
+                            index: &index,
+                            prefixes: prefixes,
+                            triples: &triples,
+                            listCounter: &listCounter,
+                            statement: statement
+                        )
+                    )
+                } else {
+                    objects.append(try resolveTerm(nextObject, prefixes: prefixes))
+                }
             }
 
             for object in objects {
@@ -1439,6 +1526,62 @@ private struct SHACLTurtleSubsetParser {
         return triples
     }
 
+    private func parseObjectList(
+        tokens: [String],
+        index: inout Int,
+        prefixes: [String: String],
+        triples: inout [SHACLTriple],
+        listCounter: inout Int,
+        statement: String
+    ) throws -> String {
+        var values: [String] = []
+        var sawClose = false
+
+        while index < tokens.count {
+            let token = tokens[index]
+            if token == ")" {
+                index += 1
+                sawClose = true
+                break
+            }
+            if token == "(" || token == ";" || token == "," {
+                throw SHACLError.invalidStatement(statement)
+            }
+            values.append(try resolveTerm(token, prefixes: prefixes))
+            index += 1
+        }
+
+        if !sawClose {
+            throw SHACLError.invalidStatement(statement)
+        }
+
+        if values.isEmpty {
+            return SHACLIRIs.rdfNil
+        }
+
+        func nextListNode() -> String {
+            defer { listCounter += 1 }
+            return "_:ListNode\(listCounter)"
+        }
+
+        let head = nextListNode()
+        var current = head
+
+        for position in values.indices {
+            triples.append(
+                SHACLTriple(subject: current, predicate: SHACLIRIs.rdfFirst, object: values[position])
+            )
+            let isLast = position == values.count - 1
+            let next = isLast ? SHACLIRIs.rdfNil : nextListNode()
+            triples.append(
+                SHACLTriple(subject: current, predicate: SHACLIRIs.rdfRest, object: next)
+            )
+            current = next
+        }
+
+        return head
+    }
+
     private func tokenize(_ statement: String) throws -> [String] {
         var tokens: [String] = []
         var index = statement.startIndex
@@ -1451,7 +1594,7 @@ private struct SHACLTurtleSubsetParser {
                 continue
             }
 
-            if ch == ";" || ch == "," {
+            if ch == ";" || ch == "," || ch == "(" || ch == ")" {
                 tokens.append(String(ch))
                 index = statement.index(after: index)
                 continue

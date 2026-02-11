@@ -33,9 +33,9 @@ Legend:
 - [x] `REQ-SHACL-008` Constraint components: value range/string facets (`sh:minLength`, `sh:maxLength`, `sh:pattern`, `sh:minInclusive`, `sh:maxInclusive`).
   - Implemented string facets: `sh:minLength`, `sh:maxLength`, `sh:pattern`.
   - Implemented integer range facets: `sh:minInclusive`, `sh:maxInclusive`.
-- [~] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).
+- [x] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).
   - Implemented `sh:hasValue` checks.
-  - Implemented subset `sh:in` checks using direct object-list syntax.
+  - Implemented `sh:in` checks for direct values and RDF collection list syntax.
 - [~] `REQ-SHACL-010` Constraint components: logical composition (`sh:and`, `sh:or`, `sh:not`, `sh:xone`).
   - Implemented subset for property-shape values using direct shape-IRI object syntax.
 - [~] `REQ-SHACL-011` Constraint components: shape references (`sh:node`, `sh:property`, qualified value shape family).

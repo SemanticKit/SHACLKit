@@ -1,0 +1,4 @@
+@prefix ex: <http://example.com/> .
+
+ex:t1 a ex:Task ;
+  ex:status ex:Archived .

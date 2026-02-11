@@ -358,6 +358,28 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(violation.message.contains("http://example.com/Archived"))
 }
 
+@Test func coreValidatorConformsForInListConstraintFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("inListConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("inListConstraintsValid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsInListConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("inListConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("inListConstraintsInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#in")
+    #expect(violation.message.contains("in violation"))
+}
+
 @Test func coreValidatorConformsForNodeReferenceFixture() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("nodeReferenceShapes.ttl")
