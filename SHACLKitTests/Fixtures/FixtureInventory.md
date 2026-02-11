@@ -14,6 +14,7 @@ Current local families:
 - Membership/value constraints (`hasValue`, `in` direct/list)
 - Logical constraints (`and`, `or`, `not`, `xone` direct/list)
 - Shape references (`node`, qualified value shape counts)
+- Node expressions (`union`, `intersection`, `shnex:pathValues`)
 - Severity/report diagnostics
 - Invalid shapes graph diagnostics
 - Regression and smoke scenarios

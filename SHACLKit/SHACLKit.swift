@@ -202,6 +202,7 @@ public struct SHACLShapesGraph: Sendable, Equatable {
 public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case union([String])
     case intersection([String])
+    case pathValues(path: SHACLPropertyPath, focusNodeTerm: String?)
 }
 
 public struct SHACLNodeExpressionDefinition: Sendable, Hashable {
@@ -495,6 +496,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         struct PartialNodeExpression {
             var unionMemberObjects: Set<String> = []
             var intersectionMemberObjects: Set<String> = []
+            var pathValuesObject: String?
+            var pathValuesFocusNodeObject: String?
         }
 
         struct PartialRule {
@@ -681,6 +684,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                     expression.intersectionMemberObjects.insert(object)
                 }
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexPathValues {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.pathValuesObject = object
+                nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexFocusNode {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.pathValuesFocusNodeObject = object
+                nodeExpressions[subject] = expression
             }
         }
 
@@ -700,6 +711,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .intersection(intersectionMembers)
+                )
+            }
+
+            if let pathValuesObject = partial.pathValuesObject,
+               let parsedPath = parsePropertyPath(pathValuesObject, triplesBySubject: triplesBySubject) {
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .pathValues(path: parsedPath, focusNodeTerm: partial.pathValuesFocusNodeObject)
                 )
             }
 
@@ -1161,7 +1180,8 @@ public struct SHACLFocusNodeResolver: Sendable {
             let output = SHACLNodeExpressionEvaluator().evaluate(
                 expressionIRI: expressionIRI,
                 focusNode: "",
-                shapesGraph: shapesGraph
+                shapesGraph: shapesGraph,
+                dataGraph: graph
             )
             return Set(output.filter { !$0.isEmpty })
         case .targetSubjectsOf(let predicateIRI):
@@ -1180,7 +1200,8 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
     public func evaluate(
         expressionIRI: String,
         focusNode: String,
-        shapesGraph: SHACLShapesGraph
+        shapesGraph: SHACLShapesGraph,
+        dataGraph: SHACLDataGraph? = nil
     ) -> Set<String> {
         let expressionByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.nodeExpressions.map { ($0.expressionIRI, $0) })
         var visited: Set<String> = []
@@ -1188,6 +1209,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             expressionIRI,
             focusNode: focusNode,
             expressionsByIRI: expressionByIRI,
+            dataGraph: dataGraph,
             depth: 0,
             visited: &visited
         )
@@ -1197,6 +1219,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
         _ term: String,
         focusNode: String,
         expressionsByIRI: [String: SHACLNodeExpressionDefinition],
+        dataGraph: SHACLDataGraph?,
         depth: Int,
         visited: inout Set<String>
     ) -> Set<String> {
@@ -1223,6 +1246,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                         member,
                         focusNode: focusNode,
                         expressionsByIRI: expressionsByIRI,
+                        dataGraph: dataGraph,
                         depth: depth + 1,
                         visited: &visited
                     )
@@ -1236,6 +1260,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 first,
                 focusNode: focusNode,
                 expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1245,12 +1270,98 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                         member,
                         focusNode: focusNode,
                         expressionsByIRI: expressionsByIRI,
+                        dataGraph: dataGraph,
                         depth: depth + 1,
                         visited: &visited
                     )
                 )
             }
+        case .pathValues(let path, let focusNodeTerm):
+            guard let dataGraph else {
+                return []
+            }
+            let focusNodes: Set<String>
+            if let focusNodeTerm {
+                focusNodes = evaluateTerm(
+                    focusNodeTerm,
+                    focusNode: focusNode,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    depth: depth + 1,
+                    visited: &visited
+                )
+            } else {
+                focusNodes = [focusNode]
+            }
+            return focusNodes.reduce(into: Set<String>()) { result, node in
+                result.formUnion(evaluatePropertyPathValues(path, from: node, dataGraph: dataGraph))
+            }
         }
+    }
+}
+
+private func evaluatePropertyPathValues(
+    _ path: SHACLPropertyPath,
+    from focusNode: String,
+    dataGraph: SHACLDataGraph
+) -> Set<String> {
+    switch path {
+    case .predicate(let predicateIRI):
+        return Set(
+            dataGraph.triples
+                .filter { $0.subject == focusNode && $0.predicate == predicateIRI }
+                .map(\.object)
+        )
+    case .inverse(let nested):
+        let candidateNodes = Set(dataGraph.triples.map(\.subject) + dataGraph.triples.map(\.object))
+        return Set(
+            candidateNodes.filter { candidate in
+                evaluatePropertyPathValues(nested, from: candidate, dataGraph: dataGraph).contains(focusNode)
+            }
+        )
+    case .sequence(let members):
+        return members.reduce(into: Set([focusNode])) { partial, member in
+            let next = partial.reduce(into: Set<String>()) { nextSet, node in
+                nextSet.formUnion(evaluatePropertyPathValues(member, from: node, dataGraph: dataGraph))
+            }
+            partial = next
+        }
+    case .alternative(let members):
+        return members.reduce(into: Set<String>()) { partial, member in
+            partial.formUnion(evaluatePropertyPathValues(member, from: focusNode, dataGraph: dataGraph))
+        }
+    case .zeroOrOne(let nested):
+        return Set([focusNode]).union(evaluatePropertyPathValues(nested, from: focusNode, dataGraph: dataGraph))
+    case .zeroOrMore(let nested):
+        var reached: Set<String> = [focusNode]
+        var frontier: Set<String> = [focusNode]
+        while !frontier.isEmpty {
+            let next = frontier.reduce(into: Set<String>()) { partial, node in
+                partial.formUnion(evaluatePropertyPathValues(nested, from: node, dataGraph: dataGraph))
+            }
+            let delta = next.subtracting(reached)
+            if delta.isEmpty {
+                break
+            }
+            reached.formUnion(delta)
+            frontier = delta
+        }
+        return reached
+    case .oneOrMore(let nested):
+        var reached = evaluatePropertyPathValues(nested, from: focusNode, dataGraph: dataGraph)
+        var frontier = reached
+        while !frontier.isEmpty {
+            let next = frontier.reduce(into: Set<String>()) { partial, node in
+                partial.formUnion(evaluatePropertyPathValues(nested, from: node, dataGraph: dataGraph))
+            }
+            let delta = next.subtracting(reached)
+            if delta.isEmpty {
+                break
+            }
+            reached.formUnion(delta)
+            frontier = delta
+        }
+        return reached
     }
 }
 
@@ -1674,18 +1785,21 @@ public struct SHACLCoreValidator: SHACLValidator {
                         let subjects = evaluateRuleTerm(
                             rule.subjectTerm,
                             focusNode: focusNode,
+                            dataGraph: graphSnapshot,
                             expressionGraph: expressionGraph,
                             nodeExpressionsByIRI: nodeExpressionsByIRI
                         )
                         let predicates = evaluateRuleTerm(
                             rule.predicateTerm,
                             focusNode: focusNode,
+                            dataGraph: graphSnapshot,
                             expressionGraph: expressionGraph,
                             nodeExpressionsByIRI: nodeExpressionsByIRI
                         )
                         let objects = evaluateRuleTerm(
                             rule.objectTerm,
                             focusNode: focusNode,
+                            dataGraph: graphSnapshot,
                             expressionGraph: expressionGraph,
                             nodeExpressionsByIRI: nodeExpressionsByIRI
                         )
@@ -1741,6 +1855,7 @@ public struct SHACLCoreValidator: SHACLValidator {
     private func evaluateRuleTerm(
         _ term: String,
         focusNode: String,
+        dataGraph: SHACLDataGraph,
         expressionGraph: SHACLShapesGraph,
         nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition]
     ) -> [String] {
@@ -1750,7 +1865,12 @@ public struct SHACLCoreValidator: SHACLValidator {
 
         if nodeExpressionsByIRI[term] != nil {
             return SHACLNodeExpressionEvaluator()
-                .evaluate(expressionIRI: term, focusNode: focusNode, shapesGraph: expressionGraph)
+                .evaluate(
+                    expressionIRI: term,
+                    focusNode: focusNode,
+                    shapesGraph: expressionGraph,
+                    dataGraph: dataGraph
+                )
                 .filter { !$0.isEmpty }
                 .sorted()
         }
@@ -2243,7 +2363,8 @@ public struct SHACLCoreValidator: SHACLValidator {
             let outputNodes = SHACLNodeExpressionEvaluator().evaluate(
                 expressionIRI: expressionIRI,
                 focusNode: focusNode,
-                shapesGraph: expressionGraph
+                shapesGraph: expressionGraph,
+                dataGraph: dataGraph
             )
             if !isTrueOnlyExpressionOutput(outputNodes) {
                 violations.append(
@@ -2265,7 +2386,8 @@ public struct SHACLCoreValidator: SHACLValidator {
                 .evaluate(
                     expressionIRI: nodeByExpressionIRI,
                     focusNode: focusNode,
-                    shapesGraph: expressionGraph
+                    shapesGraph: expressionGraph,
+                    dataGraph: dataGraph
                 )
                 .sorted()
             for referencedShapeIRI in referencedShapeIRIs {
@@ -2344,7 +2466,8 @@ public struct SHACLCoreValidator: SHACLValidator {
                     .evaluate(
                         expressionIRI: expressionIRI,
                         focusNode: focusNode,
-                        shapesGraph: expressionGraph
+                        shapesGraph: expressionGraph,
+                        dataGraph: dataGraph
                     )
                     .sorted()
             } else {
@@ -2357,7 +2480,8 @@ public struct SHACLCoreValidator: SHACLValidator {
                     let outputNodes = SHACLNodeExpressionEvaluator().evaluate(
                         expressionIRI: expressionIRI,
                         focusNode: valueNode,
-                        shapesGraph: expressionGraph
+                        shapesGraph: expressionGraph,
+                        dataGraph: dataGraph
                     )
                     if !isTrueOnlyExpressionOutput(outputNodes) {
                         violations.append(
@@ -2833,7 +2957,8 @@ public struct SHACLCoreValidator: SHACLValidator {
                         .evaluate(
                             expressionIRI: nodeByExpressionIRI,
                             focusNode: valueNode,
-                            shapesGraph: expressionGraph
+                            shapesGraph: expressionGraph,
+                            dataGraph: dataGraph
                         )
                         .sorted()
                     for referencedShapeIRI in referencedShapeIRIs {
@@ -3112,64 +3237,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         from focusNode: String,
         dataGraph: SHACLDataGraph
     ) -> Set<String> {
-        switch path {
-        case .predicate(let predicateIRI):
-            return Set(
-                dataGraph.triples
-                    .filter { $0.subject == focusNode && $0.predicate == predicateIRI }
-                    .map(\.object)
-            )
-        case .inverse(let nested):
-            let candidateNodes = Set(dataGraph.triples.map(\.subject) + dataGraph.triples.map(\.object))
-            return Set(
-                candidateNodes.filter { candidate in
-                    resolvePropertyPathValues(nested, from: candidate, dataGraph: dataGraph).contains(focusNode)
-                }
-            )
-        case .sequence(let members):
-            return members.reduce(into: Set([focusNode])) { partial, member in
-                let next = partial.reduce(into: Set<String>()) { nextSet, node in
-                    nextSet.formUnion(resolvePropertyPathValues(member, from: node, dataGraph: dataGraph))
-                }
-                partial = next
-            }
-        case .alternative(let members):
-            return members.reduce(into: Set<String>()) { partial, member in
-                partial.formUnion(resolvePropertyPathValues(member, from: focusNode, dataGraph: dataGraph))
-            }
-        case .zeroOrOne(let nested):
-            return Set([focusNode]).union(resolvePropertyPathValues(nested, from: focusNode, dataGraph: dataGraph))
-        case .zeroOrMore(let nested):
-            var reached: Set<String> = [focusNode]
-            var frontier: Set<String> = [focusNode]
-            while !frontier.isEmpty {
-                let next = frontier.reduce(into: Set<String>()) { partial, node in
-                    partial.formUnion(resolvePropertyPathValues(nested, from: node, dataGraph: dataGraph))
-                }
-                let delta = next.subtracting(reached)
-                if delta.isEmpty {
-                    break
-                }
-                reached.formUnion(delta)
-                frontier = delta
-            }
-            return reached
-        case .oneOrMore(let nested):
-            var reached = resolvePropertyPathValues(nested, from: focusNode, dataGraph: dataGraph)
-            var frontier = reached
-            while !frontier.isEmpty {
-                let next = frontier.reduce(into: Set<String>()) { partial, node in
-                    partial.formUnion(resolvePropertyPathValues(nested, from: node, dataGraph: dataGraph))
-                }
-                let delta = next.subtracting(reached)
-                if delta.isEmpty {
-                    break
-                }
-                reached.formUnion(delta)
-                frontier = delta
-            }
-            return reached
-        }
+        evaluatePropertyPathValues(path, from: focusNode, dataGraph: dataGraph)
     }
 
     private func conforms(
@@ -3509,6 +3577,8 @@ private enum SHACLIRIs {
     static let union = "http://www.w3.org/ns/shacl#union"
     static let intersection = "http://www.w3.org/ns/shacl#intersection"
     static let shThis = "http://www.w3.org/ns/shacl#this"
+    static let shnexPathValues = "http://www.w3.org/ns/shacl-node-expr#pathValues"
+    static let shnexFocusNode = "http://www.w3.org/ns/shacl-node-expr#focusNode"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"

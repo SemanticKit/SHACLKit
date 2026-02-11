@@ -61,6 +61,7 @@ Legend:
 
 - [~] `REQ-SHACL-200` Implement SHACL 1.2 Node Expressions evaluation model.
   - Implemented subset evaluator for `sh:union` and `sh:intersection`, including nested expressions and `sh:this`.
+  - Implemented first-slice `shnex:pathValues` with optional `shnex:focusNode` expression chaining.
 - [~] `REQ-SHACL-201` Integrate node expression evaluation into constraints/targets where applicable.
   - Integrated subset into property-shape evaluation via `sh:expression` as a value source.
   - Added shape-graph validation for missing/unknown node-expression references.

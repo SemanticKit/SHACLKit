@@ -325,6 +325,27 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
 }
 
+@Test func coreValidatorConformsForPathValuesNodeExpression() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeExpressionPathValuesValidShapes.ttl")
+    let dataGraph = try fixtureData("nodeExpressionPathValuesData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsPathValuesNodeExpressionViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeExpressionPathValuesInvalidShapes.ttl")
+    let dataGraph = try fixtureData("nodeExpressionPathValuesData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
 @Test func coreValidatorConformsForPropertyExpressionConstraint() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("expressionConstraintPathValidShapes.ttl")
