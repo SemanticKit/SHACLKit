@@ -1,4 +1,6 @@
 import Foundation
+import RDFKit
+import SemanticKit
 import Testing
 @testable import SHACLKit
 
@@ -14,6 +16,90 @@ private func fixtureExists(_ relativePath: String) -> Bool {
     let fileURL = URL(fileURLWithPath: #filePath)
     let fixturesURL = fileURL.deletingLastPathComponent().appendingPathComponent("Fixtures")
     return FileManager.default.fileExists(atPath: fixturesURL.appendingPathComponent(relativePath).path)
+}
+
+private struct W3CCuratedConformanceCase {
+    let caseID: String
+    let dataGraphRelativePath: String
+    let shapesGraphRelativePath: String
+    let expectedConforms: Bool
+}
+
+private func loadW3CCuratedConformanceCases() throws -> [W3CCuratedConformanceCase] {
+    let manifestData = try fixtureData("W3CDataShapes/W3CCuratedConformanceManifest.tsv")
+    guard let manifestText = String(data: manifestData, encoding: .utf8) else {
+        throw NSError(
+            domain: "SHACLKitTests",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Unable to decode curated W3C manifest as UTF-8."]
+        )
+    }
+
+    var cases: [W3CCuratedConformanceCase] = []
+    for rawLine in manifestText.split(whereSeparator: \.isNewline) {
+        let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        if line.isEmpty || line.hasPrefix("#") {
+            continue
+        }
+
+        let fields = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+        guard fields.count >= 4 else {
+            throw NSError(
+                domain: "SHACLKitTests",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid curated W3C manifest row: \(line)"]
+            )
+        }
+
+        let expectedField = fields[3].lowercased()
+        guard expectedField == "true" || expectedField == "false" else {
+            throw NSError(
+                domain: "SHACLKitTests",
+                code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid expected_conforms value in row: \(line)"]
+            )
+        }
+
+        cases.append(
+            W3CCuratedConformanceCase(
+                caseID: fields[0],
+                dataGraphRelativePath: fields[1],
+                shapesGraphRelativePath: fields[2],
+                expectedConforms: expectedField == "true"
+            )
+        )
+    }
+
+    return cases
+}
+
+private func semanticGraph(fromTurtleData data: Data) throws -> Graph {
+    guard let turtle = String(data: data, encoding: .utf8) else {
+        throw SHACLError.invalidUTF8
+    }
+    let graphSection = turtle
+        .split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
+        .prefix { line in
+            !line.trimmingCharacters(in: .whitespaces).hasPrefix("<>")
+        }
+        .joined(separator: "\n")
+    let sanitizedTurtle = graphSection.replacingOccurrences(of: "\r\n", with: "\n")
+    let baseIRI = try IRI("https://example.invalid/shaclkit/w3c-fixture")
+    return try Graph(turtle: sanitizedTurtle, baseIRI: baseIRI)
+}
+
+private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
+    guard let turtle = String(data: data, encoding: .utf8) else {
+        throw SHACLError.invalidUTF8
+    }
+    let graphSection = turtle
+        .split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
+        .prefix { line in
+            !line.trimmingCharacters(in: .whitespaces).hasPrefix("<>")
+        }
+        .joined(separator: "\n")
+        .replacingOccurrences(of: "\r\n", with: "\n")
+    return Data(graphSection.utf8)
 }
 
 @Test func shapesLoaderParsesNodeShapeTargets() async throws {
@@ -116,6 +202,36 @@ private func fixtureExists(_ relativePath: String) -> Bool {
     #expect(fixtureExists("W3CDataShapes/data-shapes-test-suite/tests/manifest.ttl"))
     #expect(fixtureExists("W3CDataShapes/shacl12-test-suite/tests/manifest.ttl"))
     #expect(fixtureExists("W3CDataShapes/shacl12-test-suite/tests/rules/manifest-rules.ttl"))
+}
+
+@Test func w3cCuratedConformanceSubsetMatchesExpectations() async throws {
+    let validator = SHACLCoreValidator()
+    let conformanceCases = try loadW3CCuratedConformanceCases()
+    #expect(!conformanceCases.isEmpty)
+
+    for conformanceCase in conformanceCases {
+        let dataGraphPayload = try fixtureData("W3CDataShapes/\(conformanceCase.dataGraphRelativePath)")
+        let shapesGraphPayload = try fixtureData("W3CDataShapes/\(conformanceCase.shapesGraphRelativePath)")
+
+        _ = try semanticGraph(fromTurtleData: dataGraphPayload)
+        let parsedDataGraph = try SHACLDataGraphLoader().load(
+            from: cleanedGraphSectionData(fromTurtleData: dataGraphPayload)
+        )
+        _ = try semanticGraph(fromTurtleData: shapesGraphPayload)
+        let parsedShapesGraph = try SHACLShapesGraphLoader().load(
+            from: cleanedGraphSectionData(fromTurtleData: shapesGraphPayload)
+        )
+        let result = try validator.validate(dataGraph: parsedDataGraph, shapesGraph: parsedShapesGraph)
+
+        if result.conforms != conformanceCase.expectedConforms {
+            Issue.record(
+                """
+                W3C curated case \(conformanceCase.caseID) expectation mismatch: \
+                expected conforms=\(conformanceCase.expectedConforms), got \(result.conforms).
+                """
+            )
+        }
+    }
 }
 
 @Test func nodeExpressionEvaluatorEvaluatesUnionIntersectionAndCycle() async throws {

@@ -9,6 +9,10 @@ let package = Package(
             targets: ["SHACLKit"]
         )
     ],
+    dependencies: [
+        .package(path: "../SemanticKit"),
+        .package(path: "../RDFKit")
+    ],
     targets: [
         .target(
             name: "SHACLKit",
@@ -16,7 +20,11 @@ let package = Package(
         ),
         .testTarget(
             name: "SHACLKitTests",
-            dependencies: ["SHACLKit"],
+            dependencies: [
+                "SHACLKit",
+                "SemanticKit",
+                "RDFKit"
+            ],
             path: "SHACLKitTests",
             resources: [
                 .copy("Fixtures")
