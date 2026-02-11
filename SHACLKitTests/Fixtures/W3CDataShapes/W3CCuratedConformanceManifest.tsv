@@ -48,6 +48,7 @@ core-property-pattern-001	data-shapes-test-suite/tests/core/property/pattern-001
 core-property-pattern-002	data-shapes-test-suite/tests/core/property/pattern-002.ttl	data-shapes-test-suite/tests/core/property/pattern-002.ttl	false	Property pattern checks with flags.
 core-property-maxInclusive-001	data-shapes-test-suite/tests/core/property/maxInclusive-001.ttl	data-shapes-test-suite/tests/core/property/maxInclusive-001.ttl	false	Property maxInclusive checks.
 core-property-minExclusive-001	data-shapes-test-suite/tests/core/property/minExclusive-001.ttl	data-shapes-test-suite/tests/core/property/minExclusive-001.ttl	false	Property minExclusive checks.
+core-property-minExclusive-002	data-shapes-test-suite/tests/core/property/minExclusive-002.ttl	data-shapes-test-suite/tests/core/property/minExclusive-002.ttl	false	Property minExclusive non-numeric type checks.
 core-property-maxExclusive-001	data-shapes-test-suite/tests/core/property/maxExclusive-001.ttl	data-shapes-test-suite/tests/core/property/maxExclusive-001.ttl	false	Property maxExclusive checks.
 core-property-hasValue-001	data-shapes-test-suite/tests/core/property/hasValue-001.ttl	data-shapes-test-suite/tests/core/property/hasValue-001.ttl	false	Property hasValue checks.
 core-property-in-001	data-shapes-test-suite/tests/core/property/in-001.ttl	data-shapes-test-suite/tests/core/property/in-001.ttl	false	Property in-list membership checks.
@@ -67,3 +68,5 @@ core-property-node-001	data-shapes-test-suite/tests/core/property/node-001.ttl	d
 core-property-node-002	data-shapes-test-suite/tests/core/property/node-002.ttl	data-shapes-test-suite/tests/core/property/node-002.ttl	false	Property node constraint checks with non-conforming values.
 core-property-property-001	data-shapes-test-suite/tests/core/property/property-001.ttl	data-shapes-test-suite/tests/core/property/property-001.ttl	false	Property shape references on property values.
 core-property-qualifiedValueShape-001	data-shapes-test-suite/tests/core/property/qualifiedValueShape-001.ttl	data-shapes-test-suite/tests/core/property/qualifiedValueShape-001.ttl	false	Property qualified value shape counts.
+core-property-qualifiedMinCountDisjoint-001	data-shapes-test-suite/tests/core/property/qualifiedMinCountDisjoint-001.ttl	data-shapes-test-suite/tests/core/property/qualifiedMinCountDisjoint-001.ttl	false	Property qualifiedMinCount with qualifiedValueShapesDisjoint.
+core-property-qualifiedValueShapesDisjoint-001	data-shapes-test-suite/tests/core/property/qualifiedValueShapesDisjoint-001.ttl	data-shapes-test-suite/tests/core/property/qualifiedValueShapesDisjoint-001.ttl	false	Property qualifiedValueShapesDisjoint overlap handling.

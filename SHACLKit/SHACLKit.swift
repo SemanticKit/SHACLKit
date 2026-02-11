@@ -67,6 +67,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let xoneShapeIRIs: [String]
     public let notShapeIRI: String?
     public let qualifiedValueShapeIRI: String?
+    public let qualifiedValueShapesDisjoint: Bool
     public let qualifiedMinCount: Int?
     public let qualifiedMaxCount: Int?
     public let minCount: Int?
@@ -111,6 +112,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         xoneShapeIRIs: [String] = [],
         notShapeIRI: String? = nil,
         qualifiedValueShapeIRI: String? = nil,
+        qualifiedValueShapesDisjoint: Bool = false,
         qualifiedMinCount: Int? = nil,
         qualifiedMaxCount: Int? = nil,
         minCount: Int? = nil,
@@ -154,6 +156,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.xoneShapeIRIs = xoneShapeIRIs
         self.notShapeIRI = notShapeIRI
         self.qualifiedValueShapeIRI = qualifiedValueShapeIRI
+        self.qualifiedValueShapesDisjoint = qualifiedValueShapesDisjoint
         self.qualifiedMinCount = qualifiedMinCount
         self.qualifiedMaxCount = qualifiedMaxCount
         self.minCount = minCount
@@ -465,6 +468,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var xoneShapeIRIs: Set<String> = []
             var notShapeIRI: String?
             var qualifiedValueShapeIRI: String?
+            var qualifiedValueShapesDisjoint = false
             var qualifiedMinCount: Int?
             var qualifiedMaxCount: Int?
             var minCount: Int?
@@ -600,6 +604,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.notShapeIRI = object
             } else if predicate == SHACLIRIs.qualifiedValueShape {
                 current.qualifiedValueShapeIRI = object
+            } else if predicate == SHACLIRIs.qualifiedValueShapesDisjoint {
+                current.qualifiedValueShapesDisjoint = isTrueBooleanTerm(object)
             } else if predicate == SHACLIRIs.qualifiedMinCount {
                 guard let count = Int(object) else {
                     throw SHACLError.invalidIntegerLiteral(object)
@@ -739,6 +745,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 xoneShapeIRIs: resolveShapeReferenceIRIs(partial.xoneShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
                 notShapeIRI: partial.notShapeIRI,
                 qualifiedValueShapeIRI: partial.qualifiedValueShapeIRI,
+                qualifiedValueShapesDisjoint: partial.qualifiedValueShapesDisjoint,
                 qualifiedMinCount: partial.qualifiedMinCount,
                 qualifiedMaxCount: partial.qualifiedMaxCount,
                 minCount: partial.minCount,
@@ -2799,8 +2806,24 @@ public struct SHACLCoreValidator: SHACLValidator {
             }
 
             if let qualifiedShapeIRI = propertyShape.qualifiedValueShapeIRI {
+                let siblingQualifiedShapeIRIs: [String]
+                if propertyShape.qualifiedValueShapesDisjoint {
+                    siblingQualifiedShapeIRIs = nodeShape.propertyShapeIRIs.compactMap { siblingIRI in
+                        guard siblingIRI != propertyShapeIRI,
+                              let siblingShape = shapesByIRI[siblingIRI],
+                              siblingShape.kind == .propertyShape,
+                              siblingShape.pathIRI == propertyShape.pathIRI,
+                              let siblingQualifiedShapeIRI = siblingShape.qualifiedValueShapeIRI else {
+                            return nil
+                        }
+                        return siblingQualifiedShapeIRI
+                    }
+                } else {
+                    siblingQualifiedShapeIRIs = []
+                }
+
                 let qualifiedMatchCount = values.reduce(into: 0) { count, valueNode in
-                    if conforms(
+                    let matchesQualifiedShape = conforms(
                         valueNode: valueNode,
                         toNodeShapeIRI: qualifiedShapeIRI,
                         dataGraph: dataGraph,
@@ -2808,9 +2831,29 @@ public struct SHACLCoreValidator: SHACLValidator {
                         nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: depth,
                         visited: &visited
-                    ) {
-                        count += 1
+                    )
+                    guard matchesQualifiedShape else {
+                        return
                     }
+
+                    if propertyShape.qualifiedValueShapesDisjoint {
+                        let matchesSiblingQualifiedShape = siblingQualifiedShapeIRIs.contains { siblingShapeIRI in
+                            conforms(
+                                valueNode: valueNode,
+                                toNodeShapeIRI: siblingShapeIRI,
+                                dataGraph: dataGraph,
+                                shapesByIRI: shapesByIRI,
+                                nodeExpressionsByIRI: nodeExpressionsByIRI,
+                                depth: depth,
+                                visited: &visited
+                            )
+                        }
+                        if matchesSiblingQualifiedShape {
+                            return
+                        }
+                    }
+
+                    count += 1
                 }
 
                 if let qualifiedMin = propertyShape.qualifiedMinCount, qualifiedMatchCount < qualifiedMin {
@@ -3115,6 +3158,7 @@ private enum SHACLIRIs {
     static let not = "http://www.w3.org/ns/shacl#not"
     static let xone = "http://www.w3.org/ns/shacl#xone"
     static let qualifiedValueShape = "http://www.w3.org/ns/shacl#qualifiedValueShape"
+    static let qualifiedValueShapesDisjoint = "http://www.w3.org/ns/shacl#qualifiedValueShapesDisjoint"
     static let qualifiedMinCount = "http://www.w3.org/ns/shacl#qualifiedMinCount"
     static let qualifiedMaxCount = "http://www.w3.org/ns/shacl#qualifiedMaxCount"
     static let rule = "http://www.w3.org/ns/shacl#rule"
