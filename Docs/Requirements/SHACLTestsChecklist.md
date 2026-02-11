@@ -34,9 +34,8 @@ Legend:
   - Covered `hasValue` and `in` fixtures, including RDF list-based `sh:in`.
 - [x] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
   - Covered fixtures for `and`, `or`, `not`, and `xone` across direct shape references and RDF list syntax.
-- [~] `TEST-SHACL-025` Shape-reference and qualified shape tests.
-  - Covered subset `sh:node` fixture.
-  - Covered subset qualified value shape count fixtures.
+- [x] `TEST-SHACL-025` Shape-reference and qualified shape tests.
+  - Covered `sh:node` fixtures, qualified value shape count fixtures, and invalid reference diagnostics.
 
 ## Phase 2: Node Expressions and Rules
 

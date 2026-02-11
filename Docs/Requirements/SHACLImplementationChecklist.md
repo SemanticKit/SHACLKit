@@ -19,7 +19,7 @@ Legend:
 - [x] `REQ-SHACL-000` Create standalone Swift package library (`SHACLKit`) with source/tests/docs scaffolding.
 - [x] `REQ-SHACL-001` Parse/ingest SHACL shapes graph terms required for Core constraints.
 - [x] `REQ-SHACL-002` Resolve targets (`sh:targetClass`, `sh:targetNode`, `sh:targetSubjectsOf`, `sh:targetObjectsOf`).
-- [~] `REQ-SHACL-003` Evaluate node shapes and property shapes against RDF terms/triples.
+- [x] `REQ-SHACL-003` Evaluate node shapes and property shapes against RDF terms/triples.
   - Implemented target-to-focus-node resolution over parsed RDF triples.
   - Implemented node/property evaluation path for `sh:minCount` and `sh:maxCount`.
   - Implemented node-shape-level `sh:class` and `sh:nodeKind` checks on focus nodes.
@@ -38,9 +38,10 @@ Legend:
   - Implemented `sh:in` checks for direct values and RDF collection list syntax.
 - [x] `REQ-SHACL-010` Constraint components: logical composition (`sh:and`, `sh:or`, `sh:not`, `sh:xone`).
   - Implemented for property-shape values using direct shape references and RDF list syntax.
-- [~] `REQ-SHACL-011` Constraint components: shape references (`sh:node`, `sh:property`, qualified value shape family).
-  - Implemented subset `sh:node` evaluation for referenced node shapes.
-  - Implemented subset qualified value shape counts (`sh:qualifiedValueShape`, `sh:qualifiedMinCount`, `sh:qualifiedMaxCount`).
+- [x] `REQ-SHACL-011` Constraint components: shape references (`sh:node`, `sh:property`, qualified value shape family).
+  - Implemented `sh:node` evaluation for referenced node shapes.
+  - Implemented `sh:property` linked property-shape evaluation and reference diagnostics.
+  - Implemented qualified value shape counts (`sh:qualifiedValueShape`, `sh:qualifiedMinCount`, `sh:qualifiedMaxCount`).
 - [x] `REQ-SHACL-012` Enforce recursion/termination safeguards for cyclic shapes.
 - [x] `REQ-SHACL-013` Emit stable machine-readable diagnostics (focus node, path, value, source shape, source constraint).
   - Implemented: `focusNode`, `pathIRI`, `valueNode`, `shapeIRI` (source shape), and `sourceConstraintIRI` on validation results.
