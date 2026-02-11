@@ -39,6 +39,7 @@ Legend:
 - [x] `TEST-SHACL-022` String/range facet tests.
   - Covered `minLength`, `maxLength`, and `pattern` fixtures.
   - Added curated W3C node-shape conformance subset coverage for dateTime range boundaries (`minInclusive-002`, `minInclusive-003`).
+  - Added curated W3C node-shape conformance subset coverage for exclusive numeric bounds (`minExclusive-001`, `maxExclusive-001`).
   - Added curated W3C node-shape conformance subset coverage for `pattern-002`.
   - Covered integer range fixtures for `minInclusive` and `maxInclusive`, including non-numeric values.
 - [x] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).

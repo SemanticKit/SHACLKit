@@ -31,9 +31,9 @@ Legend:
   - Implemented `sh:class` checks for property values.
   - Implemented `sh:datatype` checks with literal datatype inference (`xsd:integer`, typed literals).
   - Implemented `sh:nodeKind` checks (`sh:IRI`, `sh:Literal`, `sh:BlankNode`, `sh:BlankNodeOrIRI`, `sh:BlankNodeOrLiteral`, `sh:IRIOrLiteral`).
-- [x] `REQ-SHACL-008` Constraint components: value range/string facets (`sh:minLength`, `sh:maxLength`, `sh:pattern`, `sh:minInclusive`, `sh:maxInclusive`).
+- [x] `REQ-SHACL-008` Constraint components: value range/string facets (`sh:minLength`, `sh:maxLength`, `sh:pattern`, `sh:minInclusive`, `sh:maxInclusive`, `sh:minExclusive`, `sh:maxExclusive`).
   - Implemented string facets: `sh:minLength`, `sh:maxLength`, `sh:pattern`.
-  - Implemented range facets for integer literals and first-slice `xsd:dateTime` comparability: `sh:minInclusive`, `sh:maxInclusive`.
+  - Implemented range facets for numeric literals and first-slice `xsd:dateTime` comparability: `sh:minInclusive`, `sh:maxInclusive`, `sh:minExclusive`, `sh:maxExclusive`.
 - [x] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).
   - Implemented `sh:hasValue` checks.
   - Implemented `sh:in` checks for direct values and RDF collection list syntax.
