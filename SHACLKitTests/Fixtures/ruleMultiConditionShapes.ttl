@@ -1,0 +1,27 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:CondA
+    a sh:NodeShape ;
+    sh:class ex:A .
+
+ex:CondB
+    a sh:NodeShape ;
+    sh:class ex:B .
+
+ex:DeriveRule
+    a sh:TripleRule ;
+    sh:condition ex:CondA ;
+    sh:condition ex:CondB ;
+    sh:subject sh:this ;
+    sh:predicate ex:derived ;
+    sh:object "ok" .
+
+ex:PersonShape
+    a sh:NodeShape ;
+    sh:targetNode ex:alice ;
+    sh:rule ex:DeriveRule ;
+    sh:property [
+        sh:path ex:derived ;
+        sh:hasValue "ok"
+    ] .

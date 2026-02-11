@@ -76,6 +76,7 @@ Legend:
   - Added fixtures/tests for first-slice `sh:nodeByExpression` behavior on node and property shapes.
 - [~] `TEST-SHACL-210` Rule evaluation fixtures (order, repeatability, termination).
   - Added `sh:TripleRule` fixtures and tests covering rule parsing, execution, repeatability, and self-loop termination behavior.
+  - Added fixtures/tests proving all `sh:condition` entries must conform before triple-rule emission.
 
 ## Phase 3: SHACL SPARQL Extensions
 

@@ -1292,6 +1292,27 @@ private struct TestShapesSource {
     #expect(result.violations.isEmpty)
 }
 
+@Test func coreValidatorRuleEvaluationRequiresAllConditions() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("ruleMultiConditionShapes.ttl")
+    let dataGraph = try fixtureData("ruleMultiConditionValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorRuleEvaluationSkipsWhenConditionMissing() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("ruleMultiConditionShapes.ttl")
+    let dataGraph = try fixtureData("ruleMultiConditionInvalidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
 @Test func coreValidatorThrowsWithoutSandboxedSPARQLExecutor() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("sparqlConstraintShapes.ttl")
