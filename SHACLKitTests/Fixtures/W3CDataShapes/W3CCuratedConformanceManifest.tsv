@@ -95,3 +95,4 @@ core-path-complex-002	data-shapes-test-suite/tests/core/path/path-complex-002-da
 core-path-complex-001	data-shapes-test-suite/tests/core/path/path-complex-001.ttl	data-shapes-test-suite/tests/core/path/path-complex-001.ttl	false	Complex sequence with transitive subclass path.
 core-path-unused-001	data-shapes-test-suite/tests/core/path/path-unused-001-data.ttl	data-shapes-test-suite/tests/core/path/path-unused-001-shapes.ttl	false	Unused ill-formed path must not impact active constraints.
 core-path-strange-001	data-shapes-test-suite/tests/core/path/path-strange-001.ttl	data-shapes-test-suite/tests/core/path/path-strange-001.ttl	false	Strange path node with extra predicates resolves to sequence path.
+core-path-strange-002	data-shapes-test-suite/tests/core/path/path-strange-002.ttl	data-shapes-test-suite/tests/core/path/path-strange-002.ttl	false	Strange path node with mixed valid/invalid metadata resolves to sequence path.
