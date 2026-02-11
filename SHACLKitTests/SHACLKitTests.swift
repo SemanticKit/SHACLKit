@@ -43,25 +43,6 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(Set(propShape.targets).contains(.targetNode("http://example.com/alice")))
 }
 
-@Test func coreValidatorStillReportsNotImplementedWithParsedCount() async throws {
-    let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("basic-targets.ttl")
-    let dataGraph = try fixtureData("data-graph.ttl")
-
-    do {
-        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
-        Issue.record("Expected notImplemented until core engine lands")
-    } catch let error as SHACLError {
-        switch error {
-        case .notImplemented(let detail):
-            #expect(detail.contains("Parsed 1 shape"))
-            #expect(detail.contains("resolved 3 focus nodes"))
-        default:
-            Issue.record("Unexpected SHACLError: \(error)")
-        }
-    }
-}
-
 @Test func focusNodeResolverResolvesSelectorsAgainstDataGraph() async throws {
     let shapesLoader = SHACLShapesGraphLoader()
     let dataLoader = SHACLDataGraphLoader()
@@ -100,4 +81,31 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(byShape["http://example.com/NamePropShape"] == [
         "http://example.com/alice",
     ])
+}
+
+@Test func coreValidatorConformsForMinMaxCountFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("count-constraints-shapes.ttl")
+    let dataGraph = try fixtureData("count-constraints-valid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsDeterministicCountViolations() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("count-constraints-shapes.ttl")
+    let dataGraph = try fixtureData("count-constraints-invalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+
+    #expect(!result.conforms)
+    #expect(result.violations.count == 2)
+
+    let summary = result.violations.map { ($0.focusNode, $0.message) }
+    #expect(summary[0].0 == "http://example.com/alice")
+    #expect(summary[0].1.contains("minCount violation"))
+    #expect(summary[1].0 == "http://example.com/bob")
+    #expect(summary[1].1.contains("maxCount violation"))
 }

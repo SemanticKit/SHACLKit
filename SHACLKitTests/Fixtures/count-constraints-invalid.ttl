@@ -1,0 +1,7 @@
+@prefix ex: <http://example.com/> .
+
+ex:alice a ex:Person .
+
+ex:bob a ex:Person ;
+  ex:name ex:BobName1 ;
+  ex:name ex:BobName2 .

@@ -21,10 +21,10 @@ Legend:
 - [x] `REQ-SHACL-002` Resolve targets (`sh:targetClass`, `sh:targetNode`, `sh:targetSubjectsOf`, `sh:targetObjectsOf`).
 - [~] `REQ-SHACL-003` Evaluate node shapes and property shapes against RDF terms/triples.
   - Implemented target-to-focus-node resolution over parsed RDF triples.
-  - Constraint-component evaluation is still pending.
+  - Implemented node/property evaluation path for `sh:minCount` and `sh:maxCount`.
 - [ ] `REQ-SHACL-004` Support SHACL severity levels and result reporting model.
-- [ ] `REQ-SHACL-005` Generate deterministic validation reports (conforms + detailed results).
-- [ ] `REQ-SHACL-006` Constraint components: cardinality (`sh:minCount`, `sh:maxCount`).
+- [~] `REQ-SHACL-005` Generate deterministic validation reports (conforms + detailed results).
+- [~] `REQ-SHACL-006` Constraint components: cardinality (`sh:minCount`, `sh:maxCount`).
 - [ ] `REQ-SHACL-007` Constraint components: value type checks (`sh:class`, `sh:datatype`, `sh:nodeKind`).
 - [ ] `REQ-SHACL-008` Constraint components: value range/string facets (`sh:minLength`, `sh:maxLength`, `sh:pattern`, `sh:minInclusive`, `sh:maxInclusive`).
 - [ ] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).

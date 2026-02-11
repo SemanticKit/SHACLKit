@@ -22,11 +22,27 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let shapeIRI: String
     public let kind: SHACLShapeKind
     public let targets: [SHACLTargetSelector]
+    public let propertyShapeIRIs: [String]
+    public let pathIRI: String?
+    public let minCount: Int?
+    public let maxCount: Int?
 
-    public init(shapeIRI: String, kind: SHACLShapeKind, targets: [SHACLTargetSelector]) {
+    public init(
+        shapeIRI: String,
+        kind: SHACLShapeKind,
+        targets: [SHACLTargetSelector],
+        propertyShapeIRIs: [String] = [],
+        pathIRI: String? = nil,
+        minCount: Int? = nil,
+        maxCount: Int? = nil
+    ) {
         self.shapeIRI = shapeIRI
         self.kind = kind
         self.targets = targets
+        self.propertyShapeIRIs = propertyShapeIRIs
+        self.pathIRI = pathIRI
+        self.minCount = minCount
+        self.maxCount = maxCount
     }
 }
 
@@ -68,13 +84,37 @@ public struct SHACLTargetResolution: Sendable, Equatable {
     }
 }
 
+public struct SHACLViolation: Sendable, Equatable {
+    public let severity: SHACLSeverity
+    public let shapeIRI: String
+    public let focusNode: String
+    public let pathIRI: String?
+    public let message: String
+
+    public init(
+        severity: SHACLSeverity = .violation,
+        shapeIRI: String,
+        focusNode: String,
+        pathIRI: String?,
+        message: String
+    ) {
+        self.severity = severity
+        self.shapeIRI = shapeIRI
+        self.focusNode = focusNode
+        self.pathIRI = pathIRI
+        self.message = message
+    }
+}
+
 public struct SHACLValidationResult: Sendable, Equatable {
     public let conforms: Bool
     public let message: String
+    public let violations: [SHACLViolation]
 
-    public init(conforms: Bool, message: String) {
+    public init(conforms: Bool, message: String, violations: [SHACLViolation] = []) {
         self.conforms = conforms
         self.message = message
+        self.violations = violations
     }
 }
 
@@ -95,6 +135,7 @@ public enum SHACLError: Error, LocalizedError {
     case invalidPrefixDeclaration(String)
     case unknownPrefix(String)
     case invalidStatement(String)
+    case invalidIntegerLiteral(String)
     case unsupportedTerm(String)
     case notImplemented(String)
 
@@ -108,6 +149,8 @@ public enum SHACLError: Error, LocalizedError {
             return "Unknown prefix: \(prefix)"
         case .invalidStatement(let statement):
             return "Invalid statement: \(statement)"
+        case .invalidIntegerLiteral(let value):
+            return "Invalid integer literal: \(value)"
         case .unsupportedTerm(let term):
             return "Unsupported RDF term in SHACLKit Turtle subset parser: \(term)"
         case .notImplemented(let detail):
@@ -130,6 +173,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         struct PartialShape {
             var kind: SHACLShapeKind?
             var targets: Set<SHACLTargetSelector> = []
+            var propertyShapeIRIs: Set<String> = []
+            var pathIRI: String?
+            var minCount: Int?
+            var maxCount: Int?
         }
 
         var shapes: [String: PartialShape] = [:]
@@ -155,6 +202,20 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.targets.insert(.targetSubjectsOf(object))
             } else if predicate == SHACLIRIs.targetObjectsOf {
                 current.targets.insert(.targetObjectsOf(object))
+            } else if predicate == SHACLIRIs.property {
+                current.propertyShapeIRIs.insert(object)
+            } else if predicate == SHACLIRIs.path {
+                current.pathIRI = object
+            } else if predicate == SHACLIRIs.minCount {
+                guard let count = Int(object) else {
+                    throw SHACLError.invalidIntegerLiteral(object)
+                }
+                current.minCount = count
+            } else if predicate == SHACLIRIs.maxCount {
+                guard let count = Int(object) else {
+                    throw SHACLError.invalidIntegerLiteral(object)
+                }
+                current.maxCount = count
             }
 
             shapes[subject] = current
@@ -167,14 +228,29 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             return SHACLShapeDefinition(
                 shapeIRI: shapeIRI,
                 kind: kind,
-                targets: partial.targets.sorted(by: { lhs, rhs in
-                    String(describing: lhs) < String(describing: rhs)
-                })
+                targets: partial.targets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
+                propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
+                pathIRI: partial.pathIRI,
+                minCount: partial.minCount,
+                maxCount: partial.maxCount
             )
         }
         .sorted(by: { $0.shapeIRI < $1.shapeIRI })
 
         return SHACLShapesGraph(shapes: definitions)
+    }
+
+    private func targetSortKey(_ selector: SHACLTargetSelector) -> String {
+        switch selector {
+        case .targetClass(let iri):
+            return "0:\(iri)"
+        case .targetNode(let iri):
+            return "1:\(iri)"
+        case .targetSubjectsOf(let iri):
+            return "2:\(iri)"
+        case .targetObjectsOf(let iri):
+            return "3:\(iri)"
+        }
     }
 }
 
@@ -243,12 +319,82 @@ public struct SHACLCoreValidator: SHACLValidator {
         let parsedShapes = try shapesLoader.load(from: shapesGraph)
         let parsedData = try dataLoader.load(from: dataGraph)
         let resolutions = focusResolver.resolve(dataGraph: parsedData, shapesGraph: parsedShapes)
-        let resolvedFocusNodes = resolutions.reduce(into: 0) { partial, item in
-            partial += item.focusNodes.count
+        let shapeByIRI = Dictionary(uniqueKeysWithValues: parsedShapes.shapes.map { ($0.shapeIRI, $0) })
+
+        var violations: [SHACLViolation] = []
+
+        for resolution in resolutions {
+            guard let shape = shapeByIRI[resolution.shapeIRI], shape.kind == .nodeShape else {
+                continue
+            }
+            for focusNode in resolution.focusNodes {
+                violations.append(contentsOf: evaluate(nodeShape: shape, focusNode: focusNode, dataGraph: parsedData, shapesByIRI: shapeByIRI))
+            }
         }
-        throw SHACLError.notImplemented(
-            "Core SHACL validation engine. Parsed \(parsedShapes.shapes.count) shape definitions and resolved \(resolvedFocusNodes) focus nodes."
+
+        let sortedViolations = violations.sorted { lhs, rhs in
+            (lhs.shapeIRI, lhs.focusNode, lhs.pathIRI ?? "", lhs.message) < (rhs.shapeIRI, rhs.focusNode, rhs.pathIRI ?? "", rhs.message)
+        }
+
+        if sortedViolations.isEmpty {
+            return SHACLValidationResult(
+                conforms: true,
+                message: "SHACL Core subset validation passed for \(parsedShapes.shapes.count) shapes.",
+                violations: []
+            )
+        }
+
+        return SHACLValidationResult(
+            conforms: false,
+            message: "SHACL Core subset validation failed with \(sortedViolations.count) violation(s).",
+            violations: sortedViolations
         )
+    }
+
+    private func evaluate(
+        nodeShape: SHACLShapeDefinition,
+        focusNode: String,
+        dataGraph: SHACLDataGraph,
+        shapesByIRI: [String: SHACLShapeDefinition]
+    ) -> [SHACLViolation] {
+        var violations: [SHACLViolation] = []
+
+        for propertyShapeIRI in nodeShape.propertyShapeIRIs {
+            guard let propertyShape = shapesByIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
+                continue
+            }
+            guard let pathIRI = propertyShape.pathIRI else {
+                continue
+            }
+
+            let valueCount = dataGraph.triples.filter {
+                $0.subject == focusNode && $0.predicate == pathIRI
+            }.count
+
+            if let minCount = propertyShape.minCount, valueCount < minCount {
+                violations.append(
+                    SHACLViolation(
+                        shapeIRI: propertyShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: pathIRI,
+                        message: "minCount violation: expected >= \(minCount), got \(valueCount)"
+                    )
+                )
+            }
+
+            if let maxCount = propertyShape.maxCount, valueCount > maxCount {
+                violations.append(
+                    SHACLViolation(
+                        shapeIRI: propertyShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: pathIRI,
+                        message: "maxCount violation: expected <= \(maxCount), got \(valueCount)"
+                    )
+                )
+            }
+        }
+
+        return violations
     }
 }
 
@@ -260,6 +406,10 @@ private enum SHACLIRIs {
     static let targetNode = "http://www.w3.org/ns/shacl#targetNode"
     static let targetSubjectsOf = "http://www.w3.org/ns/shacl#targetSubjectsOf"
     static let targetObjectsOf = "http://www.w3.org/ns/shacl#targetObjectsOf"
+    static let property = "http://www.w3.org/ns/shacl#property"
+    static let path = "http://www.w3.org/ns/shacl#path"
+    static let minCount = "http://www.w3.org/ns/shacl#minCount"
+    static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
 }
 
 private struct SHACLTriple {
@@ -294,6 +444,10 @@ private struct SHACLTurtleSubsetParser {
         for rawLine in source.split(separator: "\n", omittingEmptySubsequences: false) {
             let line = String(rawLine).trimmingCharacters(in: .whitespacesAndNewlines)
 
+            if line.isEmpty || line.hasPrefix("#") {
+                continue
+            }
+
             if line.hasPrefix("@prefix") {
                 let pattern = #"^@prefix\s+([A-Za-z][A-Za-z0-9_-]*):\s*<([^>]+)>\s*\.\s*$"#
                 guard let regex = try? NSRegularExpression(pattern: pattern) else {
@@ -308,7 +462,7 @@ private struct SHACLTurtleSubsetParser {
                 let prefix = String(line[prefixRange])
                 let iri = String(line[iriRange])
                 prefixes[prefix] = iri
-            } else if !line.isEmpty {
+            } else {
                 bodyLines.append(String(rawLine))
             }
         }
@@ -472,6 +626,10 @@ private struct SHACLTurtleSubsetParser {
 
         if token.hasPrefix("<") && token.hasSuffix(">") {
             return String(token.dropFirst().dropLast())
+        }
+
+        if token.allSatisfy({ $0.isNumber }) {
+            return token
         }
 
         if let colon = token.firstIndex(of: ":") {

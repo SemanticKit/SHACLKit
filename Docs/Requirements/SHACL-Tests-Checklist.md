@@ -15,14 +15,14 @@ Legend:
 
 - [x] `TEST-SHACL-010` Target selection tests for all core target selectors.
 - [x] `TEST-SHACL-015` Focus-node resolution tests over RDF triples for single and multi-shape target sets.
-- [ ] `TEST-SHACL-011` Node shape validation pass/fail matrix.
-- [ ] `TEST-SHACL-012` Property shape validation pass/fail matrix.
+- [~] `TEST-SHACL-011` Node shape validation pass/fail matrix.
+- [~] `TEST-SHACL-012` Property shape validation pass/fail matrix.
 - [ ] `TEST-SHACL-013` Severity propagation tests (`Violation`, `Warning`, `Info`).
 - [ ] `TEST-SHACL-014` Report model shape and deterministic ordering assertions.
 
 ## Phase 1: Constraint Component Coverage
 
-- [ ] `TEST-SHACL-020` Cardinality component tests.
+- [~] `TEST-SHACL-020` Cardinality component tests.
 - [ ] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
 - [ ] `TEST-SHACL-022` String/range facet tests.
 - [ ] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
