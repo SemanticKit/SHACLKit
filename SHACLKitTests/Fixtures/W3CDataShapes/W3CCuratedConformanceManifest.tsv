@@ -12,3 +12,5 @@ core-node-and-001	data-shapes-test-suite/tests/core/node/and-001.ttl	data-shapes
 core-node-or-001	data-shapes-test-suite/tests/core/node/or-001.ttl	data-shapes-test-suite/tests/core/node/or-001.ttl	false	Logical or list evaluation.
 core-node-not-001	data-shapes-test-suite/tests/core/node/not-001.ttl	data-shapes-test-suite/tests/core/node/not-001.ttl	false	Logical not evaluation.
 core-node-xone-001	data-shapes-test-suite/tests/core/node/xone-001.ttl	data-shapes-test-suite/tests/core/node/xone-001.ttl	false	Logical xone evaluation.
+node-expr-expression-001	shacl12-test-suite/tests/node-expr/constraints/expression-001.ttl	shacl12-test-suite/tests/node-expr/constraints/expression-001.ttl	false	Node-shape expression constraint over class-targeted focus nodes.
+node-expr-nodeByExpression-001	shacl12-test-suite/tests/node-expr/constraints/nodeByExpression-001.ttl	shacl12-test-suite/tests/node-expr/constraints/nodeByExpression-001.ttl	false	Property-shape nodeByExpression constraint in SHACL 1.2 suite.

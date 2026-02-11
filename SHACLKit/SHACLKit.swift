@@ -1118,15 +1118,20 @@ public struct SHACLCoreValidator: SHACLValidator {
         let sparqlByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.sparqlDefinitions.map { ($0.sparqlIRI, $0) })
 
         for shape in shapesGraph.shapes where shape.kind == .nodeShape {
-            if let expressionIRI = shape.expressionIRI, expressionByIRI[expressionIRI] == nil {
+            if let expressionIRI = shape.expressionIRI,
+               expressionByIRI[expressionIRI] == nil,
+               expressionIRI != SHACLIRIs.shThis,
+               !isDirectExpressionLiteralTerm(expressionIRI) {
                 throw SHACLError.invalidShapesGraph(
                     "Node shape \(shape.shapeIRI) references missing node expression \(expressionIRI)"
                 )
             }
             if let nodeByExpressionIRI = shape.nodeByExpressionIRI, expressionByIRI[nodeByExpressionIRI] == nil {
-                throw SHACLError.invalidShapesGraph(
-                    "Node shape \(shape.shapeIRI) references missing nodeByExpression \(nodeByExpressionIRI)"
-                )
+                guard let referencedShape = byIRI[nodeByExpressionIRI], referencedShape.kind == .nodeShape else {
+                    throw SHACLError.invalidShapesGraph(
+                        "Node shape \(shape.shapeIRI) references missing nodeByExpression \(nodeByExpressionIRI)"
+                    )
+                }
             }
             for propertyShapeIRI in shape.propertyShapeIRIs {
                 guard let propertyShape = byIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
@@ -1175,15 +1180,20 @@ public struct SHACLCoreValidator: SHACLValidator {
             if shape.pathIRI == nil && shape.expressionIRI == nil {
                 throw SHACLError.invalidShapesGraph("Property shape \(shape.shapeIRI) is missing both sh:path and sh:expression")
             }
-            if let expressionIRI = shape.expressionIRI, expressionByIRI[expressionIRI] == nil {
+            if let expressionIRI = shape.expressionIRI,
+               expressionByIRI[expressionIRI] == nil,
+               expressionIRI != SHACLIRIs.shThis,
+               !isDirectExpressionLiteralTerm(expressionIRI) {
                 throw SHACLError.invalidShapesGraph(
                     "Property shape \(shape.shapeIRI) references missing node expression \(expressionIRI)"
                 )
             }
             if let nodeByExpressionIRI = shape.nodeByExpressionIRI, expressionByIRI[nodeByExpressionIRI] == nil {
-                throw SHACLError.invalidShapesGraph(
-                    "Property shape \(shape.shapeIRI) references missing nodeByExpression \(nodeByExpressionIRI)"
-                )
+                guard let referencedShape = byIRI[nodeByExpressionIRI], referencedShape.kind == .nodeShape else {
+                    throw SHACLError.invalidShapesGraph(
+                        "Property shape \(shape.shapeIRI) references missing nodeByExpression \(nodeByExpressionIRI)"
+                    )
+                }
             }
 
             let referencedNodeShapeIRIs =
@@ -1200,6 +1210,13 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
         }
+    }
+
+    private func isDirectExpressionLiteralTerm(_ term: String) -> Bool {
+        if term.hasPrefix("\"") {
+            return true
+        }
+        return Int(term) != nil
     }
 
     private func resolveFocusNodes(
