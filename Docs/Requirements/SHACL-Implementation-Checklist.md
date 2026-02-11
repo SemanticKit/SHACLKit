@@ -31,7 +31,8 @@ Legend:
   - Implemented subset `sh:nodeKind` checks (`sh:IRI`, `sh:Literal`, `sh:BlankNode`, `sh:IRIOrLiteral`).
 - [~] `REQ-SHACL-008` Constraint components: value range/string facets (`sh:minLength`, `sh:maxLength`, `sh:pattern`, `sh:minInclusive`, `sh:maxInclusive`).
   - Implemented string facets: `sh:minLength`, `sh:maxLength`, `sh:pattern`.
-- [ ] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).
+- [~] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).
+  - Implemented `sh:hasValue` checks.
 - [ ] `REQ-SHACL-010` Constraint components: logical composition (`sh:and`, `sh:or`, `sh:not`, `sh:xone`).
 - [ ] `REQ-SHACL-011` Constraint components: shape references (`sh:node`, `sh:property`, qualified value shape family).
 - [ ] `REQ-SHACL-012` Enforce recursion/termination safeguards for cyclic shapes.

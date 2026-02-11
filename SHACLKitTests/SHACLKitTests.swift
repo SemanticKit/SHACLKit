@@ -228,3 +228,26 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(messages.contains("minLength violation"))
     #expect(messages.contains("pattern violation"))
 }
+
+@Test func coreValidatorConformsForHasValueFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("hasvalue-constraints-shapes.ttl")
+    let dataGraph = try fixtureData("hasvalue-constraints-valid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsHasValueViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("hasvalue-constraints-shapes.ttl")
+    let dataGraph = try fixtureData("hasvalue-constraints-invalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.message.contains("hasValue violation"))
+    #expect(violation.message.contains("http://example.com/Active"))
+}
