@@ -1,0 +1,23 @@
+@prefix ex: <http://example.com/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:FilterPeopleExpr
+    shnex:filterShape ex:PersonShape ;
+    shnex:nodes ( ex:alice ex:bob ex:charlie ) .
+
+ex:FilterUnconstrainedExpr
+    shnex:filterShape ex:EmptyShape ;
+    shnex:nodes ( ex:alice ex:bob ex:charlie ) .
+
+ex:PersonShape
+    a sh:NodeShape ;
+    sh:class ex:Person .
+
+ex:EmptyShape
+    a sh:NodeShape .
+
+ex:alice rdf:type ex:Person .
+ex:bob rdf:type ex:Person .
+ex:charlie rdf:type ex:Robot .
