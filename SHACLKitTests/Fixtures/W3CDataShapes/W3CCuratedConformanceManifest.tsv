@@ -8,3 +8,7 @@ core-node-maxLength-001	data-shapes-test-suite/tests/core/node/maxLength-001.ttl
 core-node-pattern-001	data-shapes-test-suite/tests/core/node/pattern-001.ttl	data-shapes-test-suite/tests/core/node/pattern-001.ttl	false	Regex pattern constraint checks.
 core-node-hasValue-001	data-shapes-test-suite/tests/core/node/hasValue-001.ttl	data-shapes-test-suite/tests/core/node/hasValue-001.ttl	false	Node hasValue evaluation.
 core-node-in-001	data-shapes-test-suite/tests/core/node/in-001.ttl	data-shapes-test-suite/tests/core/node/in-001.ttl	false	Node in-list membership checks.
+core-node-and-001	data-shapes-test-suite/tests/core/node/and-001.ttl	data-shapes-test-suite/tests/core/node/and-001.ttl	false	Logical and list evaluation.
+core-node-or-001	data-shapes-test-suite/tests/core/node/or-001.ttl	data-shapes-test-suite/tests/core/node/or-001.ttl	false	Logical or list evaluation.
+core-node-not-001	data-shapes-test-suite/tests/core/node/not-001.ttl	data-shapes-test-suite/tests/core/node/not-001.ttl	false	Logical not evaluation.
+core-node-xone-001	data-shapes-test-suite/tests/core/node/xone-001.ttl	data-shapes-test-suite/tests/core/node/xone-001.ttl	false	Logical xone evaluation.
