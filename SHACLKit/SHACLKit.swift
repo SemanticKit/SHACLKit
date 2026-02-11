@@ -207,6 +207,7 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case count(inputTerm: String, staticListLength: Int?)
     case min(inputTerm: String, staticListMembers: [String]?)
     case max(inputTerm: String, staticListMembers: [String]?)
+    case sum(inputTerm: String, staticListMembers: [String]?)
     case ifThenElse(condition: String, thenTerm: String, elseTerm: String?)
     case pathValues(path: SHACLPropertyPath, focusNodeTerm: String?)
 }
@@ -507,6 +508,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var countObjects: Set<String> = []
             var minObjects: Set<String> = []
             var maxObjects: Set<String> = []
+            var sumObjects: Set<String> = []
             var ifObjects: Set<String> = []
             var thenObjects: Set<String> = []
             var elseObjects: Set<String> = []
@@ -718,6 +720,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.maxObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexSum {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.sumObjects.insert(object)
+                nodeExpressions[subject] = expression
             } else if predicate == SHACLIRIs.shnexIf {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.ifObjects.insert(object)
@@ -803,6 +809,17 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .max(inputTerm: resolvedMaxInput, staticListMembers: staticListMembers)
+                )
+            }
+
+            if let sumObject = partial.sumObjects.sorted().first {
+                let resolvedSumInput = resolveShapeReferenceIRIs([sumObject], triplesBySubject: triplesBySubject).sorted().first ?? sumObject
+                let staticListMembers = rdfListLength(sumObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveShapeReferenceIRIs([sumObject], triplesBySubject: triplesBySubject).sorted()
+                    : nil
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .sum(inputTerm: resolvedSumInput, staticListMembers: staticListMembers)
                 )
             }
 
@@ -1475,6 +1492,16 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 return []
             }
             return [maximum]
+        case .sum(let inputTerm, let staticListMembers):
+            let output = staticListMembers.map(Set.init) ?? evaluateTerm(
+                inputTerm,
+                focusNode: focusNode,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            return [numericSum(from: output)]
         case .ifThenElse(let condition, let thenTerm, let elseTerm):
             let conditionOutput = evaluateTerm(
                 condition,
@@ -1543,7 +1570,7 @@ private func isTrueOnlyExpressionSet(_ outputNodes: Set<String>) -> Bool {
 private func numericExtremeTerm(from outputNodes: Set<String>, findMaximum: Bool) -> String? {
     var chosen: (term: String, value: Double)?
     for term in outputNodes {
-        guard let value = nodeExpressionNumericValue(term) else {
+        guard let value = nodeExpressionNumericTerm(term)?.value else {
             continue
         }
         guard let current = chosen else {
@@ -1561,14 +1588,44 @@ private func numericExtremeTerm(from outputNodes: Set<String>, findMaximum: Bool
     return chosen?.term
 }
 
-private func nodeExpressionNumericValue(_ term: String) -> Double? {
-    if let direct = Double(term) {
-        return direct
+private func numericSum(from outputNodes: Set<String>) -> String {
+    var total = 0.0
+    var sawDecimal = false
+    for term in outputNodes {
+        guard let parsed = nodeExpressionNumericTerm(term) else {
+            continue
+        }
+        total += parsed.value
+        if !parsed.isInteger {
+            sawDecimal = true
+        }
     }
-    guard let lexical = nodeExpressionLiteralLexicalForm(term) else {
+
+    if !sawDecimal && floor(total) == total {
+        return String(Int(total))
+    }
+
+    var text = String(total)
+    if text.contains(".") {
+        while text.last == "0" {
+            text.removeLast()
+        }
+        if text.last == "." {
+            text.removeLast()
+        }
+    }
+    return text
+}
+
+private func nodeExpressionNumericTerm(_ term: String) -> (value: Double, isInteger: Bool)? {
+    if let direct = Double(term) {
+        return (direct, Int(term) != nil)
+    }
+    guard let lexical = nodeExpressionLiteralLexicalForm(term),
+          let parsed = Double(lexical) else {
         return nil
     }
-    return Double(lexical)
+    return (parsed, Int(lexical) != nil)
 }
 
 private func nodeExpressionLiteralLexicalForm(_ value: String) -> String? {
@@ -3864,6 +3921,7 @@ private enum SHACLIRIs {
     static let shnexCount = "http://www.w3.org/ns/shacl-node-expr#count"
     static let shnexMin = "http://www.w3.org/ns/shacl-node-expr#min"
     static let shnexMax = "http://www.w3.org/ns/shacl-node-expr#max"
+    static let shnexSum = "http://www.w3.org/ns/shacl-node-expr#sum"
     static let shnexIf = "http://www.w3.org/ns/shacl-node-expr#if"
     static let shnexThen = "http://www.w3.org/ns/shacl-node-expr#then"
     static let shnexElse = "http://www.w3.org/ns/shacl-node-expr#else"

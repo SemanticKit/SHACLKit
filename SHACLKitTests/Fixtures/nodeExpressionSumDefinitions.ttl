@@ -1,0 +1,18 @@
+@prefix ex: <http://example.com/> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:SumEmpty
+    shnex:sum [] .
+
+ex:SumListIntegers
+    shnex:sum ( 4 5 3 ) .
+
+ex:SumListMixed
+    shnex:sum ( 4 "5.1"^^xsd:decimal 3 ) .
+
+ex:SumNodes
+    shnex:sum ex:RevenueNodes .
+
+ex:RevenueNodes
+    shnex:nodes ( "4.2"^^xsd:decimal "37.8"^^xsd:decimal ) .

@@ -440,6 +440,40 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(maxNodes == Set(["9"]))
 }
 
+@Test func nodeExpressionEvaluatorEvaluatesSum() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("nodeExpressionSumDefinitions.ttl"))
+    let evaluator = SHACLNodeExpressionEvaluator()
+
+    let sumEmpty = evaluator.evaluate(
+        expressionIRI: "http://example.com/SumEmpty",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(sumEmpty == Set(["0"]))
+
+    let sumListIntegers = evaluator.evaluate(
+        expressionIRI: "http://example.com/SumListIntegers",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(sumListIntegers == Set(["12"]))
+
+    let sumListMixed = evaluator.evaluate(
+        expressionIRI: "http://example.com/SumListMixed",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(sumListMixed == Set(["12.1"]))
+
+    let sumNodes = evaluator.evaluate(
+        expressionIRI: "http://example.com/SumNodes",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(sumNodes == Set(["42"]))
+}
+
 @Test func coreValidatorConformsForExpressionDerivedPropertyValues() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("nodeExpressionConstraintValidShapes.ttl")
@@ -559,6 +593,27 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("expressionConstraintMaxShapes.ttl")
     let dataGraph = try fixtureData("expressionConstraintMaxInvalidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
+@Test func coreValidatorConformsForSumExpressionConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintSumShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintSumValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsSumExpressionConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintSumShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintSumInvalidData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)

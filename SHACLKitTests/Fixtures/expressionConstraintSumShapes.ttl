@@ -1,0 +1,17 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:PersonShape
+    a sh:NodeShape ;
+    sh:targetNode ex:alice ;
+    sh:property ex:ScoreSumShape .
+
+ex:ScoreSumShape
+    sh:expression ex:ScoreSumExpr ;
+    sh:hasValue 3 .
+
+ex:ScoreSumExpr
+    shnex:sum [
+        shnex:pathValues ex:score
+    ] .
