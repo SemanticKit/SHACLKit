@@ -503,6 +503,39 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(companies == Set(["http://example.com/Company1", "http://example.com/Company2"]))
 }
 
+@Test func nodeExpressionEvaluatorEvaluatesMatchAll() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let graphData = try fixtureData("nodeExpressionMatchAllDefinitions.ttl")
+    let shapesGraph = try loader.load(from: graphData)
+    let dataGraph = try dataLoader.load(from: graphData)
+    let evaluator = SHACLNodeExpressionEvaluator()
+
+    let matchAllEmpty = evaluator.evaluate(
+        expressionIRI: "http://example.com/MatchAllEmpty",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(matchAllEmpty == Set(["\"true\"^^http://www.w3.org/2001/XMLSchema#boolean"]))
+
+    let matchAllTrue = evaluator.evaluate(
+        expressionIRI: "http://example.com/MatchAllTrue",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(matchAllTrue == Set(["\"true\"^^http://www.w3.org/2001/XMLSchema#boolean"]))
+
+    let matchAllFalse = evaluator.evaluate(
+        expressionIRI: "http://example.com/MatchAllFalse",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(matchAllFalse == Set(["\"false\"^^http://www.w3.org/2001/XMLSchema#boolean"]))
+}
+
 @Test func nodeExpressionEvaluatorEvaluatesMinAndMax() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionMinMaxDefinitions.ttl"))
@@ -772,6 +805,27 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("expressionConstraintNodesMatchingInvalidShapes.ttl")
     let dataGraph = try fixtureData("expressionConstraintNodesMatchingValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
+@Test func coreValidatorConformsForMatchAllExpressionConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintMatchAllShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintMatchAllValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsMatchAllExpressionConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintMatchAllShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintMatchAllInvalidData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)

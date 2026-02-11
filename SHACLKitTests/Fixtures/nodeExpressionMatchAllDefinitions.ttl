@@ -1,0 +1,15 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:MatchAllEmpty
+    shnex:matchAll [ sh:minInclusive 3 ] ;
+    shnex:nodes [] .
+
+ex:MatchAllTrue
+    shnex:matchAll [ sh:minInclusive 3 ] ;
+    shnex:nodes ( 4 3 5 ) .
+
+ex:MatchAllFalse
+    shnex:matchAll [ sh:minInclusive 3 ] ;
+    shnex:nodes ( 4 3 1 5 ) .

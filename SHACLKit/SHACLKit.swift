@@ -207,6 +207,7 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case count(inputTerm: String, staticListLength: Int?)
     case variable(String)
     case distinct(inputTerm: String, staticListMembers: [String]?)
+    case matchAll(inputTerm: String, shapeTerm: String, staticListMembers: [String]?)
     case instancesOf(String)
     case nodesMatching(String)
     case min(inputTerm: String, staticListMembers: [String]?)
@@ -512,6 +513,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var countObjects: Set<String> = []
             var variableNames: Set<String> = []
             var distinctObjects: Set<String> = []
+            var matchAllObjects: Set<String> = []
             var instancesOfObjects: Set<String> = []
             var nodesMatchingObjects: Set<String> = []
             var minObjects: Set<String> = []
@@ -728,6 +730,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.distinctObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexMatchAll {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.matchAllObjects.insert(object)
+                nodeExpressions[subject] = expression
             } else if predicate == SHACLIRIs.shnexInstancesOf {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.instancesOfObjects.insert(object)
@@ -787,6 +793,18 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .intersection(intersectionMembers)
+                )
+            }
+
+            if let shapeTerm = resolveShapeReferenceIRIs(partial.matchAllObjects, triplesBySubject: triplesBySubject).sorted().first,
+               let inputObject = partial.nodesObjects.sorted().first {
+                let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
+                let staticListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
+                    : nil
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .matchAll(inputTerm: resolvedInput, shapeTerm: shapeTerm, staticListMembers: staticListMembers)
                 )
             }
 
@@ -1546,6 +1564,31 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 depth: depth + 1,
                 visited: &visited
             )
+        case .matchAll(let inputTerm, let shapeTerm, let staticListMembers):
+            let inputNodes = staticListMembers.map(Set.init) ?? evaluateTerm(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            if inputNodes.isEmpty {
+                return ["\"true\"^^\(SHACLIRIs.xsdBoolean)"]
+            }
+            guard let dataGraph else {
+                return ["\"false\"^^\(SHACLIRIs.xsdBoolean)"]
+            }
+            let matched = nodesMatching(
+                shapeIRI: shapeTerm,
+                candidates: inputNodes,
+                shapesGraph: shapesGraph,
+                dataGraph: dataGraph
+            )
+            return matched.count == inputNodes.count
+                ? ["\"true\"^^\(SHACLIRIs.xsdBoolean)"]
+                : ["\"false\"^^\(SHACLIRIs.xsdBoolean)"]
         case .instancesOf(let classIRI):
             guard let dataGraph else {
                 return []
@@ -4133,6 +4176,7 @@ private enum SHACLIRIs {
     static let shnexCount = "http://www.w3.org/ns/shacl-node-expr#count"
     static let shnexVar = "http://www.w3.org/ns/shacl-node-expr#var"
     static let shnexDistinct = "http://www.w3.org/ns/shacl-node-expr#distinct"
+    static let shnexMatchAll = "http://www.w3.org/ns/shacl-node-expr#matchAll"
     static let shnexInstancesOf = "http://www.w3.org/ns/shacl-node-expr#instancesOf"
     static let shnexNodesMatching = "http://www.w3.org/ns/shacl-node-expr#nodesMatching"
     static let shnexMin = "http://www.w3.org/ns/shacl-node-expr#min"
