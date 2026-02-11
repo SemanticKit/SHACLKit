@@ -185,6 +185,17 @@ public protocol SHACLDataGraphLoading: Sendable {
 
 public protocol SHACLValidator: Sendable {
     func validate(dataGraph: Data, shapesGraph: Data) throws -> SHACLValidationResult
+    func validate(dataGraph: SHACLDataGraph, shapesGraph: SHACLShapesGraph) throws -> SHACLValidationResult
+}
+
+public protocol SHACLDataGraphAdapting: Sendable {
+    associatedtype Source
+    func adapt(_ source: Source) throws -> SHACLDataGraph
+}
+
+public protocol SHACLShapesGraphAdapting: Sendable {
+    associatedtype Source
+    func adapt(_ source: Source) throws -> SHACLShapesGraph
 }
 
 public enum SHACLError: Error, LocalizedError {
@@ -483,8 +494,14 @@ public struct SHACLCoreValidator: SHACLValidator {
 
     public func validate(dataGraph: Data, shapesGraph: Data) throws -> SHACLValidationResult {
         let parsedShapes = try shapesLoader.load(from: shapesGraph)
-        try validateShapesGraph(parsedShapes)
         let parsedData = try dataLoader.load(from: dataGraph)
+        return try validate(dataGraph: parsedData, shapesGraph: parsedShapes)
+    }
+
+    public func validate(dataGraph: SHACLDataGraph, shapesGraph: SHACLShapesGraph) throws -> SHACLValidationResult {
+        try validateShapesGraph(shapesGraph)
+        let parsedShapes = shapesGraph
+        let parsedData = dataGraph
         let resolutions = focusResolver.resolve(dataGraph: parsedData, shapesGraph: parsedShapes)
         let shapeByIRI = Dictionary(uniqueKeysWithValues: parsedShapes.shapes.map { ($0.shapeIRI, $0) })
 
