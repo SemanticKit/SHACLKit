@@ -1001,6 +1001,26 @@ private struct TestShapesSource {
     }
 }
 
+@Test func coreValidatorThrowsForMissingReferencedNodeByExpressionOnNodeShape() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("invalidShapesUnknownNodeByExpressionNode.ttl")
+    let dataGraph = try fixtureData("invalidShapesData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
+@Test func coreValidatorThrowsForMissingReferencedNodeByExpressionOnPropertyShape() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("invalidShapesUnknownNodeByExpressionProperty.ttl")
+    let dataGraph = try fixtureData("invalidShapesData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorThrowsForPhaseGatedRulePredicate() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("phaseGatedRulesShapes.ttl")

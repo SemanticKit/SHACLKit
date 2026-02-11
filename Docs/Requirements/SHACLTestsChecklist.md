@@ -61,7 +61,7 @@ Legend:
 
 - [x] `TEST-SHACL-030` Recursion/cycle guard tests.
 - [x] `TEST-SHACL-031` Invalid shapes graph diagnostics tests.
-  - Covered missing `sh:path`, missing referenced property shape, missing referenced node shape, and missing referenced node expression failures.
+  - Covered missing `sh:path`, missing referenced property shape, missing referenced node shape, missing referenced node expression, and missing `sh:nodeByExpression` reference failures.
 - [x] `TEST-SHACL-032` Large graph smoke test for baseline performance.
 - [x] `TEST-SHACL-033` Regression suite for previously fixed defects.
   - Added deterministic regression coverage for prior cycle/severity behavior.
