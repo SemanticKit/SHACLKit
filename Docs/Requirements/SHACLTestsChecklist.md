@@ -15,6 +15,7 @@ Legend:
 ## Phase 1: Core Behavior Tests
 
 - [x] `TEST-SHACL-010` Target selection tests for all core target selectors.
+  - Added coverage for `sh:targetNode` selectors backed by node-expression definitions.
 - [x] `TEST-SHACL-015` Focus-node resolution tests over RDF triples for single and multi-shape target sets.
 - [x] `TEST-SHACL-011` Node shape validation pass/fail matrix.
   - Covered node-shape-level `sh:class` and `sh:nodeKind` pass/fail fixtures with matrix assertions.

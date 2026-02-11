@@ -45,6 +45,13 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(Set(propShape.targets).contains(.targetNode("http://example.com/alice")))
 }
 
+@Test func shapesLoaderParsesTargetNodeExpressionSelectors() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("targetNodeExpressionShapes.ttl"))
+    let shape = try #require(graph.shapes.first(where: { $0.shapeIRI == "http://example.com/ExprTargetShape" }))
+    #expect(Set(shape.targets).contains(.targetNodeExpression("_:expr")))
+}
+
 @Test func shapesLoaderParsesNodeExpressionDefinitions() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionDefinitions.ttl"))
@@ -210,6 +217,22 @@ private func fixtureData(_ name: String) throws -> Data {
     ])
     #expect(byShape["http://example.com/NamePropShape"] == [
         "http://example.com/alice",
+    ])
+}
+
+@Test func focusNodeResolverResolvesTargetNodeExpressions() async throws {
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let resolver = SHACLFocusNodeResolver()
+
+    let shapes = try shapesLoader.load(from: fixtureData("targetNodeExpressionShapes.ttl"))
+    let dataGraph = try dataLoader.load(from: fixtureData("dataGraph.ttl"))
+    let resolutions = resolver.resolve(dataGraph: dataGraph, shapesGraph: shapes)
+
+    let resolution = try #require(resolutions.first(where: { $0.shapeIRI == "http://example.com/ExprTargetShape" }))
+    #expect(resolution.focusNodes == [
+        "http://example.com/alice",
+        "http://example.com/bob",
     ])
 }
 

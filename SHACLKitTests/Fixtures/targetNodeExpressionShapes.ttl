@@ -1,0 +1,12 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:ExprTargetShape a sh:NodeShape ;
+  sh:targetNode _:expr ;
+  sh:property ex:NameShape .
+
+ex:NameShape a sh:PropertyShape ;
+  sh:path ex:name ;
+  sh:minCount 1 .
+
+_:expr sh:union ( ex:alice ex:bob ) .

@@ -14,6 +14,7 @@ public enum SHACLShapeKind: String, Sendable, Codable {
 public enum SHACLTargetSelector: Sendable, Hashable {
     case targetClass(String)
     case targetNode(String)
+    case targetNodeExpression(String)
     case targetSubjectsOf(String)
     case targetObjectsOf(String)
 }
@@ -451,15 +452,43 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
 
         let triplesBySubject = Dictionary(grouping: triples, by: \.subject)
 
+        let expressionDefinitions = nodeExpressions.compactMap { expressionIRI, partial -> SHACLNodeExpressionDefinition? in
+            let unionMembers = resolveShapeReferenceIRIs(partial.unionMemberObjects, triplesBySubject: triplesBySubject).sorted()
+            if !unionMembers.isEmpty {
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .union(unionMembers)
+                )
+            }
+
+            let intersectionMembers = resolveShapeReferenceIRIs(partial.intersectionMemberObjects, triplesBySubject: triplesBySubject).sorted()
+            if !intersectionMembers.isEmpty {
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .intersection(intersectionMembers)
+                )
+            }
+
+            return nil
+        }
+        .sorted(by: { $0.expressionIRI < $1.expressionIRI })
+        let expressionIRIs = Set(expressionDefinitions.map(\.expressionIRI))
+
         let definitions = shapes.compactMap { shapeIRI, partial -> SHACLShapeDefinition? in
             guard let kind = partial.kind else {
                 return nil
+            }
+            let normalizedTargets = partial.targets.map { selector -> SHACLTargetSelector in
+                if case .targetNode(let node) = selector, expressionIRIs.contains(node) {
+                    return .targetNodeExpression(node)
+                }
+                return selector
             }
             return SHACLShapeDefinition(
                 shapeIRI: shapeIRI,
                 kind: kind,
                 severity: partial.severity,
-                targets: partial.targets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
+                targets: normalizedTargets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
                 pathIRI: partial.pathIRI,
                 expressionIRI: partial.expressionIRI,
@@ -487,27 +516,6 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         }
         .sorted(by: { $0.shapeIRI < $1.shapeIRI })
 
-        let expressionDefinitions = nodeExpressions.compactMap { expressionIRI, partial -> SHACLNodeExpressionDefinition? in
-            let unionMembers = resolveShapeReferenceIRIs(partial.unionMemberObjects, triplesBySubject: triplesBySubject).sorted()
-            if !unionMembers.isEmpty {
-                return SHACLNodeExpressionDefinition(
-                    expressionIRI: expressionIRI,
-                    kind: .union(unionMembers)
-                )
-            }
-
-            let intersectionMembers = resolveShapeReferenceIRIs(partial.intersectionMemberObjects, triplesBySubject: triplesBySubject).sorted()
-            if !intersectionMembers.isEmpty {
-                return SHACLNodeExpressionDefinition(
-                    expressionIRI: expressionIRI,
-                    kind: .intersection(intersectionMembers)
-                )
-            }
-
-            return nil
-        }
-        .sorted(by: { $0.expressionIRI < $1.expressionIRI })
-
         return SHACLShapesGraph(shapes: definitions, nodeExpressions: expressionDefinitions)
     }
 
@@ -517,10 +525,12 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             return "0:\(iri)"
         case .targetNode(let iri):
             return "1:\(iri)"
-        case .targetSubjectsOf(let iri):
+        case .targetNodeExpression(let iri):
             return "2:\(iri)"
-        case .targetObjectsOf(let iri):
+        case .targetSubjectsOf(let iri):
             return "3:\(iri)"
+        case .targetObjectsOf(let iri):
+            return "4:\(iri)"
         }
     }
 
@@ -645,13 +655,13 @@ public struct SHACLFocusNodeResolver: Sendable {
         shapesGraph.shapes.map { shape in
             var nodes: Set<String> = []
             for selector in shape.targets {
-                nodes.formUnion(resolve(selector: selector, in: dataGraph))
+                nodes.formUnion(resolve(selector: selector, in: dataGraph, shapesGraph: shapesGraph))
             }
             return SHACLTargetResolution(shapeIRI: shape.shapeIRI, focusNodes: nodes.sorted())
         }
     }
 
-    private func resolve(selector: SHACLTargetSelector, in graph: SHACLDataGraph) -> Set<String> {
+    private func resolve(selector: SHACLTargetSelector, in graph: SHACLDataGraph, shapesGraph: SHACLShapesGraph) -> Set<String> {
         switch selector {
         case .targetClass(let classIRI):
             return Set(
@@ -661,6 +671,13 @@ public struct SHACLFocusNodeResolver: Sendable {
             )
         case .targetNode(let nodeIRI):
             return Set([nodeIRI])
+        case .targetNodeExpression(let expressionIRI):
+            let output = SHACLNodeExpressionEvaluator().evaluate(
+                expressionIRI: expressionIRI,
+                focusNode: "",
+                shapesGraph: shapesGraph
+            )
+            return output
         case .targetSubjectsOf(let predicateIRI):
             return Set(graph.triples.filter { $0.predicate == predicateIRI }.map(\.subject))
         case .targetObjectsOf(let predicateIRI):
