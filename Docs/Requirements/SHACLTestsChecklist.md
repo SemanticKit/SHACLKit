@@ -29,7 +29,8 @@ Legend:
   - Covered `minLength`, `maxLength`, and `pattern` fixtures.
 - [~] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
   - Covered `hasValue` and subset `in` fixtures.
-- [ ] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
+- [~] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
+  - Covered subset fixtures for `and`, `or`, `not`, and `xone` with direct shape-IRI object syntax.
 - [~] `TEST-SHACL-025` Shape-reference and qualified shape tests.
   - Covered subset `sh:node` fixture.
 

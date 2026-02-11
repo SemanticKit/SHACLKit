@@ -1,0 +1,4 @@
+@prefix ex: <http://example.com/> .
+
+ex:alice ex:status ex:s1 .
+ex:s1 ex:type ex:Banned .

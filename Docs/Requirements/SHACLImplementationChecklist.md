@@ -34,7 +34,8 @@ Legend:
 - [~] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).
   - Implemented `sh:hasValue` checks.
   - Implemented subset `sh:in` checks using direct object-list syntax.
-- [ ] `REQ-SHACL-010` Constraint components: logical composition (`sh:and`, `sh:or`, `sh:not`, `sh:xone`).
+- [~] `REQ-SHACL-010` Constraint components: logical composition (`sh:and`, `sh:or`, `sh:not`, `sh:xone`).
+  - Implemented subset for property-shape values using direct shape-IRI object syntax.
 - [~] `REQ-SHACL-011` Constraint components: shape references (`sh:node`, `sh:property`, qualified value shape family).
   - Implemented subset `sh:node` evaluation for referenced node shapes.
 - [x] `REQ-SHACL-012` Enforce recursion/termination safeguards for cyclic shapes.

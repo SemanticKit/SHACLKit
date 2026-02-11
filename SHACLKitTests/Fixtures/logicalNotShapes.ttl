@@ -1,0 +1,17 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:EntryShape a sh:NodeShape ;
+  sh:targetNode ex:alice ;
+  sh:property ex:StatusShape .
+
+ex:StatusShape a sh:PropertyShape ;
+  sh:path ex:status ;
+  sh:not ex:ForbiddenShape .
+
+ex:ForbiddenShape a sh:NodeShape ;
+  sh:property ex:ForbiddenTypeShape .
+
+ex:ForbiddenTypeShape a sh:PropertyShape ;
+  sh:path ex:type ;
+  sh:hasValue ex:Banned .

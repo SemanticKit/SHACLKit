@@ -1,0 +1,24 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:EntryShape a sh:NodeShape ;
+  sh:targetNode ex:alice ;
+  sh:property ex:ProfileShape .
+
+ex:ProfileShape a sh:PropertyShape ;
+  sh:path ex:profile ;
+  sh:xone ex:GoldShape , ex:SilverShape .
+
+ex:GoldShape a sh:NodeShape ;
+  sh:property ex:GoldTypeShape .
+
+ex:GoldTypeShape a sh:PropertyShape ;
+  sh:path ex:level ;
+  sh:hasValue ex:Gold .
+
+ex:SilverShape a sh:NodeShape ;
+  sh:property ex:SilverTypeShape .
+
+ex:SilverTypeShape a sh:PropertyShape ;
+  sh:path ex:level ;
+  sh:hasValue ex:Silver .

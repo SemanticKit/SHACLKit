@@ -1,0 +1,4 @@
+@prefix ex: <http://example.com/> .
+
+ex:alice ex:role ex:r1 .
+ex:r1 ex:type ex:Guest .

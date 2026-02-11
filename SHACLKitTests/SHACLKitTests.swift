@@ -357,3 +357,86 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#minCount")
     #expect(violation.message.contains("minCount violation"))
 }
+
+@Test func coreValidatorConformsForLogicalOrFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("logicalOrShapes.ttl")
+    let dataGraph = try fixtureData("logicalOrValid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+}
+
+@Test func coreValidatorReportsLogicalOrViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("logicalOrShapes.ttl")
+    let dataGraph = try fixtureData("logicalOrInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#or")
+    #expect(violation.message.contains("or violation"))
+}
+
+@Test func coreValidatorConformsForLogicalAndFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("logicalAndShapes.ttl")
+    let dataGraph = try fixtureData("logicalAndValid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+}
+
+@Test func coreValidatorReportsLogicalAndViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("logicalAndShapes.ttl")
+    let dataGraph = try fixtureData("logicalAndInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first { $0.sourceConstraintIRI == "http://www.w3.org/ns/shacl#and" })
+    #expect(violation.message.contains("and violation"))
+}
+
+@Test func coreValidatorConformsForLogicalNotFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("logicalNotShapes.ttl")
+    let dataGraph = try fixtureData("logicalNotValid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+}
+
+@Test func coreValidatorReportsLogicalNotViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("logicalNotShapes.ttl")
+    let dataGraph = try fixtureData("logicalNotInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#not")
+    #expect(violation.message.contains("not violation"))
+}
+
+@Test func coreValidatorConformsForLogicalXoneFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("logicalXoneShapes.ttl")
+    let dataGraph = try fixtureData("logicalXoneValid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+}
+
+@Test func coreValidatorReportsLogicalXoneViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("logicalXoneShapes.ttl")
+    let dataGraph = try fixtureData("logicalXoneInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#xone")
+    #expect(violation.message.contains("xone violation"))
+}
