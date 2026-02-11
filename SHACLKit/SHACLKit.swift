@@ -204,6 +204,7 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case intersection([String])
     case nodes([String])
     case exists(String)
+    case ifThenElse(condition: String, thenTerm: String, elseTerm: String?)
     case pathValues(path: SHACLPropertyPath, focusNodeTerm: String?)
 }
 
@@ -500,6 +501,9 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var intersectionMemberObjects: Set<String> = []
             var nodesObjects: Set<String> = []
             var existsObjects: Set<String> = []
+            var ifObjects: Set<String> = []
+            var thenObjects: Set<String> = []
+            var elseObjects: Set<String> = []
             var pathValuesObject: String?
             var pathValuesFocusNodeObject: String?
         }
@@ -696,6 +700,18 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.existsObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexIf {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.ifObjects.insert(object)
+                nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexThen {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.thenObjects.insert(object)
+                nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexElse {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.elseObjects.insert(object)
+                nodeExpressions[subject] = expression
             } else if predicate == SHACLIRIs.shnexPathValues {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.pathValuesObject = object
@@ -738,6 +754,16 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .exists(existsInput)
+                )
+            }
+
+            let ifTerms = resolveShapeReferenceIRIs(partial.ifObjects, triplesBySubject: triplesBySubject).sorted()
+            let thenTerms = resolveShapeReferenceIRIs(partial.thenObjects, triplesBySubject: triplesBySubject).sorted()
+            let elseTerms = resolveShapeReferenceIRIs(partial.elseObjects, triplesBySubject: triplesBySubject).sorted()
+            if let condition = ifTerms.first, let thenTerm = thenTerms.first {
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .ifThenElse(condition: condition, thenTerm: thenTerm, elseTerm: elseTerms.first)
                 )
             }
 
@@ -1330,6 +1356,36 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 visited: &visited
             )
             return output.isEmpty ? ["false"] : ["true"]
+        case .ifThenElse(let condition, let thenTerm, let elseTerm):
+            let conditionOutput = evaluateTerm(
+                condition,
+                focusNode: focusNode,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            if isTrueOnlyExpressionSet(conditionOutput) {
+                return evaluateTerm(
+                    thenTerm,
+                    focusNode: focusNode,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    depth: depth + 1,
+                    visited: &visited
+                )
+            }
+            guard let elseTerm else {
+                return []
+            }
+            return evaluateTerm(
+                elseTerm,
+                focusNode: focusNode,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
         case .pathValues(let path, let focusNodeTerm):
             guard let dataGraph else {
                 return []
@@ -1352,6 +1408,17 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             }
         }
     }
+}
+
+private func isTrueOnlyExpressionSet(_ outputNodes: Set<String>) -> Bool {
+    guard outputNodes.count == 1, let only = outputNodes.first else {
+        return false
+    }
+    return only == "true"
+        || only == "1"
+        || only == "\"true\""
+        || only == "\"true\"^^\(SHACLIRIs.xsdBoolean)"
+        || only == "\"1\"^^\(SHACLIRIs.xsdBoolean)"
 }
 
 private func evaluatePropertyPathValues(
@@ -3633,6 +3700,9 @@ private enum SHACLIRIs {
     static let shThis = "http://www.w3.org/ns/shacl#this"
     static let shnexNodes = "http://www.w3.org/ns/shacl-node-expr#nodes"
     static let shnexExists = "http://www.w3.org/ns/shacl-node-expr#exists"
+    static let shnexIf = "http://www.w3.org/ns/shacl-node-expr#if"
+    static let shnexThen = "http://www.w3.org/ns/shacl-node-expr#then"
+    static let shnexElse = "http://www.w3.org/ns/shacl-node-expr#else"
     static let shnexPathValues = "http://www.w3.org/ns/shacl-node-expr#pathValues"
     static let shnexFocusNode = "http://www.w3.org/ns/shacl-node-expr#focusNode"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"

@@ -1,0 +1,32 @@
+@prefix ex: <http://example.com/> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:IfTrue
+    shnex:if true ;
+    shnex:then 42 .
+
+ex:IfFalseWithElse
+    shnex:if false ;
+    shnex:then "yes" ;
+    shnex:else "no" .
+
+ex:IfFalseNoElse
+    shnex:if false ;
+    shnex:then "yes" .
+
+ex:CondExpr
+    shnex:exists ex:CondNodes .
+
+ex:CondNodes
+    shnex:nodes ( ex:present ) .
+
+ex:IfNested
+    shnex:if ex:CondExpr ;
+    shnex:then ex:ThenNodes ;
+    shnex:else ex:ElseNodes .
+
+ex:ThenNodes
+    shnex:nodes ( ex:thenResult ) .
+
+ex:ElseNodes
+    shnex:nodes ( ex:elseResult ) .
