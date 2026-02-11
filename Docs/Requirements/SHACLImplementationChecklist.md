@@ -24,7 +24,7 @@ Legend:
   - Implemented node/property evaluation path for `sh:minCount` and `sh:maxCount`.
 - [x] `REQ-SHACL-004` Support SHACL severity levels and result reporting model.
 - [x] `REQ-SHACL-005` Generate deterministic validation reports (conforms + detailed results).
-- [~] `REQ-SHACL-006` Constraint components: cardinality (`sh:minCount`, `sh:maxCount`).
+- [x] `REQ-SHACL-006` Constraint components: cardinality (`sh:minCount`, `sh:maxCount`).
 - [~] `REQ-SHACL-007` Constraint components: value type checks (`sh:class`, `sh:datatype`, `sh:nodeKind`).
   - Implemented `sh:class` checks for property values.
   - Implemented `sh:datatype` checks with literal datatype inference (`xsd:integer`, typed literals).
