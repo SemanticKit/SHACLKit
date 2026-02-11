@@ -681,6 +681,13 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         shapesGraph: graph
     )
     #expect(orderByDesc == Set(["8"]))
+
+    let orderByNumeric = evaluator.evaluate(
+        expressionIRI: "http://example.com/OrderByNumericLimitExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(orderByNumeric == Set(["2"]))
 }
 
 @Test func nodeExpressionEvaluatorEvaluatesMinAndMax() async throws {

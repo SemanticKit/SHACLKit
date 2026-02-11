@@ -9,7 +9,7 @@ ex:ScopeShape
 
 ex:OrderByProperty
     sh:expression ex:OrderByExpr ;
-    sh:hasValue ex:alice .
+    sh:hasValue ex:bob .
 
 ex:OrderByExpr
     shnex:nodes [

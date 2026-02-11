@@ -19,3 +19,12 @@ ex:OrderByDescLimitExpr
         shnex:desc true ;
     ] ;
     shnex:limit 1 .
+
+ex:OrderByNumericLimitExpr
+    shnex:nodes [
+        shnex:nodes ( 10 2 ) ;
+        shnex:orderBy [
+            shnex:var "focusNode" ;
+        ] ;
+    ] ;
+    shnex:limit 1 .

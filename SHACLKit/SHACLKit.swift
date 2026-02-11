@@ -2044,35 +2044,17 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             if ordered.isEmpty {
                 return []
             }
-            let sorted = ordered.sorted { lhs, rhs in
-                let lhsKeys = evaluateTerm(
-                    keyTerm,
-                    focusNode: lhs,
-                    shapesGraph: shapesGraph,
-                    expressionsByIRI: expressionsByIRI,
-                    dataGraph: dataGraph,
-                    depth: depth + 1,
-                    visited: &visited
-                ).sorted()
-                let rhsKeys = evaluateTerm(
-                    keyTerm,
-                    focusNode: rhs,
-                    shapesGraph: shapesGraph,
-                    expressionsByIRI: expressionsByIRI,
-                    dataGraph: dataGraph,
-                    depth: depth + 1,
-                    visited: &visited
-                ).sorted()
-                let lhsKey = lhsKeys.first ?? ""
-                let rhsKey = rhsKeys.first ?? ""
-                if lhsKey == rhsKey {
-                    return lhs < rhs
-                }
-                if descending {
-                    return lhsKey > rhsKey
-                }
-                return lhsKey < rhsKey
-            }
+            let sorted = sortOrderByNodes(
+                ordered,
+                keyTerm: keyTerm,
+                descending: descending,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
             return Set(sorted)
         }
     }
@@ -2109,35 +2091,17 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 depth: depth + 1,
                 visited: &visited
             )
-            return input.sorted { lhs, rhs in
-                let lhsKeys = evaluateTerm(
-                    keyTerm,
-                    focusNode: lhs,
-                    shapesGraph: shapesGraph,
-                    expressionsByIRI: expressionsByIRI,
-                    dataGraph: dataGraph,
-                    depth: depth + 1,
-                    visited: &visited
-                ).sorted()
-                let rhsKeys = evaluateTerm(
-                    keyTerm,
-                    focusNode: rhs,
-                    shapesGraph: shapesGraph,
-                    expressionsByIRI: expressionsByIRI,
-                    dataGraph: dataGraph,
-                    depth: depth + 1,
-                    visited: &visited
-                ).sorted()
-                let lhsKey = lhsKeys.first ?? ""
-                let rhsKey = rhsKeys.first ?? ""
-                if lhsKey == rhsKey {
-                    return lhs < rhs
-                }
-                if descending {
-                    return lhsKey > rhsKey
-                }
-                return lhsKey < rhsKey
-            }
+            return sortOrderByNodes(
+                input,
+                keyTerm: keyTerm,
+                descending: descending,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
         default:
             return evaluateTerm(
                 term,
@@ -2148,6 +2112,55 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 depth: depth,
                 visited: &visited
             ).sorted()
+        }
+    }
+
+    private func sortOrderByNodes(
+        _ inputNodes: [String],
+        keyTerm: String,
+        descending: Bool,
+        focusNode: String,
+        shapesGraph: SHACLShapesGraph,
+        expressionsByIRI: [String: SHACLNodeExpressionDefinition],
+        dataGraph: SHACLDataGraph?,
+        depth: Int,
+        visited: inout Set<String>
+    ) -> [String] {
+        return inputNodes.sorted { lhs, rhs in
+            let lhsKeys = evaluateTerm(
+                keyTerm,
+                focusNode: lhs,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth,
+                visited: &visited
+            ).sorted()
+            let rhsKeys = evaluateTerm(
+                keyTerm,
+                focusNode: rhs,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth,
+                visited: &visited
+            ).sorted()
+            let lhsKey = lhsKeys.first ?? ""
+            let rhsKey = rhsKeys.first ?? ""
+            let ascending: Bool
+            if let lhsNumeric = nodeExpressionNumericTerm(lhsKey)?.value,
+               let rhsNumeric = nodeExpressionNumericTerm(rhsKey)?.value {
+                if lhsNumeric == rhsNumeric {
+                    ascending = lhs < rhs
+                } else {
+                    ascending = lhsNumeric < rhsNumeric
+                }
+            } else if lhsKey == rhsKey {
+                ascending = lhs < rhs
+            } else {
+                ascending = lhsKey < rhsKey
+            }
+            return descending ? !ascending : ascending
         }
     }
 }

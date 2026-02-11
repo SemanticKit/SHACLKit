@@ -1,5 +1,5 @@
 @prefix ex: <http://example.com/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 
-ex:alice rdf:type ex:Person ; ex:rank 1 .
+ex:alice rdf:type ex:Person ; ex:rank 10 .
 ex:bob rdf:type ex:Person ; ex:rank 2 .
