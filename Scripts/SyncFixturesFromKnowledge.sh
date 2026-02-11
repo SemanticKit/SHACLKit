@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 SOURCE_DIR="$ROOT_DIR/Knowledge/SHACL/Fixtures"
+INBOX_FIXTURES_DIR="$ROOT_DIR/Knowledge/Inbox/Fixtures"
 DEST_DIR="$ROOT_DIR/Frameworks/SHACLKit/SHACLKitTests/Fixtures"
 
 if [[ ! -d "$SOURCE_DIR" ]]; then
@@ -29,3 +30,21 @@ for file in "${source_files[@]}"; do
 done
 
 echo "Fixture sync complete: ${#source_files[@]} file(s) copied."
+
+# Optionally sync the newest staged W3C Data Shapes curated fixture bundle from Knowledge/Inbox/Fixtures.
+latest_w3c_dir=""
+if [[ -d "$INBOX_FIXTURES_DIR" ]]; then
+  while IFS= read -r dir; do
+    latest_w3c_dir="$dir"
+  done < <(find "$INBOX_FIXTURES_DIR" -maxdepth 1 -mindepth 1 -type d -name 'W3CDataShapes*' | sort)
+fi
+
+if [[ -n "$latest_w3c_dir" ]]; then
+  w3c_dest="$DEST_DIR/W3CDataShapes"
+  rm -rf "$w3c_dest"
+  mkdir -p "$w3c_dest"
+  cp -R "$latest_w3c_dir"/. "$w3c_dest"/
+  echo "Synced W3C curated fixtures from $(basename "$latest_w3c_dir") to SHACLKitTests/Fixtures/W3CDataShapes"
+else
+  echo "No W3CDataShapes* directory found under $INBOX_FIXTURES_DIR (skipping optional W3C sync)."
+fi

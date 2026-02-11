@@ -10,6 +10,12 @@ private func fixtureData(_ name: String) throws -> Data {
     return try Data(contentsOf: fixturesURL.appendingPathComponent(name))
 }
 
+private func fixtureExists(_ relativePath: String) -> Bool {
+    let fileURL = URL(fileURLWithPath: #filePath)
+    let fixturesURL = fileURL.deletingLastPathComponent().appendingPathComponent("Fixtures")
+    return FileManager.default.fileExists(atPath: fixturesURL.appendingPathComponent(relativePath).path)
+}
+
 @Test func shapesLoaderParsesNodeShapeTargets() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("basicTargets.ttl"))
@@ -103,6 +109,13 @@ private func fixtureData(_ name: String) throws -> Data {
     let definition = try #require(graph.sparqlDefinitions.first)
     #expect(definition.sparqlIRI == "http://example.com/NameConstraint")
     #expect(definition.selectQuery?.contains("SELECT ?this") == true)
+}
+
+@Test func w3cCuratedFixturePackIsSyncedIntoTestResources() async throws {
+    #expect(fixtureExists("W3CDataShapes/SourceInventory.md"))
+    #expect(fixtureExists("W3CDataShapes/data-shapes-test-suite/tests/manifest.ttl"))
+    #expect(fixtureExists("W3CDataShapes/shacl12-test-suite/tests/manifest.ttl"))
+    #expect(fixtureExists("W3CDataShapes/shacl12-test-suite/tests/rules/manifest-rules.ttl"))
 }
 
 @Test func nodeExpressionEvaluatorEvaluatesUnionIntersectionAndCycle() async throws {
@@ -1086,8 +1099,8 @@ private struct TestShapesSource {
 
 @Test func coreValidatorThrowsWithoutSandboxedSPARQLExecutor() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("phaseGatedSparqlShapes.ttl")
-    let dataGraph = try fixtureData("invalidShapesData.ttl")
+    let shapes = try fixtureData("sparqlConstraintShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
 
     #expect(throws: SHACLError.self) {
         _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)

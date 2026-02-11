@@ -19,3 +19,4 @@ Current local families:
 - Regression and smoke scenarios
 - Rules (`sh:TripleRule`) first-slice execution scenarios
 - SPARQL extension first-slice scenarios (`sh:sparql` constraints, `sh:target` selectors, sandbox boundary)
+- Optional staged W3C conformance corpus sync target (`W3CDataShapes*` from `Knowledge/Inbox/Fixtures` into `SHACLKitTests/Fixtures/W3CDataShapes`)
