@@ -7,10 +7,14 @@ Legend:
 
 ## Source Coverage
 
-- [ ] `SRC-SHACL-SPEC` Shapes Constraint Language (SHACL)
-- [ ] `SRC-SHACL-TEST-REPORT` SHACL Test Suite and Implementation Report
+- [x] `SRC-SHACL-CORE-1.2` SHACL 1.2 Core (source ingested)
+- [x] `SRC-SHACL-NODEEXP-1.2` SHACL 1.2 Node Expressions (source ingested)
+- [x] `SRC-SHACL-RULES-1.2` SHACL 1.2 Rules (source ingested)
+- [x] `SRC-SHACL-SPARQL-EXT-1.2` SHACL 1.2 SPARQL Extensions (source ingested)
+- [x] `SRC-SHACL-1.0` Shapes Constraint Language (SHACL) baseline source ingested
+- [x] `SRC-SHACL-TEST-REPORT` SHACL Test Suite and Implementation Report (source ingested)
 
-## Core Scope
+## Phase 1: Core Scope (In Progress)
 
 - [x] `REQ-SHACL-000` Create standalone Swift package library (`SHACLKit`) with source/tests/docs scaffolding.
 - [ ] `REQ-SHACL-001` Parse/ingest SHACL shapes graph terms required for Core constraints.
@@ -28,8 +32,21 @@ Legend:
 - [ ] `REQ-SHACL-013` Emit stable machine-readable diagnostics (focus node, path, value, source shape, source constraint).
 - [ ] `REQ-SHACL-014` Keep execution side-effect free (pure validation result model).
 
+## Phase 2: Node Expressions and Rules
+
+- [ ] `REQ-SHACL-200` Implement SHACL 1.2 Node Expressions evaluation model.
+- [ ] `REQ-SHACL-201` Integrate node expression evaluation into constraints/targets where applicable.
+- [ ] `REQ-SHACL-210` Implement SHACL 1.2 Rules execution model.
+- [ ] `REQ-SHACL-211` Define deterministic rule execution order/termination behavior.
+
+## Phase 3: SHACL SPARQL Extensions
+
+- [ ] `REQ-SHACL-300` Implement SHACL SPARQL-based constraints.
+- [ ] `REQ-SHACL-301` Implement SHACL SPARQL targets.
+- [ ] `REQ-SHACL-302` Sandboxed/controlled query execution boundary for SPARQL extension evaluation.
+
 ## Integration Boundaries
 
 - [ ] `REQ-SHACL-100` Accept RDF data/shapes via package-level graph abstractions (no UI/network coupling).
 - [ ] `REQ-SHACL-101` Provide adapter boundary for RDFKit/SemanticKit graph representations.
-- [ ] `REQ-SHACL-102` Keep advanced SHACL features (SPARQL-based constraints, SHACL-AF) explicitly out-of-scope until core is complete.
+- [ ] `REQ-SHACL-102` Keep advanced features gated by explicit phase completion and test baselines.

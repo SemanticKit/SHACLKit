@@ -11,7 +11,7 @@ Legend:
 - [ ] `TEST-SHACL-001` Add canonical SHACL Core fixture corpus copied from Knowledge master set.
 - [ ] `TEST-SHACL-002` Add helper loaders for data graph + shapes graph fixture pairs.
 
-## Core Behavior Tests
+## Phase 1: Core Behavior Tests
 
 - [ ] `TEST-SHACL-010` Target selection tests for all core target selectors.
 - [ ] `TEST-SHACL-011` Node shape validation pass/fail matrix.
@@ -19,7 +19,7 @@ Legend:
 - [ ] `TEST-SHACL-013` Severity propagation tests (`Violation`, `Warning`, `Info`).
 - [ ] `TEST-SHACL-014` Report model shape and deterministic ordering assertions.
 
-## Constraint Component Coverage
+## Phase 1: Constraint Component Coverage
 
 - [ ] `TEST-SHACL-020` Cardinality component tests.
 - [ ] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
@@ -27,6 +27,17 @@ Legend:
 - [ ] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
 - [ ] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
 - [ ] `TEST-SHACL-025` Shape-reference and qualified shape tests.
+
+## Phase 2: Node Expressions and Rules
+
+- [ ] `TEST-SHACL-200` Node expression conformance fixtures.
+- [ ] `TEST-SHACL-210` Rule evaluation fixtures (order, repeatability, termination).
+
+## Phase 3: SHACL SPARQL Extensions
+
+- [ ] `TEST-SHACL-300` SPARQL constraint fixtures.
+- [ ] `TEST-SHACL-301` SPARQL target fixtures.
+- [ ] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.
 
 ## Robustness and Regression
 
