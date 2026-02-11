@@ -1738,7 +1738,9 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 depth: depth + 1,
                 visited: &visited
             )
-            return output.isEmpty ? ["false"] : ["true"]
+            return output.isEmpty
+                ? ["\"false\"^^\(SHACLIRIs.xsdBoolean)"]
+                : ["\"true\"^^\(SHACLIRIs.xsdBoolean)"]
         case .count(let inputTerm, let staticListLength):
             if let staticListLength {
                 return ["\(staticListLength)"]

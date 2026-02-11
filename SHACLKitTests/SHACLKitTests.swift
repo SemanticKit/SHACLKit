@@ -321,21 +321,21 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         focusNode: "http://example.com/focus",
         shapesGraph: graph
     )
-    #expect(existsTrueResult == Set(["true"]))
+    #expect(existsTrueResult == Set(["\"true\"^^http://www.w3.org/2001/XMLSchema#boolean"]))
 
     let existsFalseResult = evaluator.evaluate(
         expressionIRI: "http://example.com/ExistsFalse",
         focusNode: "http://example.com/focus",
         shapesGraph: graph
     )
-    #expect(existsFalseResult == Set(["false"]))
+    #expect(existsFalseResult == Set(["\"false\"^^http://www.w3.org/2001/XMLSchema#boolean"]))
 
     let existsFalseAnonymousResult = evaluator.evaluate(
         expressionIRI: "http://example.com/ExistsFalseAnonymous",
         focusNode: "http://example.com/focus",
         shapesGraph: graph
     )
-    #expect(existsFalseAnonymousResult == Set(["false"]))
+    #expect(existsFalseAnonymousResult == Set(["\"false\"^^http://www.w3.org/2001/XMLSchema#boolean"]))
 }
 
 @Test func nodeExpressionEvaluatorEvaluatesIfThenElse() async throws {
@@ -575,7 +575,7 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         shapesGraph: shapesGraph,
         dataGraph: dataGraph
     )
-    #expect(concatSimple == Set(["http://example.com/alice", "http://example.com/bob", "false"]))
+    #expect(concatSimple == Set(["http://example.com/alice", "http://example.com/bob", "\"false\"^^http://www.w3.org/2001/XMLSchema#boolean"]))
 
     let removeSimple = evaluator.evaluate(
         expressionIRI: "http://example.com/RemoveSimple",
@@ -584,6 +584,14 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         dataGraph: dataGraph
     )
     #expect(removeSimple == Set(["http://example.com/alice", "http://example.com/charlie"]))
+
+    let removeNested = evaluator.evaluate(
+        expressionIRI: "http://example.com/RemoveNested",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(removeNested == Set(["4", "2"]))
 }
 
 @Test func nodeExpressionEvaluatorEvaluatesFlatMap() async throws {
