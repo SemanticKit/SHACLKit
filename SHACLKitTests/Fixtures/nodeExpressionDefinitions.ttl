@@ -1,0 +1,8 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:ExprA sh:union ( ex:ConstA sh:this ) .
+ex:ExprB sh:union ( sh:this ex:ConstB ) .
+ex:ExprInter sh:intersection ( ex:ExprA ex:ExprB ) .
+ex:ExprNested sh:union ( ex:ExprInter ex:ConstC ) .
+ex:ExprCycle sh:union ( ex:ExprCycle ex:ConstD ) .

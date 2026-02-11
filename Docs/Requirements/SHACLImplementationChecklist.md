@@ -49,7 +49,8 @@ Legend:
 
 ## Phase 2: Node Expressions and Rules
 
-- [ ] `REQ-SHACL-200` Implement SHACL 1.2 Node Expressions evaluation model.
+- [~] `REQ-SHACL-200` Implement SHACL 1.2 Node Expressions evaluation model.
+  - Implemented subset evaluator for `sh:union` and `sh:intersection`, including nested expressions and `sh:this`.
 - [ ] `REQ-SHACL-201` Integrate node expression evaluation into constraints/targets where applicable.
 - [ ] `REQ-SHACL-210` Implement SHACL 1.2 Rules execution model.
 - [ ] `REQ-SHACL-211` Define deterministic rule execution order/termination behavior.

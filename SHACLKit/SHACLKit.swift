@@ -114,9 +114,26 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
 
 public struct SHACLShapesGraph: Sendable, Equatable {
     public let shapes: [SHACLShapeDefinition]
+    public let nodeExpressions: [SHACLNodeExpressionDefinition]
 
-    public init(shapes: [SHACLShapeDefinition]) {
+    public init(shapes: [SHACLShapeDefinition], nodeExpressions: [SHACLNodeExpressionDefinition] = []) {
         self.shapes = shapes
+        self.nodeExpressions = nodeExpressions
+    }
+}
+
+public enum SHACLNodeExpressionKind: Sendable, Hashable {
+    case union([String])
+    case intersection([String])
+}
+
+public struct SHACLNodeExpressionDefinition: Sendable, Hashable {
+    public let expressionIRI: String
+    public let kind: SHACLNodeExpressionKind
+
+    public init(expressionIRI: String, kind: SHACLNodeExpressionKind) {
+        self.expressionIRI = expressionIRI
+        self.kind = kind
     }
 }
 
@@ -308,7 +325,13 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var maxCount: Int?
         }
 
+        struct PartialNodeExpression {
+            var unionMemberObjects: Set<String> = []
+            var intersectionMemberObjects: Set<String> = []
+        }
+
         var shapes: [String: PartialShape] = [:]
+        var nodeExpressions: [String: PartialNodeExpression] = [:]
 
         for triple in triples {
             let subject = triple.subject
@@ -408,6 +431,16 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             }
 
             shapes[subject] = current
+
+            if predicate == SHACLIRIs.union || predicate == SHACLIRIs.intersection {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                if predicate == SHACLIRIs.union {
+                    expression.unionMemberObjects.insert(object)
+                } else {
+                    expression.intersectionMemberObjects.insert(object)
+                }
+                nodeExpressions[subject] = expression
+            }
         }
 
         let triplesBySubject = Dictionary(grouping: triples, by: \.subject)
@@ -447,7 +480,28 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         }
         .sorted(by: { $0.shapeIRI < $1.shapeIRI })
 
-        return SHACLShapesGraph(shapes: definitions)
+        let expressionDefinitions = nodeExpressions.compactMap { expressionIRI, partial -> SHACLNodeExpressionDefinition? in
+            let unionMembers = resolveShapeReferenceIRIs(partial.unionMemberObjects, triplesBySubject: triplesBySubject).sorted()
+            if !unionMembers.isEmpty {
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .union(unionMembers)
+                )
+            }
+
+            let intersectionMembers = resolveShapeReferenceIRIs(partial.intersectionMemberObjects, triplesBySubject: triplesBySubject).sorted()
+            if !intersectionMembers.isEmpty {
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .intersection(intersectionMembers)
+                )
+            }
+
+            return nil
+        }
+        .sorted(by: { $0.expressionIRI < $1.expressionIRI })
+
+        return SHACLShapesGraph(shapes: definitions, nodeExpressions: expressionDefinitions)
     }
 
     private func targetSortKey(_ selector: SHACLTargetSelector) -> String {
@@ -604,6 +658,88 @@ public struct SHACLFocusNodeResolver: Sendable {
             return Set(graph.triples.filter { $0.predicate == predicateIRI }.map(\.subject))
         case .targetObjectsOf(let predicateIRI):
             return Set(graph.triples.filter { $0.predicate == predicateIRI }.map(\.object))
+        }
+    }
+}
+
+public struct SHACLNodeExpressionEvaluator: Sendable {
+    private let maxDepth = 16
+
+    public init() {}
+
+    public func evaluate(
+        expressionIRI: String,
+        focusNode: String,
+        shapesGraph: SHACLShapesGraph
+    ) -> Set<String> {
+        let expressionByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.nodeExpressions.map { ($0.expressionIRI, $0) })
+        var visited: Set<String> = []
+        return evaluateTerm(
+            expressionIRI,
+            focusNode: focusNode,
+            expressionsByIRI: expressionByIRI,
+            depth: 0,
+            visited: &visited
+        )
+    }
+
+    private func evaluateTerm(
+        _ term: String,
+        focusNode: String,
+        expressionsByIRI: [String: SHACLNodeExpressionDefinition],
+        depth: Int,
+        visited: inout Set<String>
+    ) -> Set<String> {
+        if term == SHACLIRIs.shThis {
+            return [focusNode]
+        }
+
+        guard let expression = expressionsByIRI[term] else {
+            return [term]
+        }
+
+        if depth > maxDepth || visited.contains(expression.expressionIRI) {
+            return []
+        }
+
+        visited.insert(expression.expressionIRI)
+        defer { visited.remove(expression.expressionIRI) }
+
+        switch expression.kind {
+        case .union(let members):
+            return members.reduce(into: Set<String>()) { result, member in
+                result.formUnion(
+                    evaluateTerm(
+                        member,
+                        focusNode: focusNode,
+                        expressionsByIRI: expressionsByIRI,
+                        depth: depth + 1,
+                        visited: &visited
+                    )
+                )
+            }
+        case .intersection(let members):
+            guard let first = members.first else {
+                return []
+            }
+            let initial = evaluateTerm(
+                first,
+                focusNode: focusNode,
+                expressionsByIRI: expressionsByIRI,
+                depth: depth + 1,
+                visited: &visited
+            )
+            return members.dropFirst().reduce(initial) { partial, member in
+                partial.intersection(
+                    evaluateTerm(
+                        member,
+                        focusNode: focusNode,
+                        expressionsByIRI: expressionsByIRI,
+                        depth: depth + 1,
+                        visited: &visited
+                    )
+                )
+            }
         }
     }
 }
@@ -1352,6 +1488,7 @@ private enum SHACLIRIs {
     static let expression = "http://www.w3.org/ns/shacl#expression"
     static let union = "http://www.w3.org/ns/shacl#union"
     static let intersection = "http://www.w3.org/ns/shacl#intersection"
+    static let shThis = "http://www.w3.org/ns/shacl#this"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"
@@ -1375,8 +1512,6 @@ private enum SHACLIRIs {
         prefixes,
         target,
         expression,
-        union,
-        intersection,
     ]
 }
 

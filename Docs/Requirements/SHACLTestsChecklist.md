@@ -40,7 +40,8 @@ Legend:
 
 ## Phase 2: Node Expressions and Rules
 
-- [ ] `TEST-SHACL-200` Node expression conformance fixtures.
+- [~] `TEST-SHACL-200` Node expression conformance fixtures.
+  - Added fixtures/tests for `sh:union` and `sh:intersection` subset evaluation, nesting, and cycle handling.
 - [ ] `TEST-SHACL-210` Rule evaluation fixtures (order, repeatability, termination).
 
 ## Phase 3: SHACL SPARQL Extensions

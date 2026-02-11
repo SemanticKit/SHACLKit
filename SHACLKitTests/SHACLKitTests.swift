@@ -45,6 +45,57 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(Set(propShape.targets).contains(.targetNode("http://example.com/alice")))
 }
 
+@Test func shapesLoaderParsesNodeExpressionDefinitions() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("nodeExpressionDefinitions.ttl"))
+
+    let byIRI = Dictionary(uniqueKeysWithValues: graph.nodeExpressions.map { ($0.expressionIRI, $0.kind) })
+    #expect(byIRI.count == 5)
+    if case .union(let members)? = byIRI["http://example.com/ExprA"] {
+        #expect(Set(members) == Set([
+            "http://example.com/ConstA",
+            "http://www.w3.org/ns/shacl#this",
+        ]))
+    } else {
+        Issue.record("ExprA union definition was not parsed.")
+    }
+}
+
+@Test func nodeExpressionEvaluatorEvaluatesUnionIntersectionAndCycle() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("nodeExpressionDefinitions.ttl"))
+    let evaluator = SHACLNodeExpressionEvaluator()
+    let focus = "http://example.com/focus"
+
+    let unionResult = evaluator.evaluate(
+        expressionIRI: "http://example.com/ExprA",
+        focusNode: focus,
+        shapesGraph: graph
+    )
+    #expect(unionResult == Set(["http://example.com/ConstA", focus]))
+
+    let intersectionResult = evaluator.evaluate(
+        expressionIRI: "http://example.com/ExprInter",
+        focusNode: focus,
+        shapesGraph: graph
+    )
+    #expect(intersectionResult == Set([focus]))
+
+    let nestedResult = evaluator.evaluate(
+        expressionIRI: "http://example.com/ExprNested",
+        focusNode: focus,
+        shapesGraph: graph
+    )
+    #expect(nestedResult == Set([focus, "http://example.com/ConstC"]))
+
+    let cycleResult = evaluator.evaluate(
+        expressionIRI: "http://example.com/ExprCycle",
+        focusNode: focus,
+        shapesGraph: graph
+    )
+    #expect(cycleResult == Set(["http://example.com/ConstD"]))
+}
+
 @Test func focusNodeResolverResolvesSelectorsAgainstDataGraph() async throws {
     let shapesLoader = SHACLShapesGraphLoader()
     let dataLoader = SHACLDataGraphLoader()
