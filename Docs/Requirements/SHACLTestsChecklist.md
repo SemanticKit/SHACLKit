@@ -35,14 +35,16 @@ Legend:
 - [x] `TEST-SHACL-020` Cardinality component tests.
 - [x] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
   - Covered `class`, `datatype`, and all `nodeKind` fixtures.
+  - Added curated W3C node-shape conformance subset coverage for `datatype-002`, `class-002`, and `class-003`.
 - [x] `TEST-SHACL-022` String/range facet tests.
   - Covered `minLength`, `maxLength`, and `pattern` fixtures.
+  - Added curated W3C node-shape conformance subset coverage for `pattern-002`.
   - Covered integer range fixtures for `minInclusive` and `maxInclusive`, including non-numeric values.
 - [x] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
   - Covered `hasValue` and `in` fixtures, including RDF list-based `sh:in`.
 - [x] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
   - Covered fixtures for `and`, `or`, `not`, and `xone` across direct shape references and RDF list syntax.
-  - Added curated W3C node-shape logical conformance subset coverage (`and-001`, `or-001`, `not-001`, `xone-001`).
+  - Added curated W3C node-shape logical conformance subset coverage (`and-001`, `and-002`, `or-001`, `not-001`, `not-002`, `xone-001`).
 - [x] `TEST-SHACL-025` Shape-reference and qualified shape tests.
   - Covered `sh:node` fixtures, qualified value shape count fixtures, and invalid reference diagnostics.
   - Added curated W3C node-shape conformance subset coverage for `class-001`, `node-001`, and `qualified-001`.

@@ -2572,7 +2572,8 @@ private struct SHACLTurtleSubsetParser {
         var bodyLines: [String] = []
 
         for rawLine in source.split(separator: "\n", omittingEmptySubsequences: false) {
-            let line = String(rawLine).trimmingCharacters(in: .whitespacesAndNewlines)
+            let withoutComments = stripComments(from: String(rawLine))
+            let line = withoutComments.trimmingCharacters(in: .whitespacesAndNewlines)
 
             if line.isEmpty || line.hasPrefix("#") {
                 continue
@@ -2593,11 +2594,42 @@ private struct SHACLTurtleSubsetParser {
                 let iri = String(line[iriRange])
                 prefixes[prefix] = iri
             } else {
-                bodyLines.append(String(rawLine))
+                bodyLines.append(withoutComments)
             }
         }
 
         return (prefixes, bodyLines.joined(separator: "\n"))
+    }
+
+    private func stripComments(from line: String) -> String {
+        var result = ""
+        var inIRI = false
+        var inString = false
+        var escaped = false
+
+        for ch in line {
+            if ch == "\"" && !inIRI && !escaped {
+                inString.toggle()
+            } else if ch == "<" && !inString {
+                inIRI = true
+            } else if ch == ">" && inIRI {
+                inIRI = false
+            }
+
+            if ch == "#" && !inIRI && !inString {
+                break
+            }
+
+            result.append(ch)
+
+            if inString && ch == "\\" && !escaped {
+                escaped = true
+            } else {
+                escaped = false
+            }
+        }
+
+        return result
     }
 
     private func splitStatements(from body: String) -> [String] {
