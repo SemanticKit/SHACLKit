@@ -545,7 +545,7 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let scenarios: [(String, String, Bool)] = [
         ("nodeShapeConstraintsShapes.ttl", "nodeShapeConstraintsValid.ttl", true),
         ("nodeShapeConstraintsShapes.ttl", "nodeShapeConstraintsInvalid.ttl", false),
-        ("severityWarningShapes.ttl", "severityWarningData.ttl", true),
+        ("severityWarningShapes.ttl", "severityWarningData.ttl", false),
     ]
 
     for scenario in scenarios {
@@ -848,13 +848,13 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(violation.message.contains("qualifiedMaxCount violation"))
 }
 
-@Test func coreValidatorKeepsConformanceTrueForWarningOnlyResults() async throws {
+@Test func coreValidatorSetsConformanceFalseForWarningOnlyResults() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("severityWarningShapes.ttl")
     let dataGraph = try fixtureData("severityWarningData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
-    #expect(result.conforms)
+    #expect(!result.conforms)
     #expect(result.violations.count == 1)
     let warning = try #require(result.violations.first)
     #expect(warning.severity == .warning)
@@ -1370,7 +1370,7 @@ private struct TestShapesSource {
     let first = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     let second = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(first == second)
-    #expect(first.conforms)
+    #expect(!first.conforms)
     let warning = try #require(first.violations.first)
     #expect(warning.severity == .warning)
 }

@@ -32,6 +32,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let shapeIRI: String
     public let kind: SHACLShapeKind
     public let isRDFSClass: Bool
+    public let isDeactivated: Bool
     public let severity: SHACLSeverity?
     public let targets: [SHACLTargetSelector]
     public let propertyShapeIRIs: [String]
@@ -77,6 +78,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         shapeIRI: String,
         kind: SHACLShapeKind,
         isRDFSClass: Bool = false,
+        isDeactivated: Bool = false,
         severity: SHACLSeverity? = nil,
         targets: [SHACLTargetSelector],
         propertyShapeIRIs: [String] = [],
@@ -121,6 +123,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.shapeIRI = shapeIRI
         self.kind = kind
         self.isRDFSClass = isRDFSClass
+        self.isDeactivated = isDeactivated
         self.severity = severity
         self.targets = targets
         self.propertyShapeIRIs = propertyShapeIRIs
@@ -433,6 +436,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         struct PartialShape {
             var kind: SHACLShapeKind?
             var isRDFSClass = false
+            var isDeactivated = false
             var severity: SHACLSeverity?
             var targets: Set<SHACLTargetSelector> = []
             var propertyShapeIRIs: Set<String> = []
@@ -532,6 +536,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.targets.insert(.targetObjectsOf(object))
             } else if predicate == SHACLIRIs.severity {
                 current.severity = parseSeverity(object)
+            } else if predicate == SHACLIRIs.deactivated {
+                current.isDeactivated = isTrueBooleanTerm(object)
             } else if predicate == SHACLIRIs.property {
                 current.propertyShapeIRIs.insert(object)
             } else if predicate == SHACLIRIs.rule {
@@ -710,6 +716,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 shapeIRI: shapeIRI,
                 kind: kind,
                 isRDFSClass: partial.isRDFSClass,
+                isDeactivated: partial.isDeactivated,
                 severity: partial.severity,
                 targets: normalizedTargets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
@@ -1135,6 +1142,9 @@ public struct SHACLCoreValidator: SHACLValidator {
             guard let shape = shapeByIRI[resolution.shapeIRI] else {
                 continue
             }
+            if shape.isDeactivated {
+                continue
+            }
             for focusNode in resolution.focusNodes {
                 var visited: Set<String> = []
                 if shape.kind == .nodeShape {
@@ -1150,6 +1160,9 @@ public struct SHACLCoreValidator: SHACLValidator {
                         )
                     )
                 } else if shape.kind == .propertyShape {
+                    if shape.isDeactivated {
+                        continue
+                    }
                     let wrapperShape = SHACLShapeDefinition(
                         shapeIRI: "\(shape.shapeIRI)#direct-property-target-wrapper",
                         kind: .nodeShape,
@@ -1211,7 +1224,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         return SHACLValidationResult(
-            conforms: violationCount == 0,
+            conforms: false,
             message: "SHACL Core subset validation produced \(sortedViolations.count) result(s), including \(violationCount) violation(s).",
             violations: sortedViolations
         )
@@ -1594,6 +1607,9 @@ public struct SHACLCoreValidator: SHACLValidator {
     ) -> [SHACLViolation] {
         var violations: [SHACLViolation] = []
         if depth > maxReferenceDepth {
+            return violations
+        }
+        if nodeShape.isDeactivated {
             return violations
         }
         let nodeSeverity = nodeShape.severity ?? .violation
@@ -2138,6 +2154,9 @@ public struct SHACLCoreValidator: SHACLValidator {
 
         for propertyShapeIRI in nodeShape.propertyShapeIRIs {
             guard let propertyShape = shapesByIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
+                continue
+            }
+            if propertyShape.isDeactivated {
                 continue
             }
             let pathIRI = propertyShape.pathIRI
@@ -2950,7 +2969,7 @@ public struct SHACLCoreValidator: SHACLValidator {
             depth: depth + 1,
             visited: &visited
         )
-        return !nestedViolations.contains { $0.severity == .violation }
+        return nestedViolations.isEmpty
     }
 
     private func matchesNodeKind(_ value: String, nodeKind: SHACLNodeKindConstraint) -> Bool {
@@ -3203,6 +3222,7 @@ private enum SHACLIRIs {
     static let targetNode = "http://www.w3.org/ns/shacl#targetNode"
     static let targetSubjectsOf = "http://www.w3.org/ns/shacl#targetSubjectsOf"
     static let targetObjectsOf = "http://www.w3.org/ns/shacl#targetObjectsOf"
+    static let deactivated = "http://www.w3.org/ns/shacl#deactivated"
     static let severity = "http://www.w3.org/ns/shacl#severity"
     static let property = "http://www.w3.org/ns/shacl#property"
     static let path = "http://www.w3.org/ns/shacl#path"

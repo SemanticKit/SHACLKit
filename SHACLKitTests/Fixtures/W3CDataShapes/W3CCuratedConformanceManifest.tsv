@@ -78,3 +78,8 @@ core-targets-targetSubjectsOf-001	data-shapes-test-suite/tests/core/targets/targ
 core-targets-targetSubjectsOf-002	data-shapes-test-suite/tests/core/targets/targetSubjectsOf-002.ttl	data-shapes-test-suite/tests/core/targets/targetSubjectsOf-002.ttl	false	Target subjects-of selector with inverse-style data patterns.
 core-targets-targetObjectsOf-001	data-shapes-test-suite/tests/core/targets/targetObjectsOf-001.ttl	data-shapes-test-suite/tests/core/targets/targetObjectsOf-001.ttl	false	Target objects-of selector checks.
 core-targets-multipleTargets-001	data-shapes-test-suite/tests/core/targets/multipleTargets-001.ttl	data-shapes-test-suite/tests/core/targets/multipleTargets-001.ttl	false	Combined target selectors checks.
+core-misc-message-001	data-shapes-test-suite/tests/core/misc/message-001.ttl	data-shapes-test-suite/tests/core/misc/message-001.ttl	false	Custom message metadata with non-conforming datatype check.
+core-misc-severity-001	data-shapes-test-suite/tests/core/misc/severity-001.ttl	data-shapes-test-suite/tests/core/misc/severity-001.ttl	false	Warning severity propagation on datatype violation.
+core-misc-severity-002	data-shapes-test-suite/tests/core/misc/severity-002.ttl	data-shapes-test-suite/tests/core/misc/severity-002.ttl	false	Mixed severity propagation between node and property constraints.
+core-misc-deactivated-001	data-shapes-test-suite/tests/core/misc/deactivated-001.ttl	data-shapes-test-suite/tests/core/misc/deactivated-001.ttl	true	Deactivated node shape should not produce violations.
+core-misc-deactivated-002	data-shapes-test-suite/tests/core/misc/deactivated-002.ttl	data-shapes-test-suite/tests/core/misc/deactivated-002.ttl	false	Non-deactivated node shape should still enforce constraints.

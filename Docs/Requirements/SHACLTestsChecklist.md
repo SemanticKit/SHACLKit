@@ -33,6 +33,7 @@ Legend:
   - Added curated W3C property-shape conformance subset coverage for property-pair constraints (`lessThan-001`, `lessThan-002`, `lessThanOrEquals-001`).
   - Expanded curated W3C property-shape conformance subset coverage across cardinality, type, string/range, logical, shape-reference, and nested `sh:property` cases.
 - [x] `TEST-SHACL-013` Severity propagation tests (`Violation`, `Warning`, `Info`).
+  - Added curated W3C misc conformance subset coverage for severity/message/deactivated behavior (`severity-001`, `severity-002`, `message-001`, `deactivated-001`, `deactivated-002`).
 - [x] `TEST-SHACL-014` Report model shape and deterministic ordering assertions.
 
 ## Phase 1: Constraint Component Coverage
