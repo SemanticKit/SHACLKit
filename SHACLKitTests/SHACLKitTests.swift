@@ -440,3 +440,27 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#xone")
     #expect(violation.message.contains("xone violation"))
 }
+
+@Test func coreValidatorEmitsCompleteMachineReadableDiagnostics() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("logicalOrShapes.ttl")
+    let dataGraph = try fixtureData("logicalOrInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    let violation = try #require(result.violations.first)
+    #expect(violation.shapeIRI == "http://example.com/RoleShape")
+    #expect(violation.focusNode == "http://example.com/alice")
+    #expect(violation.pathIRI == "http://example.com/role")
+    #expect(violation.valueNode == "http://example.com/r1")
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#or")
+}
+
+@Test func coreValidatorIsDeterministicAcrossRepeatedRuns() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("logicalAndShapes.ttl")
+    let dataGraph = try fixtureData("logicalAndInvalid.ttl")
+
+    let first = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    let second = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(first == second)
+}
