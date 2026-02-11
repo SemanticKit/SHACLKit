@@ -133,3 +133,27 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(violation.message.contains("class violation"))
     #expect(violation.message.contains("http://example.com/org1"))
 }
+
+@Test func coreValidatorConformsForNodeKindFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodekind-constraints-shapes.ttl")
+    let dataGraph = try fixtureData("nodekind-constraints-valid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsNodeKindViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodekind-constraints-shapes.ttl")
+    let dataGraph = try fixtureData("nodekind-constraints-invalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.message.contains("nodeKind violation"))
+    #expect(violation.message.contains("iri"))
+}

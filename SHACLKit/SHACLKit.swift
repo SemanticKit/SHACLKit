@@ -18,6 +18,15 @@ public enum SHACLTargetSelector: Sendable, Hashable {
     case targetObjectsOf(String)
 }
 
+public enum SHACLNodeKindConstraint: String, Sendable, Codable, Hashable {
+    case iri
+    case literal
+    case blankNode
+    case blankNodeOrIRI
+    case blankNodeOrLiteral
+    case iriOrLiteral
+}
+
 public struct SHACLShapeDefinition: Sendable, Hashable {
     public let shapeIRI: String
     public let kind: SHACLShapeKind
@@ -25,6 +34,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let propertyShapeIRIs: [String]
     public let pathIRI: String?
     public let classIRI: String?
+    public let nodeKind: SHACLNodeKindConstraint?
     public let minCount: Int?
     public let maxCount: Int?
 
@@ -35,6 +45,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         propertyShapeIRIs: [String] = [],
         pathIRI: String? = nil,
         classIRI: String? = nil,
+        nodeKind: SHACLNodeKindConstraint? = nil,
         minCount: Int? = nil,
         maxCount: Int? = nil
     ) {
@@ -44,6 +55,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.propertyShapeIRIs = propertyShapeIRIs
         self.pathIRI = pathIRI
         self.classIRI = classIRI
+        self.nodeKind = nodeKind
         self.minCount = minCount
         self.maxCount = maxCount
     }
@@ -179,6 +191,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var propertyShapeIRIs: Set<String> = []
             var pathIRI: String?
             var classIRI: String?
+            var nodeKind: SHACLNodeKindConstraint?
             var minCount: Int?
             var maxCount: Int?
         }
@@ -212,6 +225,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.pathIRI = object
             } else if predicate == SHACLIRIs.class {
                 current.classIRI = object
+            } else if predicate == SHACLIRIs.nodeKind {
+                current.nodeKind = parseNodeKind(object)
             } else if predicate == SHACLIRIs.minCount {
                 guard let count = Int(object) else {
                     throw SHACLError.invalidIntegerLiteral(object)
@@ -238,6 +253,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
                 pathIRI: partial.pathIRI,
                 classIRI: partial.classIRI,
+                nodeKind: partial.nodeKind,
                 minCount: partial.minCount,
                 maxCount: partial.maxCount
             )
@@ -257,6 +273,25 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             return "2:\(iri)"
         case .targetObjectsOf(let iri):
             return "3:\(iri)"
+        }
+    }
+
+    private func parseNodeKind(_ iri: String) -> SHACLNodeKindConstraint? {
+        switch iri {
+        case SHACLIRIs.nodeKindIRI:
+            return .iri
+        case SHACLIRIs.nodeKindLiteral:
+            return .literal
+        case SHACLIRIs.nodeKindBlankNode:
+            return .blankNode
+        case SHACLIRIs.nodeKindBlankNodeOrIRI:
+            return .blankNodeOrIRI
+        case SHACLIRIs.nodeKindBlankNodeOrLiteral:
+            return .blankNodeOrLiteral
+        case SHACLIRIs.nodeKindIRIOrLiteral:
+            return .iriOrLiteral
+        default:
+            return nil
         }
     }
 }
@@ -420,9 +455,45 @@ public struct SHACLCoreValidator: SHACLValidator {
                     }
                 }
             }
+
+            if let nodeKind = propertyShape.nodeKind {
+                for valueNode in values {
+                    if !matchesNodeKind(valueNode, nodeKind: nodeKind) {
+                        violations.append(
+                            SHACLViolation(
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                message: "nodeKind violation: value \(valueNode) does not satisfy \(nodeKind.rawValue)"
+                            )
+                        )
+                    }
+                }
+            }
         }
 
         return violations
+    }
+
+    private func matchesNodeKind(_ value: String, nodeKind: SHACLNodeKindConstraint) -> Bool {
+        let isNumericLiteral = value.allSatisfy { $0.isNumber }
+        let isIRI = value.contains("://") || value.hasPrefix("urn:")
+        let isBlankNode = value.hasPrefix("_:")
+
+        switch nodeKind {
+        case .iri:
+            return isIRI
+        case .literal:
+            return isNumericLiteral
+        case .blankNode:
+            return isBlankNode
+        case .blankNodeOrIRI:
+            return isBlankNode || isIRI
+        case .blankNodeOrLiteral:
+            return isBlankNode || isNumericLiteral
+        case .iriOrLiteral:
+            return isIRI || isNumericLiteral
+        }
     }
 }
 
@@ -437,8 +508,15 @@ private enum SHACLIRIs {
     static let property = "http://www.w3.org/ns/shacl#property"
     static let path = "http://www.w3.org/ns/shacl#path"
     static let `class` = "http://www.w3.org/ns/shacl#class"
+    static let nodeKind = "http://www.w3.org/ns/shacl#nodeKind"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
+    static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"
+    static let nodeKindLiteral = "http://www.w3.org/ns/shacl#Literal"
+    static let nodeKindBlankNode = "http://www.w3.org/ns/shacl#BlankNode"
+    static let nodeKindBlankNodeOrIRI = "http://www.w3.org/ns/shacl#BlankNodeOrIRI"
+    static let nodeKindBlankNodeOrLiteral = "http://www.w3.org/ns/shacl#BlankNodeOrLiteral"
+    static let nodeKindIRIOrLiteral = "http://www.w3.org/ns/shacl#IRIOrLiteral"
 }
 
 private struct SHACLTriple {
