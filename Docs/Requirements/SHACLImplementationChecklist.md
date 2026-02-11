@@ -31,6 +31,7 @@ Legend:
   - Implemented subset `sh:nodeKind` checks (`sh:IRI`, `sh:Literal`, `sh:BlankNode`, `sh:IRIOrLiteral`).
 - [~] `REQ-SHACL-008` Constraint components: value range/string facets (`sh:minLength`, `sh:maxLength`, `sh:pattern`, `sh:minInclusive`, `sh:maxInclusive`).
   - Implemented string facets: `sh:minLength`, `sh:maxLength`, `sh:pattern`.
+  - Implemented integer range facets: `sh:minInclusive`, `sh:maxInclusive`.
 - [~] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).
   - Implemented `sh:hasValue` checks.
   - Implemented subset `sh:in` checks using direct object-list syntax.

@@ -27,6 +27,7 @@ Legend:
   - Covered `class`, `datatype`, and subset `nodeKind` (`IRI`, `Literal`, `BlankNode`, `IRIOrLiteral`) fixtures.
 - [~] `TEST-SHACL-022` String/range facet tests.
   - Covered `minLength`, `maxLength`, and `pattern` fixtures.
+  - Covered integer range fixtures for `minInclusive` and `maxInclusive`, including non-numeric values.
 - [~] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
   - Covered `hasValue` and subset `in` fixtures.
 - [~] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).

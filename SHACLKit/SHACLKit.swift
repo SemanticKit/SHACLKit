@@ -39,6 +39,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let datatypeIRI: String?
     public let minLength: Int?
     public let maxLength: Int?
+    public let minInclusive: Int?
+    public let maxInclusive: Int?
     public let pattern: String?
     public let hasValue: String?
     public let inValues: [String]
@@ -62,6 +64,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         datatypeIRI: String? = nil,
         minLength: Int? = nil,
         maxLength: Int? = nil,
+        minInclusive: Int? = nil,
+        maxInclusive: Int? = nil,
         pattern: String? = nil,
         hasValue: String? = nil,
         inValues: [String] = [],
@@ -84,6 +88,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.datatypeIRI = datatypeIRI
         self.minLength = minLength
         self.maxLength = maxLength
+        self.minInclusive = minInclusive
+        self.maxInclusive = maxInclusive
         self.pattern = pattern
         self.hasValue = hasValue
         self.inValues = inValues
@@ -252,6 +258,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var datatypeIRI: String?
             var minLength: Int?
             var maxLength: Int?
+            var minInclusive: Int?
+            var maxInclusive: Int?
             var pattern: String?
             var hasValue: String?
             var inValues: Set<String> = []
@@ -309,6 +317,16 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                     throw SHACLError.invalidIntegerLiteral(object)
                 }
                 current.maxLength = length
+            } else if predicate == SHACLIRIs.minInclusive {
+                guard let minimum = Int(object) else {
+                    throw SHACLError.invalidIntegerLiteral(object)
+                }
+                current.minInclusive = minimum
+            } else if predicate == SHACLIRIs.maxInclusive {
+                guard let maximum = Int(object) else {
+                    throw SHACLError.invalidIntegerLiteral(object)
+                }
+                current.maxInclusive = maximum
             } else if predicate == SHACLIRIs.pattern {
                 current.pattern = parsedLiteralLexicalForm(object)
             } else if predicate == SHACLIRIs.hasValue {
@@ -356,6 +374,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 datatypeIRI: partial.datatypeIRI,
                 minLength: partial.minLength,
                 maxLength: partial.maxLength,
+                minInclusive: partial.minInclusive,
+                maxInclusive: partial.maxInclusive,
                 pattern: partial.pattern,
                 hasValue: partial.hasValue,
                 inValues: partial.inValues.sorted(),
@@ -775,6 +795,53 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
 
+            if propertyShape.minInclusive != nil || propertyShape.maxInclusive != nil {
+                for valueNode in values {
+                    guard let numeric = extractIntegerValue(valueNode) else {
+                        violations.append(
+                            SHACLViolation(
+                                severity: severity,
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: propertyShape.minInclusive != nil ? SHACLIRIs.minInclusive : SHACLIRIs.maxInclusive,
+                                message: "range violation: value \(valueNode) is not an integer literal"
+                            )
+                        )
+                        continue
+                    }
+
+                    if let minimum = propertyShape.minInclusive, numeric < minimum {
+                        violations.append(
+                            SHACLViolation(
+                                severity: severity,
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.minInclusive,
+                                message: "minInclusive violation: expected >= \(minimum), got \(numeric)"
+                            )
+                        )
+                    }
+
+                    if let maximum = propertyShape.maxInclusive, numeric > maximum {
+                        violations.append(
+                            SHACLViolation(
+                                severity: severity,
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.maxInclusive,
+                                message: "maxInclusive violation: expected <= \(maximum), got \(numeric)"
+                            )
+                        )
+                    }
+                }
+            }
+
             if let requiredValue = propertyShape.hasValue {
                 let hasRequiredValue = values.contains(requiredValue)
                 if !hasRequiredValue {
@@ -1031,6 +1098,17 @@ public struct SHACLCoreValidator: SHACLValidator {
         let start = value.index(after: value.startIndex)
         return String(value[start..<closing])
     }
+
+    private func extractIntegerValue(_ value: String) -> Int? {
+        if let direct = Int(value) {
+            return direct
+        }
+
+        guard let lexical = extractLiteralLexicalForm(value) else {
+            return nil
+        }
+        return Int(lexical)
+    }
 }
 
 private enum SHACLIRIs {
@@ -1049,6 +1127,8 @@ private enum SHACLIRIs {
     static let datatype = "http://www.w3.org/ns/shacl#datatype"
     static let minLength = "http://www.w3.org/ns/shacl#minLength"
     static let maxLength = "http://www.w3.org/ns/shacl#maxLength"
+    static let minInclusive = "http://www.w3.org/ns/shacl#minInclusive"
+    static let maxInclusive = "http://www.w3.org/ns/shacl#maxInclusive"
     static let pattern = "http://www.w3.org/ns/shacl#pattern"
     static let hasValue = "http://www.w3.org/ns/shacl#hasValue"
     static let `in` = "http://www.w3.org/ns/shacl#in"

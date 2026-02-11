@@ -229,6 +229,41 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(messages.contains("pattern violation"))
 }
 
+@Test func coreValidatorConformsForRangeFacetFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("rangeFacetsShapes.ttl")
+    let dataGraph = try fixtureData("rangeFacetsValid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsRangeFacetViolations() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("rangeFacetsShapes.ttl")
+    let dataGraph = try fixtureData("rangeFacetsInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 2)
+    let messages = result.violations.map(\.message).joined(separator: " | ")
+    #expect(messages.contains("minInclusive violation"))
+    #expect(messages.contains("maxInclusive violation"))
+}
+
+@Test func coreValidatorReportsRangeFacetNonNumericViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("rangeFacetsShapes.ttl")
+    let dataGraph = try fixtureData("rangeFacetsNonNumeric.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#minInclusive")
+    #expect(violation.message.contains("not an integer literal"))
+}
+
 @Test func coreValidatorConformsForHasValueFixture() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("hasValueConstraintsShapes.ttl")
