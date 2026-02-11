@@ -41,6 +41,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let pattern: String?
     public let hasValue: String?
     public let inValues: [String]
+    public let nodeShapeReferenceIRI: String?
     public let minCount: Int?
     public let maxCount: Int?
 
@@ -58,6 +59,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         pattern: String? = nil,
         hasValue: String? = nil,
         inValues: [String] = [],
+        nodeShapeReferenceIRI: String? = nil,
         minCount: Int? = nil,
         maxCount: Int? = nil
     ) {
@@ -74,6 +76,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.pattern = pattern
         self.hasValue = hasValue
         self.inValues = inValues
+        self.nodeShapeReferenceIRI = nodeShapeReferenceIRI
         self.minCount = minCount
         self.maxCount = maxCount
     }
@@ -216,6 +219,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var pattern: String?
             var hasValue: String?
             var inValues: Set<String> = []
+            var nodeShapeReferenceIRI: String?
             var minCount: Int?
             var maxCount: Int?
         }
@@ -269,6 +273,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.hasValue = object
             } else if predicate == SHACLIRIs.in {
                 current.inValues.insert(object)
+            } else if predicate == SHACLIRIs.node {
+                current.nodeShapeReferenceIRI = object
             } else if predicate == SHACLIRIs.minCount {
                 guard let count = Int(object) else {
                     throw SHACLError.invalidIntegerLiteral(object)
@@ -302,6 +308,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 pattern: partial.pattern,
                 hasValue: partial.hasValue,
                 inValues: partial.inValues.sorted(),
+                nodeShapeReferenceIRI: partial.nodeShapeReferenceIRI,
                 minCount: partial.minCount,
                 maxCount: partial.maxCount
             )
@@ -405,6 +412,7 @@ public struct SHACLCoreValidator: SHACLValidator {
     private let shapesLoader: any SHACLShapesGraphLoading
     private let dataLoader: any SHACLDataGraphLoading
     private let focusResolver: SHACLFocusNodeResolver
+    private let maxReferenceDepth = 16
 
     public init(
         shapesLoader: any SHACLShapesGraphLoading = SHACLShapesGraphLoader(),
@@ -429,7 +437,17 @@ public struct SHACLCoreValidator: SHACLValidator {
                 continue
             }
             for focusNode in resolution.focusNodes {
-                violations.append(contentsOf: evaluate(nodeShape: shape, focusNode: focusNode, dataGraph: parsedData, shapesByIRI: shapeByIRI))
+                var visited: Set<String> = []
+                violations.append(
+                    contentsOf: evaluate(
+                        nodeShape: shape,
+                        focusNode: focusNode,
+                        dataGraph: parsedData,
+                        shapesByIRI: shapeByIRI,
+                        depth: 0,
+                        visited: &visited
+                    )
+                )
             }
         }
 
@@ -456,9 +474,14 @@ public struct SHACLCoreValidator: SHACLValidator {
         nodeShape: SHACLShapeDefinition,
         focusNode: String,
         dataGraph: SHACLDataGraph,
-        shapesByIRI: [String: SHACLShapeDefinition]
+        shapesByIRI: [String: SHACLShapeDefinition],
+        depth: Int,
+        visited: inout Set<String>
     ) -> [SHACLViolation] {
         var violations: [SHACLViolation] = []
+        if depth > maxReferenceDepth {
+            return violations
+        }
 
         for propertyShapeIRI in nodeShape.propertyShapeIRIs {
             guard let propertyShape = shapesByIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
@@ -630,6 +653,28 @@ public struct SHACLCoreValidator: SHACLValidator {
                     }
                 }
             }
+
+            if let nodeReference = propertyShape.nodeShapeReferenceIRI,
+               let referencedShape = shapesByIRI[nodeReference],
+               referencedShape.kind == .nodeShape {
+                for valueNode in values {
+                    let key = "\(referencedShape.shapeIRI)|\(valueNode)"
+                    if visited.contains(key) {
+                        continue
+                    }
+                    visited.insert(key)
+                    let nestedViolations = evaluate(
+                        nodeShape: referencedShape,
+                        focusNode: valueNode,
+                        dataGraph: dataGraph,
+                        shapesByIRI: shapesByIRI,
+                        depth: depth + 1,
+                        visited: &visited
+                    )
+                    visited.remove(key)
+                    violations.append(contentsOf: nestedViolations)
+                }
+            }
         }
 
         return violations
@@ -706,6 +751,7 @@ private enum SHACLIRIs {
     static let pattern = "http://www.w3.org/ns/shacl#pattern"
     static let hasValue = "http://www.w3.org/ns/shacl#hasValue"
     static let `in` = "http://www.w3.org/ns/shacl#in"
+    static let node = "http://www.w3.org/ns/shacl#node"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"

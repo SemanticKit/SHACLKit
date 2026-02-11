@@ -274,3 +274,26 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(violation.message.contains("in violation"))
     #expect(violation.message.contains("http://example.com/Archived"))
 }
+
+@Test func coreValidatorConformsForNodeReferenceFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeReferenceShapes.ttl")
+    let dataGraph = try fixtureData("nodeReferenceValid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsNodeReferenceViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeReferenceShapes.ttl")
+    let dataGraph = try fixtureData("nodeReferenceInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.shapeIRI == "http://example.com/EmployeeIdShape")
+    #expect(violation.message.contains("minCount violation"))
+}
