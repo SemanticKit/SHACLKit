@@ -15,9 +15,10 @@ Legend:
 
 - [x] `TEST-SHACL-010` Target selection tests for all core target selectors.
 - [x] `TEST-SHACL-015` Focus-node resolution tests over RDF triples for single and multi-shape target sets.
-- [~] `TEST-SHACL-011` Node shape validation pass/fail matrix.
-  - Covered node-shape-level `sh:class` and `sh:nodeKind` pass/fail fixtures.
-- [~] `TEST-SHACL-012` Property shape validation pass/fail matrix.
+- [x] `TEST-SHACL-011` Node shape validation pass/fail matrix.
+  - Covered node-shape-level `sh:class` and `sh:nodeKind` pass/fail fixtures with matrix assertions.
+- [x] `TEST-SHACL-012` Property shape validation pass/fail matrix.
+  - Covered fixture matrix assertions across implemented property-shape constraint components.
 - [x] `TEST-SHACL-013` Severity propagation tests (`Violation`, `Warning`, `Info`).
 - [x] `TEST-SHACL-014` Report model shape and deterministic ordering assertions.
 

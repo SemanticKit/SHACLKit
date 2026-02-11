@@ -145,6 +145,22 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#class")
 }
 
+@Test func coreValidatorNodeShapeValidationMatrixSubset() async throws {
+    let validator = SHACLCoreValidator()
+    let scenarios: [(String, String, Bool)] = [
+        ("nodeShapeConstraintsShapes.ttl", "nodeShapeConstraintsValid.ttl", true),
+        ("nodeShapeConstraintsShapes.ttl", "nodeShapeConstraintsInvalid.ttl", false),
+        ("severityWarningShapes.ttl", "severityWarningData.ttl", true),
+    ]
+
+    for scenario in scenarios {
+        let shapes = try fixtureData(scenario.0)
+        let dataGraph = try fixtureData(scenario.1)
+        let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+        #expect(result.conforms == scenario.2)
+    }
+}
+
 @Test func coreValidatorReportsClassConstraintViolation() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("classConstraintsShapes.ttl")
@@ -641,6 +657,35 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(!result.conforms)
     let violation = try #require(result.violations.first)
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#xone")
+}
+
+@Test func coreValidatorPropertyShapeValidationMatrixSubset() async throws {
+    let validator = SHACLCoreValidator()
+    let scenarios: [(String, String, Bool)] = [
+        ("countConstraintsShapes.ttl", "countConstraintsValid.ttl", true),
+        ("countConstraintsShapes.ttl", "countConstraintsInvalid.ttl", false),
+        ("classConstraintsShapes.ttl", "classConstraintsValid.ttl", true),
+        ("classConstraintsShapes.ttl", "classConstraintsInvalid.ttl", false),
+        ("datatypeConstraintsShapes.ttl", "datatypeConstraintsValid.ttl", true),
+        ("datatypeConstraintsShapes.ttl", "datatypeConstraintsInvalid.ttl", false),
+        ("stringFacetsShapes.ttl", "stringFacetsValid.ttl", true),
+        ("stringFacetsShapes.ttl", "stringFacetsInvalid.ttl", false),
+        ("rangeFacetsShapes.ttl", "rangeFacetsValid.ttl", true),
+        ("rangeFacetsShapes.ttl", "rangeFacetsInvalid.ttl", false),
+        ("hasValueConstraintsShapes.ttl", "hasValueConstraintsValid.ttl", true),
+        ("hasValueConstraintsShapes.ttl", "hasValueConstraintsInvalid.ttl", false),
+        ("inListConstraintsShapes.ttl", "inListConstraintsValid.ttl", true),
+        ("inListConstraintsShapes.ttl", "inListConstraintsInvalid.ttl", false),
+        ("logicalListOrShapes.ttl", "logicalListOrValid.ttl", true),
+        ("logicalListOrShapes.ttl", "logicalListOrInvalid.ttl", false),
+    ]
+
+    for scenario in scenarios {
+        let shapes = try fixtureData(scenario.0)
+        let dataGraph = try fixtureData(scenario.1)
+        let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+        #expect(result.conforms == scenario.2)
+    }
 }
 
 @Test func coreValidatorEmitsCompleteMachineReadableDiagnostics() async throws {
