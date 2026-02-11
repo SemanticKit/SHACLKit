@@ -194,6 +194,7 @@ public enum SHACLError: Error, LocalizedError {
     case invalidStatement(String)
     case invalidIntegerLiteral(String)
     case unsupportedTerm(String)
+    case invalidShapesGraph(String)
     case notImplemented(String)
 
     public var errorDescription: String? {
@@ -210,6 +211,8 @@ public enum SHACLError: Error, LocalizedError {
             return "Invalid integer literal: \(value)"
         case .unsupportedTerm(let term):
             return "Unsupported RDF term in SHACLKit Turtle subset parser: \(term)"
+        case .invalidShapesGraph(let detail):
+            return "Invalid SHACL shapes graph: \(detail)"
         case .notImplemented(let detail):
             return "SHACL feature not implemented: \(detail)"
         }
@@ -480,6 +483,7 @@ public struct SHACLCoreValidator: SHACLValidator {
 
     public func validate(dataGraph: Data, shapesGraph: Data) throws -> SHACLValidationResult {
         let parsedShapes = try shapesLoader.load(from: shapesGraph)
+        try validateShapesGraph(parsedShapes)
         let parsedData = try dataLoader.load(from: dataGraph)
         let resolutions = focusResolver.resolve(dataGraph: parsedData, shapesGraph: parsedShapes)
         let shapeByIRI = Dictionary(uniqueKeysWithValues: parsedShapes.shapes.map { ($0.shapeIRI, $0) })
@@ -538,6 +542,40 @@ public struct SHACLCoreValidator: SHACLValidator {
             message: "SHACL Core subset validation produced \(sortedViolations.count) result(s), including \(violationCount) violation(s).",
             violations: sortedViolations
         )
+    }
+
+    private func validateShapesGraph(_ shapesGraph: SHACLShapesGraph) throws {
+        let byIRI = Dictionary(uniqueKeysWithValues: shapesGraph.shapes.map { ($0.shapeIRI, $0) })
+
+        for shape in shapesGraph.shapes where shape.kind == .nodeShape {
+            for propertyShapeIRI in shape.propertyShapeIRIs {
+                guard let propertyShape = byIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
+                    throw SHACLError.invalidShapesGraph(
+                        "Node shape \(shape.shapeIRI) references missing or non-property shape \(propertyShapeIRI)"
+                    )
+                }
+            }
+        }
+
+        for shape in shapesGraph.shapes where shape.kind == .propertyShape {
+            guard shape.pathIRI != nil else {
+                throw SHACLError.invalidShapesGraph("Property shape \(shape.shapeIRI) is missing sh:path")
+            }
+
+            let referencedNodeShapeIRIs =
+                [shape.nodeShapeReferenceIRI, shape.notShapeIRI].compactMap { $0 }
+                + shape.andShapeIRIs
+                + shape.orShapeIRIs
+                + shape.xoneShapeIRIs
+
+            for referencedIRI in referencedNodeShapeIRIs {
+                guard let nodeShape = byIRI[referencedIRI], nodeShape.kind == .nodeShape else {
+                    throw SHACLError.invalidShapesGraph(
+                        "Property shape \(shape.shapeIRI) references missing or non-node shape \(referencedIRI)"
+                    )
+                }
+            }
+        }
     }
 
     private func evaluate(

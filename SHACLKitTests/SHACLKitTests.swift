@@ -464,3 +464,23 @@ private func fixtureData(_ name: String) throws -> Data {
     let second = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(first == second)
 }
+
+@Test func coreValidatorThrowsForPropertyShapeMissingPath() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("invalidShapesMissingPath.ttl")
+    let dataGraph = try fixtureData("invalidShapesData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
+@Test func coreValidatorThrowsForMissingReferencedPropertyShape() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("invalidShapesUnknownProperty.ttl")
+    let dataGraph = try fixtureData("invalidShapesData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
