@@ -45,6 +45,7 @@ Legend:
   - Added curated W3C node-shape logical conformance subset coverage (`and-001`, `or-001`, `not-001`, `xone-001`).
 - [x] `TEST-SHACL-025` Shape-reference and qualified shape tests.
   - Covered `sh:node` fixtures, qualified value shape count fixtures, and invalid reference diagnostics.
+  - Added curated W3C node-shape conformance subset coverage for `class-001`.
 
 ## Phase 2: Node Expressions and Rules
 
