@@ -585,6 +585,19 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     ])
 }
 
+@Test func focusNodeResolverIgnoresEmptyNodesTargetNodeExpressionOutputs() async throws {
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let resolver = SHACLFocusNodeResolver()
+
+    let shapes = try shapesLoader.load(from: fixtureData("targetNodeExpressionEmptyNodesShapes.ttl"))
+    let dataGraph = try dataLoader.load(from: fixtureData("dataGraph.ttl"))
+    let resolutions = resolver.resolve(dataGraph: dataGraph, shapesGraph: shapes)
+
+    let resolution = try #require(resolutions.first(where: { $0.shapeIRI == "http://example.com/EmptyNodesTargetShape" }))
+    #expect(resolution.focusNodes.isEmpty)
+}
+
 @Test func coreValidatorConformsForMinMaxCountFixture() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("countConstraintsShapes.ttl")

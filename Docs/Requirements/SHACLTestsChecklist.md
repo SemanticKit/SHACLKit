@@ -23,7 +23,7 @@ Legend:
   - Added coverage for `sh:targetNode` selectors backed by node-expression definitions.
   - Added coverage for `sh:targetNode` selectors backed by `shnex:nodes`.
   - Added coverage for `sh:targetNode` selectors backed by `shnex:pathValues` + explicit `shnex:focusNode`.
-  - Added regression coverage ensuring empty target outputs are ignored.
+  - Added regression coverage ensuring empty target outputs are ignored, including empty `shnex:nodes ()`.
   - Added curated W3C core target selector subset coverage (`targetNode`, `targetClass`, implicit `targetClass`, `targetSubjectsOf`, `targetObjectsOf`, `multipleTargets`).
   - Added curated W3C core path conformance subset coverage (inverse/alternative/sequence and cardinality path operators).
 - [x] `TEST-SHACL-015` Focus-node resolution tests over RDF triples for single and multi-shape target sets.
