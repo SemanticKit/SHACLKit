@@ -83,3 +83,12 @@ core-misc-severity-001	data-shapes-test-suite/tests/core/misc/severity-001.ttl	d
 core-misc-severity-002	data-shapes-test-suite/tests/core/misc/severity-002.ttl	data-shapes-test-suite/tests/core/misc/severity-002.ttl	false	Mixed severity propagation between node and property constraints.
 core-misc-deactivated-001	data-shapes-test-suite/tests/core/misc/deactivated-001.ttl	data-shapes-test-suite/tests/core/misc/deactivated-001.ttl	true	Deactivated node shape should not produce violations.
 core-misc-deactivated-002	data-shapes-test-suite/tests/core/misc/deactivated-002.ttl	data-shapes-test-suite/tests/core/misc/deactivated-002.ttl	false	Non-deactivated node shape should still enforce constraints.
+core-path-inverse-001	data-shapes-test-suite/tests/core/path/path-inverse-001.ttl	data-shapes-test-suite/tests/core/path/path-inverse-001.ttl	false	Inverse path evaluation.
+core-path-alternative-001	data-shapes-test-suite/tests/core/path/path-alternative-001.ttl	data-shapes-test-suite/tests/core/path/path-alternative-001.ttl	false	Alternative path evaluation.
+core-path-sequence-001	data-shapes-test-suite/tests/core/path/path-sequence-001.ttl	data-shapes-test-suite/tests/core/path/path-sequence-001.ttl	false	Sequence path evaluation.
+core-path-zeroOrMore-001	data-shapes-test-suite/tests/core/path/path-zeroOrMore-001.ttl	data-shapes-test-suite/tests/core/path/path-zeroOrMore-001.ttl	false	Zero-or-more path evaluation.
+core-path-oneOrMore-001	data-shapes-test-suite/tests/core/path/path-oneOrMore-001.ttl	data-shapes-test-suite/tests/core/path/path-oneOrMore-001.ttl	false	One-or-more path evaluation.
+core-path-zeroOrOne-001	data-shapes-test-suite/tests/core/path/path-zeroOrOne-001.ttl	data-shapes-test-suite/tests/core/path/path-zeroOrOne-001.ttl	false	Zero-or-one path evaluation.
+core-path-sequence-002	data-shapes-test-suite/tests/core/path/path-sequence-002.ttl	data-shapes-test-suite/tests/core/path/path-sequence-002.ttl	false	Longer sequence path evaluation.
+core-path-sequence-duplicate-001	data-shapes-test-suite/tests/core/path/path-sequence-duplicate-001.ttl	data-shapes-test-suite/tests/core/path/path-sequence-duplicate-001.ttl	false	Sequence path behavior with duplicate path outcomes.
+core-path-complex-002	data-shapes-test-suite/tests/core/path/path-complex-002-data.ttl	data-shapes-test-suite/tests/core/path/path-complex-002-shapes.ttl	false	Complex inverse-sequence path evaluation.

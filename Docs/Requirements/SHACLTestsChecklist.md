@@ -23,6 +23,7 @@ Legend:
   - Added coverage for `sh:targetNode` selectors backed by node-expression definitions.
   - Added regression coverage ensuring empty target outputs are ignored.
   - Added curated W3C core target selector subset coverage (`targetNode`, `targetClass`, implicit `targetClass`, `targetSubjectsOf`, `targetObjectsOf`, `multipleTargets`).
+  - Added curated W3C core path conformance subset coverage (inverse/alternative/sequence and cardinality path operators).
 - [x] `TEST-SHACL-015` Focus-node resolution tests over RDF triples for single and multi-shape target sets.
 - [x] `TEST-SHACL-011` Node shape validation pass/fail matrix.
   - Covered node-shape-level `sh:class` and `sh:nodeKind` pass/fail fixtures with matrix assertions.

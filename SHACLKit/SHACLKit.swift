@@ -28,6 +28,16 @@ public enum SHACLNodeKindConstraint: String, Sendable, Codable, Hashable {
     case iriOrLiteral
 }
 
+public indirect enum SHACLPropertyPath: Sendable, Hashable {
+    case predicate(String)
+    case inverse(SHACLPropertyPath)
+    case sequence([SHACLPropertyPath])
+    case alternative([SHACLPropertyPath])
+    case zeroOrMore(SHACLPropertyPath)
+    case oneOrMore(SHACLPropertyPath)
+    case zeroOrOne(SHACLPropertyPath)
+}
+
 public struct SHACLShapeDefinition: Sendable, Hashable {
     public let shapeIRI: String
     public let kind: SHACLShapeKind
@@ -40,6 +50,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let sparqlConstraintIRIs: [String]
     public let sparqlTargetIRIs: [String]
     public let pathIRI: String?
+    public let propertyPath: SHACLPropertyPath?
     public let expressionIRI: String?
     public let classIRI: String?
     public let nodeKind: SHACLNodeKindConstraint?
@@ -86,6 +97,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         sparqlConstraintIRIs: [String] = [],
         sparqlTargetIRIs: [String] = [],
         pathIRI: String? = nil,
+        propertyPath: SHACLPropertyPath? = nil,
         expressionIRI: String? = nil,
         classIRI: String? = nil,
         nodeKind: SHACLNodeKindConstraint? = nil,
@@ -131,6 +143,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.sparqlConstraintIRIs = sparqlConstraintIRIs
         self.sparqlTargetIRIs = sparqlTargetIRIs
         self.pathIRI = pathIRI
+        self.propertyPath = propertyPath
         self.expressionIRI = expressionIRI
         self.classIRI = classIRI
         self.nodeKind = nodeKind
@@ -724,6 +737,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 sparqlConstraintIRIs: resolveShapeReferenceIRIs(partial.sparqlConstraintIRIs, triplesBySubject: triplesBySubject).sorted(),
                 sparqlTargetIRIs: resolveShapeReferenceIRIs(partial.sparqlTargetIRIs, triplesBySubject: triplesBySubject).sorted(),
                 pathIRI: partial.pathIRI,
+                propertyPath: partial.pathIRI.flatMap { parsePropertyPath($0, triplesBySubject: triplesBySubject) },
                 expressionIRI: partial.expressionIRI,
                 classIRI: partial.classIRI,
                 nodeKind: partial.nodeKind,
@@ -935,6 +949,154 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         }
 
         return values
+    }
+
+    private func parsePropertyPath(
+        _ term: String,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> SHACLPropertyPath? {
+        var visited: Set<String> = []
+        return parsePropertyPath(
+            term,
+            triplesBySubject: triplesBySubject,
+            visited: &visited
+        )
+    }
+
+    private func parsePropertyPath(
+        _ term: String,
+        triplesBySubject: [String: [SHACLTriple]],
+        visited: inout Set<String>
+    ) -> SHACLPropertyPath? {
+        if visited.contains(term) {
+            return nil
+        }
+        visited.insert(term)
+        defer { visited.remove(term) }
+
+        if hasRDFListStructure(term, triplesBySubject: triplesBySubject) {
+            let members = resolveRDFListTermsOrdered(term, triplesBySubject: triplesBySubject)
+            let parsedMembers = members.compactMap { member in
+                parsePropertyPath(
+                    member,
+                    triplesBySubject: triplesBySubject,
+                    visited: &visited
+                )
+            }
+            guard !parsedMembers.isEmpty, parsedMembers.count == members.count else {
+                return nil
+            }
+            if parsedMembers.count == 1 {
+                return parsedMembers[0]
+            }
+            return .sequence(parsedMembers)
+        }
+
+        if let triples = triplesBySubject[term] {
+            if let inverseObject = triples.first(where: { $0.predicate == SHACLIRIs.inversePath })?.object,
+               let nested = parsePropertyPath(
+                   inverseObject,
+                   triplesBySubject: triplesBySubject,
+                   visited: &visited
+               ) {
+                return .inverse(nested)
+            }
+
+            if let alternativeList = triples.first(where: { $0.predicate == SHACLIRIs.alternativePath })?.object {
+                let members = resolveRDFListTermsOrdered(alternativeList, triplesBySubject: triplesBySubject)
+                let parsedMembers = members.compactMap { member in
+                    parsePropertyPath(
+                        member,
+                        triplesBySubject: triplesBySubject,
+                        visited: &visited
+                    )
+                }
+                guard !parsedMembers.isEmpty, parsedMembers.count == members.count else {
+                    return nil
+                }
+                return .alternative(parsedMembers)
+            }
+
+            if let zeroOrMoreObject = triples.first(where: { $0.predicate == SHACLIRIs.zeroOrMorePath })?.object,
+               let nested = parsePropertyPath(
+                   zeroOrMoreObject,
+                   triplesBySubject: triplesBySubject,
+                   visited: &visited
+               ) {
+                return .zeroOrMore(nested)
+            }
+
+            if let oneOrMoreObject = triples.first(where: { $0.predicate == SHACLIRIs.oneOrMorePath })?.object,
+               let nested = parsePropertyPath(
+                   oneOrMoreObject,
+                   triplesBySubject: triplesBySubject,
+                   visited: &visited
+               ) {
+                return .oneOrMore(nested)
+            }
+
+            if let zeroOrOneObject = triples.first(where: { $0.predicate == SHACLIRIs.zeroOrOnePath })?.object,
+               let nested = parsePropertyPath(
+                   zeroOrOneObject,
+                   triplesBySubject: triplesBySubject,
+                   visited: &visited
+               ) {
+                return .zeroOrOne(nested)
+            }
+        }
+
+        if isIRIReferenceTerm(term) {
+            return .predicate(term)
+        }
+
+        return nil
+    }
+
+    private func hasRDFListStructure(
+        _ term: String,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> Bool {
+        guard let triples = triplesBySubject[term] else {
+            return false
+        }
+        return triples.contains(where: { $0.predicate == SHACLIRIs.rdfFirst })
+    }
+
+    private func resolveRDFListTermsOrdered(
+        _ headOrValue: String,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> [String] {
+        if headOrValue == SHACLIRIs.rdfNil {
+            return []
+        }
+
+        guard hasRDFListStructure(headOrValue, triplesBySubject: triplesBySubject) else {
+            return [headOrValue]
+        }
+
+        var values: [String] = []
+        var current = headOrValue
+        var visited: Set<String> = []
+
+        while current != SHACLIRIs.rdfNil && !visited.contains(current) {
+            visited.insert(current)
+            guard let triples = triplesBySubject[current],
+                  let first = triples.first(where: { $0.predicate == SHACLIRIs.rdfFirst }),
+                  let rest = triples.first(where: { $0.predicate == SHACLIRIs.rdfRest }) else {
+                break
+            }
+            values.append(first.object)
+            current = rest.object
+        }
+
+        return values
+    }
+
+    private func isIRIReferenceTerm(_ term: String) -> Bool {
+        !term.hasPrefix("_:")
+            && !term.hasPrefix("\"")
+            && !term.isEmpty
+            && term != SHACLIRIs.rdfNil
     }
 }
 
@@ -2167,7 +2329,13 @@ public struct SHACLCoreValidator: SHACLValidator {
             let severity = propertyShape.severity ?? nodeShape.severity ?? .violation
 
             let values: [String]
-            if let pathIRI {
+            if let propertyPath = propertyShape.propertyPath {
+                values = resolvePropertyPathValues(
+                    propertyPath,
+                    from: focusNode,
+                    dataGraph: dataGraph
+                ).sorted()
+            } else if let pathIRI {
                 values = dataGraph.triples
                     .filter { $0.subject == focusNode && $0.predicate == pathIRI }
                     .map(\.object)
@@ -2939,6 +3107,71 @@ public struct SHACLCoreValidator: SHACLValidator {
         return violations
     }
 
+    private func resolvePropertyPathValues(
+        _ path: SHACLPropertyPath,
+        from focusNode: String,
+        dataGraph: SHACLDataGraph
+    ) -> Set<String> {
+        switch path {
+        case .predicate(let predicateIRI):
+            return Set(
+                dataGraph.triples
+                    .filter { $0.subject == focusNode && $0.predicate == predicateIRI }
+                    .map(\.object)
+            )
+        case .inverse(let nested):
+            let candidateNodes = Set(dataGraph.triples.map(\.subject) + dataGraph.triples.map(\.object))
+            return Set(
+                candidateNodes.filter { candidate in
+                    resolvePropertyPathValues(nested, from: candidate, dataGraph: dataGraph).contains(focusNode)
+                }
+            )
+        case .sequence(let members):
+            return members.reduce(into: Set([focusNode])) { partial, member in
+                let next = partial.reduce(into: Set<String>()) { nextSet, node in
+                    nextSet.formUnion(resolvePropertyPathValues(member, from: node, dataGraph: dataGraph))
+                }
+                partial = next
+            }
+        case .alternative(let members):
+            return members.reduce(into: Set<String>()) { partial, member in
+                partial.formUnion(resolvePropertyPathValues(member, from: focusNode, dataGraph: dataGraph))
+            }
+        case .zeroOrOne(let nested):
+            return Set([focusNode]).union(resolvePropertyPathValues(nested, from: focusNode, dataGraph: dataGraph))
+        case .zeroOrMore(let nested):
+            var reached: Set<String> = [focusNode]
+            var frontier: Set<String> = [focusNode]
+            while !frontier.isEmpty {
+                let next = frontier.reduce(into: Set<String>()) { partial, node in
+                    partial.formUnion(resolvePropertyPathValues(nested, from: node, dataGraph: dataGraph))
+                }
+                let delta = next.subtracting(reached)
+                if delta.isEmpty {
+                    break
+                }
+                reached.formUnion(delta)
+                frontier = delta
+            }
+            return reached
+        case .oneOrMore(let nested):
+            var reached = resolvePropertyPathValues(nested, from: focusNode, dataGraph: dataGraph)
+            var frontier = reached
+            while !frontier.isEmpty {
+                let next = frontier.reduce(into: Set<String>()) { partial, node in
+                    partial.formUnion(resolvePropertyPathValues(nested, from: node, dataGraph: dataGraph))
+                }
+                let delta = next.subtracting(reached)
+                if delta.isEmpty {
+                    break
+                }
+                reached.formUnion(delta)
+                frontier = delta
+            }
+            return reached
+        }
+    }
+
     private func conforms(
         valueNode: String,
         toNodeShapeIRI shapeIRI: String,
@@ -3226,6 +3459,11 @@ private enum SHACLIRIs {
     static let severity = "http://www.w3.org/ns/shacl#severity"
     static let property = "http://www.w3.org/ns/shacl#property"
     static let path = "http://www.w3.org/ns/shacl#path"
+    static let inversePath = "http://www.w3.org/ns/shacl#inversePath"
+    static let alternativePath = "http://www.w3.org/ns/shacl#alternativePath"
+    static let zeroOrMorePath = "http://www.w3.org/ns/shacl#zeroOrMorePath"
+    static let oneOrMorePath = "http://www.w3.org/ns/shacl#oneOrMorePath"
+    static let zeroOrOnePath = "http://www.w3.org/ns/shacl#zeroOrOnePath"
     static let `class` = "http://www.w3.org/ns/shacl#class"
     static let nodeKind = "http://www.w3.org/ns/shacl#nodeKind"
     static let datatype = "http://www.w3.org/ns/shacl#datatype"
