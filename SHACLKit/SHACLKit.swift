@@ -852,9 +852,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             if let shapeTerm = resolveShapeReferenceIRIs(partial.matchAllObjects, triplesBySubject: triplesBySubject).sorted().first,
                let inputObject = partial.nodesObjects.sorted().first {
                 let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
-                let staticListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticListMembers = resolveStaticRDFListMembers(inputObject, triplesBySubject: triplesBySubject)
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .matchAll(inputTerm: resolvedInput, shapeTerm: shapeTerm, staticListMembers: staticListMembers)
@@ -864,9 +862,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             if let shapeTerm = resolveShapeReferenceIRIs(partial.filterShapeObjects, triplesBySubject: triplesBySubject).sorted().first,
                let inputObject = partial.nodesObjects.sorted().first {
                 let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
-                let staticListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticListMembers = resolveStaticRDFListMembers(inputObject, triplesBySubject: triplesBySubject)
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .filterShape(inputTerm: resolvedInput, shapeTerm: shapeTerm, staticListMembers: staticListMembers)
@@ -876,13 +872,9 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             if let removeObject = partial.removeObjects.sorted().first,
                let inputObject = partial.nodesObjects.sorted().first {
                 let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
-                let staticInputListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticInputListMembers = resolveStaticRDFListMembers(inputObject, triplesBySubject: triplesBySubject)
                 let resolvedRemove = resolveShapeReferenceIRIs([removeObject], triplesBySubject: triplesBySubject).sorted().first ?? removeObject
-                let staticRemoveListMembers = rdfListLength(removeObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([removeObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticRemoveListMembers = resolveStaticRDFListMembers(removeObject, triplesBySubject: triplesBySubject)
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .remove(
@@ -897,9 +889,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             if let mapTerm = resolveShapeReferenceIRIs(partial.flatMapObjects, triplesBySubject: triplesBySubject).sorted().first,
                let inputObject = partial.nodesObjects.sorted().first {
                 let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
-                let staticInputListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticInputListMembers = resolveStaticRDFListMembers(inputObject, triplesBySubject: triplesBySubject)
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .flatMap(inputTerm: resolvedInput, mapTerm: mapTerm, staticInputListMembers: staticInputListMembers)
@@ -910,9 +900,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                let limitCount = Int(parsedLiteralLexicalForm(limitObject) ?? limitObject),
                let inputObject = partial.nodesObjects.sorted().first {
                 let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
-                let staticListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticListMembers = resolveStaticRDFListMembers(inputObject, triplesBySubject: triplesBySubject)
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .limit(inputTerm: resolvedInput, count: limitCount, staticListMembers: staticListMembers)
@@ -923,9 +911,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                let offsetCount = Int(parsedLiteralLexicalForm(offsetObject) ?? offsetObject),
                let inputObject = partial.nodesObjects.sorted().first {
                 let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
-                let staticListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticListMembers = resolveStaticRDFListMembers(inputObject, triplesBySubject: triplesBySubject)
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .offset(inputTerm: resolvedInput, count: offsetCount, staticListMembers: staticListMembers)
@@ -961,7 +947,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 )
             }
 
-            let nodesMembers = resolveShapeReferenceIRIs(partial.nodesObjects, triplesBySubject: triplesBySubject).sorted()
+            let nodesMembers: [String]
+            if partial.nodesObjects.count == 1,
+               let only = partial.nodesObjects.first,
+               let staticOrdered = resolveStaticRDFListMembers(only, triplesBySubject: triplesBySubject) {
+                nodesMembers = staticOrdered
+            } else {
+                nodesMembers = resolveShapeReferenceIRIs(partial.nodesObjects, triplesBySubject: triplesBySubject).sorted()
+            }
             if !nodesMembers.isEmpty || partial.nodesObjects.contains(SHACLIRIs.rdfNil) {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
@@ -973,16 +966,16 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 let resolvedConcatInput = resolveShapeReferenceIRIs([concatObject], triplesBySubject: triplesBySubject).sorted().first ?? concatObject
                 let staticListMembers: [String]?
                 if rdfListLength(concatObject, triplesBySubject: triplesBySubject) != nil {
-                    let members = resolveShapeReferenceIRIs([concatObject], triplesBySubject: triplesBySubject)
-                    var flattened: Set<String> = []
+                    let members = resolveRDFListOrDirectValueOrdered(concatObject, triplesBySubject: triplesBySubject)
+                    var flattened: [String] = []
                     for member in members {
-                        if rdfListLength(member, triplesBySubject: triplesBySubject) != nil {
-                            flattened.formUnion(resolveShapeReferenceIRIs([member], triplesBySubject: triplesBySubject))
+                        if let nestedList = resolveStaticRDFListMembers(member, triplesBySubject: triplesBySubject) {
+                            flattened.append(contentsOf: nestedList)
                         } else {
-                            flattened.insert(member)
+                            flattened.append(member)
                         }
                     }
-                    staticListMembers = flattened.sorted()
+                    staticListMembers = flattened
                 } else {
                     staticListMembers = nil
                 }
@@ -1018,9 +1011,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
 
             if let distinctObject = partial.distinctObjects.sorted().first {
                 let resolvedDistinctInput = resolveShapeReferenceIRIs([distinctObject], triplesBySubject: triplesBySubject).sorted().first ?? distinctObject
-                let staticListMembers = rdfListLength(distinctObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([distinctObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticListMembers = resolveStaticRDFListMembers(distinctObject, triplesBySubject: triplesBySubject)
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .distinct(inputTerm: resolvedDistinctInput, staticListMembers: staticListMembers)
@@ -1043,9 +1034,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
 
             if let minObject = partial.minObjects.sorted().first {
                 let resolvedMinInput = resolveShapeReferenceIRIs([minObject], triplesBySubject: triplesBySubject).sorted().first ?? minObject
-                let staticListMembers = rdfListLength(minObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([minObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticListMembers = resolveStaticRDFListMembers(minObject, triplesBySubject: triplesBySubject)
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .min(inputTerm: resolvedMinInput, staticListMembers: staticListMembers)
@@ -1054,9 +1043,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
 
             if let maxObject = partial.maxObjects.sorted().first {
                 let resolvedMaxInput = resolveShapeReferenceIRIs([maxObject], triplesBySubject: triplesBySubject).sorted().first ?? maxObject
-                let staticListMembers = rdfListLength(maxObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([maxObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticListMembers = resolveStaticRDFListMembers(maxObject, triplesBySubject: triplesBySubject)
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .max(inputTerm: resolvedMaxInput, staticListMembers: staticListMembers)
@@ -1065,9 +1052,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
 
             if let sumObject = partial.sumObjects.sorted().first {
                 let resolvedSumInput = resolveShapeReferenceIRIs([sumObject], triplesBySubject: triplesBySubject).sorted().first ?? sumObject
-                let staticListMembers = rdfListLength(sumObject, triplesBySubject: triplesBySubject) != nil
-                    ? resolveShapeReferenceIRIs([sumObject], triplesBySubject: triplesBySubject).sorted()
-                    : nil
+                let staticListMembers = resolveStaticRDFListMembers(sumObject, triplesBySubject: triplesBySubject)
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .sum(inputTerm: resolvedSumInput, staticListMembers: staticListMembers)
@@ -1305,6 +1290,16 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             resolved.formUnion(resolveRDFListOrDirectValue(object, triplesBySubject: triplesBySubject))
         }
         return resolved
+    }
+
+    private func resolveStaticRDFListMembers(
+        _ headOrValue: String,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> [String]? {
+        guard rdfListLength(headOrValue, triplesBySubject: triplesBySubject) != nil else {
+            return nil
+        }
+        return resolveRDFListOrDirectValueOrdered(headOrValue, triplesBySubject: triplesBySubject)
     }
 
     private func resolveRDFListOrDirectValue(
