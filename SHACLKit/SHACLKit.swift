@@ -291,6 +291,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             let predicate = triple.predicate
             let object = triple.object
 
+            if SHACLIRIs.phaseGatedPredicates.contains(predicate) {
+                throw SHACLError.notImplemented("Predicate \(predicate) is gated pending later SHACL phases.")
+            }
+
             var current = shapes[subject] ?? PartialShape()
 
             if predicate == SHACLIRIs.rdfType {
@@ -1208,6 +1212,13 @@ private enum SHACLIRIs {
     static let qualifiedValueShape = "http://www.w3.org/ns/shacl#qualifiedValueShape"
     static let qualifiedMinCount = "http://www.w3.org/ns/shacl#qualifiedMinCount"
     static let qualifiedMaxCount = "http://www.w3.org/ns/shacl#qualifiedMaxCount"
+    static let rule = "http://www.w3.org/ns/shacl#rule"
+    static let condition = "http://www.w3.org/ns/shacl#condition"
+    static let sparql = "http://www.w3.org/ns/shacl#sparql"
+    static let select = "http://www.w3.org/ns/shacl#select"
+    static let ask = "http://www.w3.org/ns/shacl#ask"
+    static let prefixes = "http://www.w3.org/ns/shacl#prefixes"
+    static let target = "http://www.w3.org/ns/shacl#target"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"
@@ -1222,6 +1233,15 @@ private enum SHACLIRIs {
     static let xsdInteger = "http://www.w3.org/2001/XMLSchema#integer"
     static let xsdString = "http://www.w3.org/2001/XMLSchema#string"
     static let rdfLangString = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
+    static let phaseGatedPredicates: Set<String> = [
+        rule,
+        condition,
+        sparql,
+        select,
+        ask,
+        prefixes,
+        target,
+    ]
 }
 
 private struct SHACLTriple {

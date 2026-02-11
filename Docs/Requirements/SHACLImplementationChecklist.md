@@ -63,4 +63,4 @@ Legend:
 - [x] `REQ-SHACL-100` Accept RDF data/shapes via package-level graph abstractions (no UI/network coupling).
 - [~] `REQ-SHACL-101` Provide adapter boundary for RDFKit/SemanticKit graph representations.
   - Added adapter protocols and typed-graph validation entrypoint; concrete RDFKit/SemanticKit adapters still pending.
-- [ ] `REQ-SHACL-102` Keep advanced features gated by explicit phase completion and test baselines.
+- [x] `REQ-SHACL-102` Keep advanced features gated by explicit phase completion and test baselines.
