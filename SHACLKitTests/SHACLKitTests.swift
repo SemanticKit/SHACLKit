@@ -1426,6 +1426,25 @@ private struct TestShapesSource {
     #expect(violation.sourceConstraintIRI == "http://example.com/NameConstraint")
 }
 
+@Test func coreValidatorExecutesSPARQLAskConstraintThroughExecutorBoundary() async throws {
+    let executor = TestSPARQLExecutor(
+        askResults: [
+            "ASK WHERE { ?this ex:active true }|http://example.com/alice": true,
+            "ASK WHERE { ?this ex:active true }|http://example.com/bob": false,
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlAskConstraintShapes.ttl")
+    let dataGraph = try fixtureData("sparqlAskData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.focusNode == "http://example.com/bob")
+    #expect(violation.sourceConstraintIRI == "http://example.com/ActiveConstraint")
+}
+
 @Test func coreValidatorExecutesSPARQLTargetThroughExecutorBoundary() async throws {
     let executor = TestSPARQLExecutor(
         selectResults: [
