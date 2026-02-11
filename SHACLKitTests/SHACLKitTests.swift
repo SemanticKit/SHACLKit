@@ -556,6 +556,16 @@ private func fixtureData(_ name: String) throws -> Data {
     }
 }
 
+@Test func coreValidatorThrowsForMissingReferencedNodeShape() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("invalidShapesUnknownNodeShape.ttl")
+    let dataGraph = try fixtureData("invalidShapesData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorMatchesResultsAcrossDataAndGraphEntryPoints() async throws {
     let validator = SHACLCoreValidator()
     let shapesData = try fixtureData("logicalOrShapes.ttl")
