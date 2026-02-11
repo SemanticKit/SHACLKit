@@ -12,3 +12,6 @@ ex:ExistsTrue
 
 ex:ExistsFalse
     shnex:exists ex:EmptyNodes .
+
+ex:ExistsFalseAnonymous
+    shnex:exists [] .

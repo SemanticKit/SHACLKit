@@ -329,6 +329,13 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         shapesGraph: graph
     )
     #expect(existsFalseResult == Set(["false"]))
+
+    let existsFalseAnonymousResult = evaluator.evaluate(
+        expressionIRI: "http://example.com/ExistsFalseAnonymous",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(existsFalseAnonymousResult == Set(["false"]))
 }
 
 @Test func coreValidatorConformsForExpressionDerivedPropertyValues() async throws {

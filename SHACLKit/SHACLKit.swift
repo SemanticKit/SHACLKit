@@ -1255,6 +1255,10 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
         }
 
         guard let expression = expressionsByIRI[term] else {
+            if term.hasPrefix("_:") {
+                // Anonymous node-expression placeholders (e.g. []) are treated as empty expressions.
+                return []
+            }
             return [term]
         }
 
