@@ -8,8 +8,8 @@ Legend:
 ## Test Infrastructure
 
 - [x] `TEST-SHACL-000` Create test target and fixtures directory (`SHACLKitTests/Fixtures`).
-- [~] `TEST-SHACL-001` Add canonical SHACL Core fixture corpus copied from Knowledge master set.
-  - Added fixture sync script (`Scripts/SyncFixturesFromKnowledge.sh`) and local fixture inventory; awaiting canonical files in `Knowledge/SHACL/Fixtures`.
+- [x] `TEST-SHACL-001` Add canonical SHACL Core fixture corpus copied from Knowledge master set.
+  - Canonical fixtures now live in `Knowledge/SHACL/Fixtures` and sync via `Scripts/SyncFixturesFromKnowledge.sh`.
 - [x] `TEST-SHACL-002` Add helper loaders for data graph + shapes graph fixture pairs.
 
 ## Phase 1: Core Behavior Tests
