@@ -122,6 +122,29 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(result.violations.isEmpty)
 }
 
+@Test func coreValidatorConformsForNodeShapeLevelConstraints() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeShapeConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("nodeShapeConstraintsValid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsNodeShapeLevelClassViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeShapeConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("nodeShapeConstraintsInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.shapeIRI == "http://example.com/EmployeeNodeShape")
+    #expect(violation.pathIRI == nil)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#class")
+}
+
 @Test func coreValidatorReportsClassConstraintViolation() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("classConstraintsShapes.ttl")

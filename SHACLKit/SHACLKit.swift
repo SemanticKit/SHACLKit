@@ -658,6 +658,40 @@ public struct SHACLCoreValidator: SHACLValidator {
         if depth > maxReferenceDepth {
             return violations
         }
+        let nodeSeverity = nodeShape.severity ?? .violation
+
+        if let classIRI = nodeShape.classIRI {
+            let hasRequiredType = dataGraph.triples.contains {
+                $0.subject == focusNode && $0.predicate == SHACLIRIs.rdfType && $0.object == classIRI
+            }
+            if !hasRequiredType {
+                violations.append(
+                    SHACLViolation(
+                        severity: nodeSeverity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.class,
+                        message: "class violation: focus node \(focusNode) is not typed as \(classIRI)"
+                    )
+                )
+            }
+        }
+
+        if let nodeKind = nodeShape.nodeKind, !matchesNodeKind(focusNode, nodeKind: nodeKind) {
+            violations.append(
+                SHACLViolation(
+                    severity: nodeSeverity,
+                    shapeIRI: nodeShape.shapeIRI,
+                    focusNode: focusNode,
+                    pathIRI: nil,
+                    valueNode: focusNode,
+                    sourceConstraintIRI: SHACLIRIs.nodeKind,
+                    message: "nodeKind violation: focus node \(focusNode) does not satisfy \(nodeKind.rawValue)"
+                )
+            )
+        }
 
         for propertyShapeIRI in nodeShape.propertyShapeIRIs {
             guard let propertyShape = shapesByIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
