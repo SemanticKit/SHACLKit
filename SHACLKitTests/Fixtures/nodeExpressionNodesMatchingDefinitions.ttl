@@ -1,0 +1,28 @@
+@prefix ex: <http://example.com/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:OrganizationsMatchingExpr
+    shnex:nodesMatching ex:OrganizationShape .
+
+ex:CompaniesMatchingExpr
+    shnex:nodesMatching ex:CompanyShape .
+
+ex:OrganizationShape
+    a sh:NodeShape ;
+    sh:class ex:Organization .
+
+ex:CompanyShape
+    a sh:NodeShape ;
+    sh:class ex:Company .
+
+ex:Company rdfs:subClassOf ex:Organization .
+
+ex:Org1 rdf:type ex:Organization .
+ex:Company1 rdf:type ex:Company .
+ex:Company2 rdf:type ex:Company .
+ex:Company1 rdf:type ex:Organization .
+ex:Company2 rdf:type ex:Organization .
+ex:Country1 rdf:type ex:Country .

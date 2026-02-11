@@ -208,6 +208,7 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case variable(String)
     case distinct(inputTerm: String, staticListMembers: [String]?)
     case instancesOf(String)
+    case nodesMatching(String)
     case min(inputTerm: String, staticListMembers: [String]?)
     case max(inputTerm: String, staticListMembers: [String]?)
     case sum(inputTerm: String, staticListMembers: [String]?)
@@ -512,6 +513,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var variableNames: Set<String> = []
             var distinctObjects: Set<String> = []
             var instancesOfObjects: Set<String> = []
+            var nodesMatchingObjects: Set<String> = []
             var minObjects: Set<String> = []
             var maxObjects: Set<String> = []
             var sumObjects: Set<String> = []
@@ -730,6 +732,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.instancesOfObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexNodesMatching {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.nodesMatchingObjects.insert(object)
+                nodeExpressions[subject] = expression
             } else if predicate == SHACLIRIs.shnexMin {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.minObjects.insert(object)
@@ -831,6 +837,13 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .instancesOf(classTerm)
+                )
+            }
+
+            if let shapeTerm = resolveShapeReferenceIRIs(partial.nodesMatchingObjects, triplesBySubject: triplesBySubject).sorted().first {
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .nodesMatching(shapeTerm)
                 )
             }
 
@@ -1402,6 +1415,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
         return evaluateTerm(
             expressionIRI,
             focusNode: focusNode,
+            shapesGraph: shapesGraph,
             expressionsByIRI: expressionByIRI,
             dataGraph: dataGraph,
             depth: 0,
@@ -1412,6 +1426,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
     private func evaluateTerm(
         _ term: String,
         focusNode: String,
+        shapesGraph: SHACLShapesGraph,
         expressionsByIRI: [String: SHACLNodeExpressionDefinition],
         dataGraph: SHACLDataGraph?,
         depth: Int,
@@ -1443,6 +1458,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     evaluateTerm(
                         member,
                         focusNode: focusNode,
+                        shapesGraph: shapesGraph,
                         expressionsByIRI: expressionsByIRI,
                         dataGraph: dataGraph,
                         depth: depth + 1,
@@ -1457,6 +1473,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             let initial = evaluateTerm(
                 first,
                 focusNode: focusNode,
+                shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
                 depth: depth + 1,
@@ -1467,6 +1484,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     evaluateTerm(
                         member,
                         focusNode: focusNode,
+                        shapesGraph: shapesGraph,
                         expressionsByIRI: expressionsByIRI,
                         dataGraph: dataGraph,
                         depth: depth + 1,
@@ -1480,6 +1498,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     evaluateTerm(
                         member,
                         focusNode: focusNode,
+                        shapesGraph: shapesGraph,
                         expressionsByIRI: expressionsByIRI,
                         dataGraph: dataGraph,
                         depth: depth + 1,
@@ -1491,6 +1510,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             let output = evaluateTerm(
                 input,
                 focusNode: focusNode,
+                shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
                 depth: depth + 1,
@@ -1504,6 +1524,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             let output = evaluateTerm(
                 inputTerm,
                 focusNode: focusNode,
+                shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
                 depth: depth + 1,
@@ -1519,6 +1540,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             return staticListMembers.map(Set.init) ?? evaluateTerm(
                 inputTerm,
                 focusNode: focusNode,
+                shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
                 depth: depth + 1,
@@ -1535,10 +1557,17 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     .filter { $0.predicate == SHACLIRIs.rdfType && matchingClasses.contains($0.object) }
                     .map(\.subject)
             )
+        case .nodesMatching(let shapeIRI):
+            guard let dataGraph else {
+                return []
+            }
+            let candidates = Set(dataGraph.triples.map(\.subject) + dataGraph.triples.map(\.object))
+            return nodesMatching(shapeIRI: shapeIRI, candidates: candidates, shapesGraph: shapesGraph, dataGraph: dataGraph)
         case .min(let inputTerm, let staticListMembers):
             let output = staticListMembers.map(Set.init) ?? evaluateTerm(
                 inputTerm,
                 focusNode: focusNode,
+                shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
                 depth: depth + 1,
@@ -1552,6 +1581,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             let output = staticListMembers.map(Set.init) ?? evaluateTerm(
                 inputTerm,
                 focusNode: focusNode,
+                shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
                 depth: depth + 1,
@@ -1565,6 +1595,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             let output = staticListMembers.map(Set.init) ?? evaluateTerm(
                 inputTerm,
                 focusNode: focusNode,
+                shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
                 depth: depth + 1,
@@ -1575,6 +1606,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             let conditionOutput = evaluateTerm(
                 condition,
                 focusNode: focusNode,
+                shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
                 depth: depth + 1,
@@ -1584,6 +1616,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 return evaluateTerm(
                     thenTerm,
                     focusNode: focusNode,
+                    shapesGraph: shapesGraph,
                     expressionsByIRI: expressionsByIRI,
                     dataGraph: dataGraph,
                     depth: depth + 1,
@@ -1596,6 +1629,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             return evaluateTerm(
                 elseTerm,
                 focusNode: focusNode,
+                shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
                 depth: depth + 1,
@@ -1610,6 +1644,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 focusNodes = evaluateTerm(
                     focusNodeTerm,
                     focusNode: focusNode,
+                    shapesGraph: shapesGraph,
                     expressionsByIRI: expressionsByIRI,
                     dataGraph: dataGraph,
                     depth: depth + 1,
@@ -1792,6 +1827,90 @@ private func transitiveSubclasses(of classIRI: String, dataGraph: SHACLDataGraph
     }
 
     return descendants
+}
+
+private func nodesMatching(
+    shapeIRI: String,
+    candidates: Set<String>,
+    shapesGraph: SHACLShapesGraph,
+    dataGraph: SHACLDataGraph
+) -> Set<String> {
+    guard !candidates.isEmpty else {
+        return []
+    }
+
+    let validator = SHACLCoreValidator()
+    let neutralizedShapes = shapesGraph.shapes.map(shapeWithoutTargets)
+    var matched: Set<String> = []
+    for candidate in candidates {
+        let tempShape = SHACLShapeDefinition(
+            shapeIRI: "urn:codex:shaclkit:nodeexpr:nodesMatching:\(candidate)",
+            kind: .nodeShape,
+            targets: [.targetNode(candidate)],
+            nodeShapeReferenceIRI: shapeIRI
+        )
+        let tempGraph = SHACLShapesGraph(
+            shapes: neutralizedShapes + [tempShape],
+            nodeExpressions: shapesGraph.nodeExpressions,
+            tripleRules: shapesGraph.tripleRules,
+            sparqlDefinitions: shapesGraph.sparqlDefinitions
+        )
+        if let result = try? validator.validate(dataGraph: dataGraph, shapesGraph: tempGraph),
+           result.conforms {
+            matched.insert(candidate)
+        }
+    }
+    return matched
+}
+
+private func shapeWithoutTargets(_ shape: SHACLShapeDefinition) -> SHACLShapeDefinition {
+    SHACLShapeDefinition(
+        shapeIRI: shape.shapeIRI,
+        kind: shape.kind,
+        isRDFSClass: shape.isRDFSClass,
+        isDeactivated: shape.isDeactivated,
+        severity: shape.severity,
+        targets: [],
+        propertyShapeIRIs: shape.propertyShapeIRIs,
+        tripleRuleIRIs: shape.tripleRuleIRIs,
+        sparqlConstraintIRIs: shape.sparqlConstraintIRIs,
+        sparqlTargetIRIs: shape.sparqlTargetIRIs,
+        pathIRI: shape.pathIRI,
+        propertyPath: shape.propertyPath,
+        expressionIRI: shape.expressionIRI,
+        classIRI: shape.classIRI,
+        nodeKind: shape.nodeKind,
+        datatypeIRI: shape.datatypeIRI,
+        minLength: shape.minLength,
+        maxLength: shape.maxLength,
+        minInclusive: shape.minInclusive,
+        maxInclusive: shape.maxInclusive,
+        minExclusive: shape.minExclusive,
+        maxExclusive: shape.maxExclusive,
+        pattern: shape.pattern,
+        hasValue: shape.hasValue,
+        inValues: shape.inValues,
+        languageInValues: shape.languageInValues,
+        uniqueLang: shape.uniqueLang,
+        equalsIRI: shape.equalsIRI,
+        disjointIRI: shape.disjointIRI,
+        lessThanIRI: shape.lessThanIRI,
+        lessThanOrEqualsIRI: shape.lessThanOrEqualsIRI,
+        isClosed: shape.isClosed,
+        ignoredPropertyIRIs: shape.ignoredPropertyIRIs,
+        nodeByExpressionIRI: shape.nodeByExpressionIRI,
+        nodeShapeReferenceIRI: shape.nodeShapeReferenceIRI,
+        andShapeIRIs: shape.andShapeIRIs,
+        orShapeIRIs: shape.orShapeIRIs,
+        xoneShapeIRIs: shape.xoneShapeIRIs,
+        notShapeIRI: shape.notShapeIRI,
+        qualifiedValueShapeIRI: shape.qualifiedValueShapeIRI,
+        qualifiedValueShapesDisjoint: shape.qualifiedValueShapesDisjoint,
+        qualifiedMinCount: shape.qualifiedMinCount,
+        qualifiedMaxCount: shape.qualifiedMaxCount,
+        minCount: shape.minCount,
+        maxCount: shape.maxCount
+    )
 }
 
 public struct SHACLCoreValidator: SHACLValidator {
@@ -2186,7 +2305,10 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         var triples = Set(dataGraph.triples)
-        let expressionGraph = SHACLShapesGraph(shapes: [], nodeExpressions: Array(nodeExpressionsByIRI.values))
+        let expressionGraph = SHACLShapesGraph(
+            shapes: Array(shapesByIRI.values),
+            nodeExpressions: Array(nodeExpressionsByIRI.values)
+        )
 
         for _ in 0..<maxRuleIterations {
             let graphSnapshot = SHACLDataGraph(triples: Array(triples))
@@ -2325,7 +2447,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
         let nodeSeverity = nodeShape.severity ?? .violation
         let expressionGraph = SHACLShapesGraph(
-            shapes: [],
+            shapes: Array(shapesByIRI.values),
             nodeExpressions: Array(nodeExpressionsByIRI.values)
         )
 
@@ -4012,6 +4134,7 @@ private enum SHACLIRIs {
     static let shnexVar = "http://www.w3.org/ns/shacl-node-expr#var"
     static let shnexDistinct = "http://www.w3.org/ns/shacl-node-expr#distinct"
     static let shnexInstancesOf = "http://www.w3.org/ns/shacl-node-expr#instancesOf"
+    static let shnexNodesMatching = "http://www.w3.org/ns/shacl-node-expr#nodesMatching"
     static let shnexMin = "http://www.w3.org/ns/shacl-node-expr#min"
     static let shnexMax = "http://www.w3.org/ns/shacl-node-expr#max"
     static let shnexSum = "http://www.w3.org/ns/shacl-node-expr#sum"

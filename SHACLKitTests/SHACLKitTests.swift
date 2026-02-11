@@ -478,6 +478,31 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(companies == Set(["http://example.com/Company1", "http://example.com/Company2"]))
 }
 
+@Test func nodeExpressionEvaluatorEvaluatesNodesMatching() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let graphData = try fixtureData("nodeExpressionNodesMatchingDefinitions.ttl")
+    let shapesGraph = try loader.load(from: graphData)
+    let dataGraph = try dataLoader.load(from: graphData)
+    let evaluator = SHACLNodeExpressionEvaluator()
+
+    let organizations = evaluator.evaluate(
+        expressionIRI: "http://example.com/OrganizationsMatchingExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(organizations == Set(["http://example.com/Org1", "http://example.com/Company1", "http://example.com/Company2"]))
+
+    let companies = evaluator.evaluate(
+        expressionIRI: "http://example.com/CompaniesMatchingExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(companies == Set(["http://example.com/Company1", "http://example.com/Company2"]))
+}
+
 @Test func nodeExpressionEvaluatorEvaluatesMinAndMax() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionMinMaxDefinitions.ttl"))
@@ -714,6 +739,39 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("expressionConstraintInstancesOfInvalidShapes.ttl")
     let dataGraph = try fixtureData("expressionConstraintInstancesOfValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
+@Test func coreValidatorConformsForNodesMatchingExpressionConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let shapes = try fixtureData("expressionConstraintNodesMatchingShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintNodesMatchingValidData.ttl")
+
+    let parsedShapes = try shapesLoader.load(from: shapes)
+    let parsedData = try dataLoader.load(from: dataGraph)
+    let expressionOutput = SHACLNodeExpressionEvaluator().evaluate(
+        expressionIRI: "http://example.com/NodesMatchingExpr",
+        focusNode: "http://example.com/scope",
+        shapesGraph: parsedShapes,
+        dataGraph: parsedData
+    )
+    #expect(expressionOutput.contains("http://example.com/alice"))
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsNodesMatchingExpressionConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintNodesMatchingInvalidShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintNodesMatchingValidData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)
