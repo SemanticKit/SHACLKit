@@ -14,6 +14,7 @@ Legend:
   - Optional corpus sync now materializes under `SHACLKitTests/Fixtures/W3CDataShapes` from newest `Knowledge/Inbox/Fixtures/W3CDataShapes*`.
   - Added smoke coverage asserting curated fixture availability in the test bundle.
   - Added curated conformance subset harness with explicit per-case expectations and SemanticKit parser preflight for fixture ingestion.
+  - Added W3C-aligned coverage for node-shape datatype/string/range/`hasValue`/`in` cases plus implicit class targeting behavior.
 - [x] `TEST-SHACL-002` Add helper loaders for data graph + shapes graph fixture pairs.
 
 ## Phase 1: Core Behavior Tests

@@ -31,6 +31,7 @@ public enum SHACLNodeKindConstraint: String, Sendable, Codable, Hashable {
 public struct SHACLShapeDefinition: Sendable, Hashable {
     public let shapeIRI: String
     public let kind: SHACLShapeKind
+    public let isRDFSClass: Bool
     public let severity: SHACLSeverity?
     public let targets: [SHACLTargetSelector]
     public let propertyShapeIRIs: [String]
@@ -64,6 +65,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public init(
         shapeIRI: String,
         kind: SHACLShapeKind,
+        isRDFSClass: Bool = false,
         severity: SHACLSeverity? = nil,
         targets: [SHACLTargetSelector],
         propertyShapeIRIs: [String] = [],
@@ -96,6 +98,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     ) {
         self.shapeIRI = shapeIRI
         self.kind = kind
+        self.isRDFSClass = isRDFSClass
         self.severity = severity
         self.targets = targets
         self.propertyShapeIRIs = propertyShapeIRIs
@@ -396,6 +399,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
 
         struct PartialShape {
             var kind: SHACLShapeKind?
+            var isRDFSClass = false
             var severity: SHACLSeverity?
             var targets: Set<SHACLTargetSelector> = []
             var propertyShapeIRIs: Set<String> = []
@@ -466,6 +470,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                     current.kind = .nodeShape
                 } else if object == SHACLIRIs.propertyShape {
                     current.kind = .propertyShape
+                } else if object == SHACLIRIs.rdfsClass {
+                    current.isRDFSClass = true
                 }
                 if object == SHACLIRIs.tripleRule {
                     var rule = rules[subject] ?? PartialRule()
@@ -636,6 +642,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             return SHACLShapeDefinition(
                 shapeIRI: shapeIRI,
                 kind: kind,
+                isRDFSClass: partial.isRDFSClass,
                 severity: partial.severity,
                 targets: normalizedTargets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
@@ -855,6 +862,13 @@ public struct SHACLFocusNodeResolver: Sendable {
             var nodes: Set<String> = []
             for selector in shape.targets {
                 nodes.formUnion(resolve(selector: selector, in: dataGraph, shapesGraph: shapesGraph))
+            }
+            if shape.kind == .nodeShape && shape.isRDFSClass {
+                nodes.formUnion(
+                    dataGraph.triples
+                        .filter { $0.predicate == SHACLIRIs.rdfType && $0.object == shape.shapeIRI }
+                        .map(\.subject)
+                )
             }
             return SHACLTargetResolution(shapeIRI: shape.shapeIRI, focusNodes: nodes.sorted())
         }
@@ -1456,6 +1470,162 @@ public struct SHACLCoreValidator: SHACLValidator {
                     message: "nodeKind violation: focus node \(focusNode) does not satisfy \(nodeKind.rawValue)"
                 )
             )
+        }
+
+        if let datatypeIRI = nodeShape.datatypeIRI {
+            let actualDatatype = inferredDatatypeIRI(for: focusNode)
+            if actualDatatype != datatypeIRI {
+                let actualText = actualDatatype ?? "none"
+                violations.append(
+                    SHACLViolation(
+                        severity: nodeSeverity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.datatype,
+                        message: "datatype violation: value \(focusNode) has datatype \(actualText), expected \(datatypeIRI)"
+                    )
+                )
+            }
+        }
+
+        if nodeShape.minLength != nil || nodeShape.maxLength != nil || nodeShape.pattern != nil {
+            if let lexical = extractLiteralLexicalForm(focusNode) {
+                if let minLength = nodeShape.minLength, lexical.count < minLength {
+                    violations.append(
+                        SHACLViolation(
+                            severity: nodeSeverity,
+                            shapeIRI: nodeShape.shapeIRI,
+                            focusNode: focusNode,
+                            pathIRI: nil,
+                            valueNode: focusNode,
+                            sourceConstraintIRI: SHACLIRIs.minLength,
+                            message: "minLength violation: expected >= \(minLength), got \(lexical.count)"
+                        )
+                    )
+                }
+
+                if let maxLength = nodeShape.maxLength, lexical.count > maxLength {
+                    violations.append(
+                        SHACLViolation(
+                            severity: nodeSeverity,
+                            shapeIRI: nodeShape.shapeIRI,
+                            focusNode: focusNode,
+                            pathIRI: nil,
+                            valueNode: focusNode,
+                            sourceConstraintIRI: SHACLIRIs.maxLength,
+                            message: "maxLength violation: expected <= \(maxLength), got \(lexical.count)"
+                        )
+                    )
+                }
+
+                if let pattern = nodeShape.pattern {
+                    let range = NSRange(lexical.startIndex..<lexical.endIndex, in: lexical)
+                    let regex = try? NSRegularExpression(pattern: pattern)
+                    let matches = regex?.firstMatch(in: lexical, options: [], range: range) != nil
+                    if !matches {
+                        violations.append(
+                            SHACLViolation(
+                                severity: nodeSeverity,
+                                shapeIRI: nodeShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: nil,
+                                valueNode: focusNode,
+                                sourceConstraintIRI: SHACLIRIs.pattern,
+                                message: "pattern violation: value \(lexical) does not match \(pattern)"
+                            )
+                        )
+                    }
+                }
+            } else {
+                violations.append(
+                    SHACLViolation(
+                        severity: nodeSeverity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.minLength,
+                        message: "string facet violation: value \(focusNode) is not a literal"
+                    )
+                )
+            }
+        }
+
+        if nodeShape.minInclusive != nil || nodeShape.maxInclusive != nil {
+            if let numeric = extractIntegerValue(focusNode) {
+                if let minimum = nodeShape.minInclusive, numeric < minimum {
+                    violations.append(
+                        SHACLViolation(
+                            severity: nodeSeverity,
+                            shapeIRI: nodeShape.shapeIRI,
+                            focusNode: focusNode,
+                            pathIRI: nil,
+                            valueNode: focusNode,
+                            sourceConstraintIRI: SHACLIRIs.minInclusive,
+                            message: "minInclusive violation: expected >= \(minimum), got \(numeric)"
+                        )
+                    )
+                }
+
+                if let maximum = nodeShape.maxInclusive, numeric > maximum {
+                    violations.append(
+                        SHACLViolation(
+                            severity: nodeSeverity,
+                            shapeIRI: nodeShape.shapeIRI,
+                            focusNode: focusNode,
+                            pathIRI: nil,
+                            valueNode: focusNode,
+                            sourceConstraintIRI: SHACLIRIs.maxInclusive,
+                            message: "maxInclusive violation: expected <= \(maximum), got \(numeric)"
+                        )
+                    )
+                }
+            } else {
+                violations.append(
+                    SHACLViolation(
+                        severity: nodeSeverity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: nodeShape.minInclusive != nil ? SHACLIRIs.minInclusive : SHACLIRIs.maxInclusive,
+                        message: "range violation: value \(focusNode) is not an integer literal"
+                    )
+                )
+            }
+        }
+
+        if let requiredValue = nodeShape.hasValue, focusNode != requiredValue {
+            violations.append(
+                SHACLViolation(
+                    severity: nodeSeverity,
+                    shapeIRI: nodeShape.shapeIRI,
+                    focusNode: focusNode,
+                    pathIRI: nil,
+                    valueNode: focusNode,
+                    sourceConstraintIRI: SHACLIRIs.hasValue,
+                    message: "hasValue violation: required value \(requiredValue) not present"
+                )
+            )
+        }
+
+        if !nodeShape.inValues.isEmpty {
+            let allowed = Set(nodeShape.inValues)
+            if !allowed.contains(focusNode) {
+                violations.append(
+                    SHACLViolation(
+                        severity: nodeSeverity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.in,
+                        message: "in violation: value \(focusNode) not found in allowed set"
+                    )
+                )
+            }
         }
 
         if let expressionIRI = nodeShape.expressionIRI {
@@ -2130,6 +2300,7 @@ public struct SHACLCoreValidator: SHACLValidator {
 
 private enum SHACLIRIs {
     static let rdfType = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    static let rdfsClass = "http://www.w3.org/2000/01/rdf-schema#Class"
     static let rdfFirst = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first"
     static let rdfRest = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"
     static let rdfNil = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"

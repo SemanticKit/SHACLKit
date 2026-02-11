@@ -1,10 +1,10 @@
 # case_id	data_graph	shapes_graph	expected_conforms	notes
-core-node-datatype-001	data-shapes-test-suite/tests/core/node/datatype-001.ttl	data-shapes-test-suite/tests/core/node/datatype-001.ttl	true	Known current behavior: SHACLKit currently treats this W3C case as conforming.
+core-node-datatype-001	data-shapes-test-suite/tests/core/node/datatype-001.ttl	data-shapes-test-suite/tests/core/node/datatype-001.ttl	false	Datatype constraint over node targets.
 core-node-nodeKind-001	data-shapes-test-suite/tests/core/node/nodeKind-001.ttl	data-shapes-test-suite/tests/core/node/nodeKind-001.ttl	false	Node kind checks for IRI-only shape.
-core-node-minInclusive-001	data-shapes-test-suite/tests/core/node/minInclusive-001.ttl	data-shapes-test-suite/tests/core/node/minInclusive-001.ttl	true	Known current behavior: SHACLKit currently treats this W3C case as conforming.
-core-node-maxInclusive-001	data-shapes-test-suite/tests/core/node/maxInclusive-001.ttl	data-shapes-test-suite/tests/core/node/maxInclusive-001.ttl	true	Known current behavior: SHACLKit currently treats this W3C case as conforming.
-core-node-minLength-001	data-shapes-test-suite/tests/core/node/minLength-001.ttl	data-shapes-test-suite/tests/core/node/minLength-001.ttl	true	Known current behavior: SHACLKit currently treats this W3C case as conforming.
-core-node-maxLength-001	data-shapes-test-suite/tests/core/node/maxLength-001.ttl	data-shapes-test-suite/tests/core/node/maxLength-001.ttl	true	Known current behavior: SHACLKit currently treats this W3C case as conforming.
-core-node-pattern-001	data-shapes-test-suite/tests/core/node/pattern-001.ttl	data-shapes-test-suite/tests/core/node/pattern-001.ttl	true	Known current behavior: SHACLKit currently treats this W3C case as conforming.
-core-node-hasValue-001	data-shapes-test-suite/tests/core/node/hasValue-001.ttl	data-shapes-test-suite/tests/core/node/hasValue-001.ttl	true	Known current behavior: SHACLKit currently treats this W3C case as conforming.
-core-node-in-001	data-shapes-test-suite/tests/core/node/in-001.ttl	data-shapes-test-suite/tests/core/node/in-001.ttl	true	Known current behavior: SHACLKit currently treats this W3C case as conforming.
+core-node-minInclusive-001	data-shapes-test-suite/tests/core/node/minInclusive-001.ttl	data-shapes-test-suite/tests/core/node/minInclusive-001.ttl	false	Integer minInclusive boundary checks.
+core-node-maxInclusive-001	data-shapes-test-suite/tests/core/node/maxInclusive-001.ttl	data-shapes-test-suite/tests/core/node/maxInclusive-001.ttl	false	Integer maxInclusive boundary checks.
+core-node-minLength-001	data-shapes-test-suite/tests/core/node/minLength-001.ttl	data-shapes-test-suite/tests/core/node/minLength-001.ttl	false	String and lexical minLength checks.
+core-node-maxLength-001	data-shapes-test-suite/tests/core/node/maxLength-001.ttl	data-shapes-test-suite/tests/core/node/maxLength-001.ttl	false	String and lexical maxLength checks.
+core-node-pattern-001	data-shapes-test-suite/tests/core/node/pattern-001.ttl	data-shapes-test-suite/tests/core/node/pattern-001.ttl	false	Regex pattern constraint checks.
+core-node-hasValue-001	data-shapes-test-suite/tests/core/node/hasValue-001.ttl	data-shapes-test-suite/tests/core/node/hasValue-001.ttl	false	Node hasValue evaluation.
+core-node-in-001	data-shapes-test-suite/tests/core/node/in-001.ttl	data-shapes-test-suite/tests/core/node/in-001.ttl	false	Node in-list membership checks.
