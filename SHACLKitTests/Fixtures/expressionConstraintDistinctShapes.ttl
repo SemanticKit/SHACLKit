@@ -1,0 +1,17 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:PersonShape
+    a sh:NodeShape ;
+    sh:targetNode ex:alice ;
+    sh:property ex:DistinctTagShape .
+
+ex:DistinctTagShape
+    sh:expression ex:DistinctTagExpr ;
+    sh:hasValue ex:b .
+
+ex:DistinctTagExpr
+    shnex:distinct [
+        shnex:pathValues ex:tag
+    ] .

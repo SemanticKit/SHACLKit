@@ -1,0 +1,15 @@
+@prefix ex: <http://example.com/> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:DistinctList
+    shnex:distinct ( 4 2 4 ) .
+
+ex:DistinctTermEquality
+    shnex:distinct ( 4 2 "04"^^xsd:integer ) .
+
+ex:DistinctNodes
+    shnex:distinct ex:TagNodes .
+
+ex:TagNodes
+    shnex:nodes ( ex:a ex:b ex:a ) .
