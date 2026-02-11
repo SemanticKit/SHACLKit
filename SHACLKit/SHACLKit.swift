@@ -204,6 +204,7 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case intersection([String])
     case nodes([String])
     case exists(String)
+    case count(inputTerm: String, staticListLength: Int?)
     case ifThenElse(condition: String, thenTerm: String, elseTerm: String?)
     case pathValues(path: SHACLPropertyPath, focusNodeTerm: String?)
 }
@@ -501,6 +502,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var intersectionMemberObjects: Set<String> = []
             var nodesObjects: Set<String> = []
             var existsObjects: Set<String> = []
+            var countObjects: Set<String> = []
             var ifObjects: Set<String> = []
             var thenObjects: Set<String> = []
             var elseObjects: Set<String> = []
@@ -700,6 +702,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.existsObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexCount {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.countObjects.insert(object)
+                nodeExpressions[subject] = expression
             } else if predicate == SHACLIRIs.shnexIf {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.ifObjects.insert(object)
@@ -754,6 +760,15 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .exists(existsInput)
+                )
+            }
+
+            if let countObject = partial.countObjects.sorted().first {
+                let resolvedCountInput = resolveShapeReferenceIRIs([countObject], triplesBySubject: triplesBySubject).sorted().first ?? countObject
+                let staticListLength = rdfListLength(countObject, triplesBySubject: triplesBySubject)
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .count(inputTerm: resolvedCountInput, staticListLength: staticListLength)
                 )
             }
 
@@ -1021,6 +1036,37 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         }
 
         return values
+    }
+
+    private func rdfListLength(
+        _ headOrValue: String,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> Int? {
+        if headOrValue == SHACLIRIs.rdfNil {
+            return 0
+        }
+
+        guard let firstRestTriples = triplesBySubject[headOrValue],
+              firstRestTriples.contains(where: { $0.predicate == SHACLIRIs.rdfFirst }) else {
+            return nil
+        }
+
+        var current = headOrValue
+        var visited: Set<String> = []
+        var count = 0
+
+        while current != SHACLIRIs.rdfNil && !visited.contains(current) {
+            visited.insert(current)
+            guard let triples = triplesBySubject[current],
+                  triples.contains(where: { $0.predicate == SHACLIRIs.rdfFirst }),
+                  let rest = triples.first(where: { $0.predicate == SHACLIRIs.rdfRest }) else {
+                break
+            }
+            count += 1
+            current = rest.object
+        }
+
+        return count
     }
 
     private func parsePropertyPath(
@@ -1356,6 +1402,19 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 visited: &visited
             )
             return output.isEmpty ? ["false"] : ["true"]
+        case .count(let inputTerm, let staticListLength):
+            if let staticListLength {
+                return ["\(staticListLength)"]
+            }
+            let output = evaluateTerm(
+                inputTerm,
+                focusNode: focusNode,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            return ["\(output.count)"]
         case .ifThenElse(let condition, let thenTerm, let elseTerm):
             let conditionOutput = evaluateTerm(
                 condition,
@@ -3700,6 +3759,7 @@ private enum SHACLIRIs {
     static let shThis = "http://www.w3.org/ns/shacl#this"
     static let shnexNodes = "http://www.w3.org/ns/shacl-node-expr#nodes"
     static let shnexExists = "http://www.w3.org/ns/shacl-node-expr#exists"
+    static let shnexCount = "http://www.w3.org/ns/shacl-node-expr#count"
     static let shnexIf = "http://www.w3.org/ns/shacl-node-expr#if"
     static let shnexThen = "http://www.w3.org/ns/shacl-node-expr#then"
     static let shnexElse = "http://www.w3.org/ns/shacl-node-expr#else"

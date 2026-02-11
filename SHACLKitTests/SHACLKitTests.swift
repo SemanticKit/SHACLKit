@@ -372,6 +372,33 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(ifNestedResult == Set(["http://example.com/thenResult"]))
 }
 
+@Test func nodeExpressionEvaluatorEvaluatesCount() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("nodeExpressionCountDefinitions.ttl"))
+    let evaluator = SHACLNodeExpressionEvaluator()
+
+    let countEmpty = evaluator.evaluate(
+        expressionIRI: "http://example.com/CountEmpty",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(countEmpty == Set(["0"]))
+
+    let countListThree = evaluator.evaluate(
+        expressionIRI: "http://example.com/CountListThree",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(countListThree == Set(["3"]))
+
+    let countNodesTwo = evaluator.evaluate(
+        expressionIRI: "http://example.com/CountNodesTwo",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(countNodesTwo == Set(["2"]))
+}
+
 @Test func coreValidatorConformsForExpressionDerivedPropertyValues() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("nodeExpressionConstraintValidShapes.ttl")
@@ -454,6 +481,27 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(!result.conforms)
     let violation = try #require(result.violations.first)
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#expression")
+}
+
+@Test func coreValidatorConformsForCountExpressionConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintCountShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintCountValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsCountExpressionConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintCountShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintCountInvalidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
 }
 
 @Test func coreValidatorConformsForPropertyExpressionConstraint() async throws {

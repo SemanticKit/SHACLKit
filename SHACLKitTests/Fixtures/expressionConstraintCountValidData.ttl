@@ -1,0 +1,4 @@
+@prefix ex: <http://example.com/> .
+
+ex:alice ex:tag "a" ;
+         ex:tag "b" .
