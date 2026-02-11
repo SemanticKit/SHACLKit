@@ -1,0 +1,27 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:ScopeShape
+    a sh:NodeShape ;
+    sh:targetNode ex:scope ;
+    sh:property ex:OrderByProperty .
+
+ex:OrderByProperty
+    sh:expression ex:OrderByExpr ;
+    sh:hasValue ex:alice .
+
+ex:OrderByExpr
+    shnex:nodes [
+        shnex:nodes [
+            shnex:nodesMatching ex:PersonShape ;
+        ] ;
+        shnex:orderBy [
+            shnex:pathValues ex:rank ;
+        ] ;
+    ] ;
+    shnex:limit 1 .
+
+ex:PersonShape
+    a sh:NodeShape ;
+    sh:class ex:Person .

@@ -222,6 +222,7 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case limit(inputTerm: String, count: Int, staticListMembers: [String]?)
     case offset(inputTerm: String, count: Int, staticListMembers: [String]?)
     case findFirst(inputTerm: String, shapeTerm: String, staticOrderedInputMembers: [String]?)
+    case orderBy(inputTerm: String, keyTerm: String, descending: Bool, staticListMembers: [String]?)
 }
 
 public struct SHACLNodeExpressionDefinition: Sendable, Hashable {
@@ -538,6 +539,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var limitObjects: Set<String> = []
             var offsetObjects: Set<String> = []
             var findFirstObjects: Set<String> = []
+            var orderByObjects: Set<String> = []
+            var orderByDescending = false
         }
 
         struct PartialRule {
@@ -816,6 +819,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.findFirstObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexOrderBy {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.orderByObjects.insert(object)
+                nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexDesc {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.orderByDescending = isTrueBooleanTerm(object)
+                nodeExpressions[subject] = expression
             }
         }
 
@@ -930,6 +941,23 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .findFirst(inputTerm: resolvedInput, shapeTerm: shapeTerm, staticOrderedInputMembers: staticOrderedInputMembers)
+                )
+            }
+
+            if let keyTerm = resolveShapeReferenceIRIs(partial.orderByObjects, triplesBySubject: triplesBySubject).sorted().first,
+               let inputObject = partial.nodesObjects.sorted().first {
+                let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
+                let staticListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
+                    : nil
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .orderBy(
+                        inputTerm: resolvedInput,
+                        keyTerm: keyTerm,
+                        descending: partial.orderByDescending,
+                        staticListMembers: staticListMembers
+                    )
                 )
             }
 
@@ -1958,7 +1986,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 )
             }
         case .limit(let inputTerm, let count, let staticListMembers):
-            let nodes = staticListMembers.map(Set.init) ?? evaluateTerm(
+            let ordered = staticListMembers ?? evaluateTermOrdered(
                 inputTerm,
                 focusNode: focusNode,
                 shapesGraph: shapesGraph,
@@ -1967,10 +1995,9 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 depth: depth + 1,
                 visited: &visited
             )
-            let ordered = nodes.sorted()
             return Set(ordered.prefix(max(0, count)))
         case .offset(let inputTerm, let count, let staticListMembers):
-            let nodes = staticListMembers.map(Set.init) ?? evaluateTerm(
+            let ordered = staticListMembers ?? evaluateTermOrdered(
                 inputTerm,
                 focusNode: focusNode,
                 shapesGraph: shapesGraph,
@@ -1979,10 +2006,9 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 depth: depth + 1,
                 visited: &visited
             )
-            let ordered = nodes.sorted()
             return Set(ordered.dropFirst(max(0, count)))
         case .findFirst(let inputTerm, let shapeTerm, let staticOrderedInputMembers):
-            let orderedInputs = staticOrderedInputMembers ?? evaluateTerm(
+            let orderedInputs = staticOrderedInputMembers ?? evaluateTermOrdered(
                 inputTerm,
                 focusNode: focusNode,
                 shapesGraph: shapesGraph,
@@ -1990,7 +2016,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 dataGraph: dataGraph,
                 depth: depth + 1,
                 visited: &visited
-            ).sorted()
+            )
             if orderedInputs.isEmpty {
                 return []
             }
@@ -2005,6 +2031,123 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 return []
             }
             return [first]
+        case .orderBy(let inputTerm, let keyTerm, let descending, let staticListMembers):
+            let ordered = staticListMembers ?? evaluateTermOrdered(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            if ordered.isEmpty {
+                return []
+            }
+            let sorted = ordered.sorted { lhs, rhs in
+                let lhsKeys = evaluateTerm(
+                    keyTerm,
+                    focusNode: lhs,
+                    shapesGraph: shapesGraph,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    depth: depth + 1,
+                    visited: &visited
+                ).sorted()
+                let rhsKeys = evaluateTerm(
+                    keyTerm,
+                    focusNode: rhs,
+                    shapesGraph: shapesGraph,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    depth: depth + 1,
+                    visited: &visited
+                ).sorted()
+                let lhsKey = lhsKeys.first ?? ""
+                let rhsKey = rhsKeys.first ?? ""
+                if lhsKey == rhsKey {
+                    return lhs < rhs
+                }
+                if descending {
+                    return lhsKey > rhsKey
+                }
+                return lhsKey < rhsKey
+            }
+            return Set(sorted)
+        }
+    }
+
+    private func evaluateTermOrdered(
+        _ term: String,
+        focusNode: String,
+        shapesGraph: SHACLShapesGraph,
+        expressionsByIRI: [String: SHACLNodeExpressionDefinition],
+        dataGraph: SHACLDataGraph?,
+        depth: Int,
+        visited: inout Set<String>
+    ) -> [String] {
+        guard let expression = expressionsByIRI[term] else {
+            return evaluateTerm(
+                term,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth,
+                visited: &visited
+            ).sorted()
+        }
+
+        switch expression.kind {
+        case .orderBy(let inputTerm, let keyTerm, let descending, let staticListMembers):
+            let input = staticListMembers ?? evaluateTermOrdered(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            return input.sorted { lhs, rhs in
+                let lhsKeys = evaluateTerm(
+                    keyTerm,
+                    focusNode: lhs,
+                    shapesGraph: shapesGraph,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    depth: depth + 1,
+                    visited: &visited
+                ).sorted()
+                let rhsKeys = evaluateTerm(
+                    keyTerm,
+                    focusNode: rhs,
+                    shapesGraph: shapesGraph,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    depth: depth + 1,
+                    visited: &visited
+                ).sorted()
+                let lhsKey = lhsKeys.first ?? ""
+                let rhsKey = rhsKeys.first ?? ""
+                if lhsKey == rhsKey {
+                    return lhs < rhs
+                }
+                if descending {
+                    return lhsKey > rhsKey
+                }
+                return lhsKey < rhsKey
+            }
+        default:
+            return evaluateTerm(
+                term,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth,
+                visited: &visited
+            ).sorted()
         }
     }
 }
@@ -4500,6 +4643,8 @@ private enum SHACLIRIs {
     static let shnexLimit = "http://www.w3.org/ns/shacl-node-expr#limit"
     static let shnexOffset = "http://www.w3.org/ns/shacl-node-expr#offset"
     static let shnexFindFirst = "http://www.w3.org/ns/shacl-node-expr#findFirst"
+    static let shnexOrderBy = "http://www.w3.org/ns/shacl-node-expr#orderBy"
+    static let shnexDesc = "http://www.w3.org/ns/shacl-node-expr#desc"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"

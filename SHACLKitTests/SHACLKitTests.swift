@@ -663,6 +663,26 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(findFirstMinInclusive == Set(["4"]))
 }
 
+@Test func nodeExpressionEvaluatorEvaluatesOrderByAndDesc() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("nodeExpressionOrderByDefinitions.ttl"))
+    let evaluator = SHACLNodeExpressionEvaluator()
+
+    let orderByAsc = evaluator.evaluate(
+        expressionIRI: "http://example.com/OrderByAscLimitExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(orderByAsc == Set(["2"]))
+
+    let orderByDesc = evaluator.evaluate(
+        expressionIRI: "http://example.com/OrderByDescLimitExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(orderByDesc == Set(["8"]))
+}
+
 @Test func nodeExpressionEvaluatorEvaluatesMinAndMax() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionMinMaxDefinitions.ttl"))
@@ -1058,6 +1078,27 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("expressionConstraintFindFirstShapes.ttl")
     let dataGraph = try fixtureData("expressionConstraintFindFirstInvalidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
+@Test func coreValidatorConformsForOrderByExpressionConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintOrderByShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintOrderByValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsOrderByExpressionConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintOrderByShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintOrderByInvalidData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)

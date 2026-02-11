@@ -61,7 +61,7 @@ Legend:
 
 - [~] `REQ-SHACL-200` Implement SHACL 1.2 Node Expressions evaluation model.
   - Implemented subset evaluator for `sh:union` and `sh:intersection`, including nested expressions and `sh:this`.
-  - Implemented first-slice `shnex:nodes`, `shnex:exists`, `shnex:count`, `shnex:var`, `shnex:distinct`, `shnex:instancesOf`, `shnex:nodesMatching`, `shnex:matchAll`, `shnex:filterShape`, `shnex:concat`, `shnex:remove`, `shnex:flatMap`, `shnex:limit`, `shnex:offset`, `shnex:findFirst`, `shnex:min`, `shnex:max`, and `shnex:sum`.
+  - Implemented first-slice `shnex:nodes`, `shnex:exists`, `shnex:count`, `shnex:var`, `shnex:distinct`, `shnex:instancesOf`, `shnex:nodesMatching`, `shnex:matchAll`, `shnex:filterShape`, `shnex:concat`, `shnex:remove`, `shnex:flatMap`, `shnex:limit`, `shnex:offset`, `shnex:findFirst`, `shnex:orderBy` (with `shnex:desc`), `shnex:min`, `shnex:max`, and `shnex:sum`.
   - Implemented first-slice `shnex:if` / `shnex:then` / `shnex:else`.
   - Implemented first-slice `shnex:pathValues` with optional `shnex:focusNode` expression chaining.
 - [~] `REQ-SHACL-201` Integrate node expression evaluation into constraints/targets where applicable.
