@@ -677,7 +677,7 @@ public struct SHACLFocusNodeResolver: Sendable {
                 focusNode: "",
                 shapesGraph: shapesGraph
             )
-            return output
+            return Set(output.filter { !$0.isEmpty })
         case .targetSubjectsOf(let predicateIRI):
             return Set(graph.triples.filter { $0.predicate == predicateIRI }.map(\.subject))
         case .targetObjectsOf(let predicateIRI):

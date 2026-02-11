@@ -236,6 +236,21 @@ private func fixtureData(_ name: String) throws -> Data {
     ])
 }
 
+@Test func focusNodeResolverIgnoresEmptyTargetNodeExpressionOutputs() async throws {
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let resolver = SHACLFocusNodeResolver()
+
+    let shapes = try shapesLoader.load(from: fixtureData("targetNodeExpressionWithThisShapes.ttl"))
+    let dataGraph = try dataLoader.load(from: fixtureData("dataGraph.ttl"))
+    let resolutions = resolver.resolve(dataGraph: dataGraph, shapesGraph: shapes)
+
+    let resolution = try #require(resolutions.first(where: { $0.shapeIRI == "http://example.com/ExprTargetWithThisShape" }))
+    #expect(resolution.focusNodes == [
+        "http://example.com/alice",
+    ])
+}
+
 @Test func coreValidatorConformsForMinMaxCountFixture() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("countConstraintsShapes.ttl")
