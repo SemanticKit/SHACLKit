@@ -1308,8 +1308,8 @@ private struct TestShapesSource {
                 kind: .propertyShape,
                 targets: [],
                 pathIRI: "http://example.com/age",
-                minInclusive: 18,
-                maxInclusive: 90
+                minInclusive: "18",
+                maxInclusive: "90"
             ),
         ]
     )

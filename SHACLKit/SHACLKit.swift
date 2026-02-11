@@ -45,8 +45,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let datatypeIRI: String?
     public let minLength: Int?
     public let maxLength: Int?
-    public let minInclusive: Int?
-    public let maxInclusive: Int?
+    public let minInclusive: String?
+    public let maxInclusive: String?
     public let pattern: String?
     public let hasValue: String?
     public let inValues: [String]
@@ -79,8 +79,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         datatypeIRI: String? = nil,
         minLength: Int? = nil,
         maxLength: Int? = nil,
-        minInclusive: Int? = nil,
-        maxInclusive: Int? = nil,
+        minInclusive: String? = nil,
+        maxInclusive: String? = nil,
         pattern: String? = nil,
         hasValue: String? = nil,
         inValues: [String] = [],
@@ -413,8 +413,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var datatypeIRI: String?
             var minLength: Int?
             var maxLength: Int?
-            var minInclusive: Int?
-            var maxInclusive: Int?
+            var minInclusive: String?
+            var maxInclusive: String?
             var pattern: String?
             var hasValue: String?
             var inValues: Set<String> = []
@@ -517,15 +517,9 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 }
                 current.maxLength = length
             } else if predicate == SHACLIRIs.minInclusive {
-                guard let minimum = Int(object) else {
-                    throw SHACLError.invalidIntegerLiteral(object)
-                }
-                current.minInclusive = minimum
+                current.minInclusive = object
             } else if predicate == SHACLIRIs.maxInclusive {
-                guard let maximum = Int(object) else {
-                    throw SHACLError.invalidIntegerLiteral(object)
-                }
-                current.maxInclusive = maximum
+                current.maxInclusive = object
             } else if predicate == SHACLIRIs.pattern {
                 current.pattern = parsedLiteralLexicalForm(object)
             } else if predicate == SHACLIRIs.hasValue {
@@ -1591,8 +1585,24 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         if nodeShape.minInclusive != nil || nodeShape.maxInclusive != nil {
-            if let numeric = extractIntegerValue(focusNode) {
-                if let minimum = nodeShape.minInclusive, numeric < minimum {
+            var hasComparableRangeValue = true
+
+            if let minimum = nodeShape.minInclusive {
+                if let comparison = compareRangeValueTerm(focusNode, toBoundTerm: minimum) {
+                    if comparison == .orderedAscending {
+                        violations.append(
+                            SHACLViolation(
+                                severity: nodeSeverity,
+                                shapeIRI: nodeShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: nil,
+                                valueNode: focusNode,
+                                sourceConstraintIRI: SHACLIRIs.minInclusive,
+                                message: "minInclusive violation: expected >= \(minimum), got \(focusNode)"
+                            )
+                        )
+                    }
+                } else {
                     violations.append(
                         SHACLViolation(
                             severity: nodeSeverity,
@@ -1601,12 +1611,31 @@ public struct SHACLCoreValidator: SHACLValidator {
                             pathIRI: nil,
                             valueNode: focusNode,
                             sourceConstraintIRI: SHACLIRIs.minInclusive,
-                            message: "minInclusive violation: expected >= \(minimum), got \(numeric)"
+                            message: rangeTypeViolationMessage(valueTerm: focusNode, boundTerm: minimum)
                         )
                     )
+                    hasComparableRangeValue = false
+                    // Preserve single deterministic range violation for non-comparable values.
+                    // Skip maxInclusive evaluation when minInclusive is already non-comparable.
                 }
+            }
 
-                if let maximum = nodeShape.maxInclusive, numeric > maximum {
+            if hasComparableRangeValue, let maximum = nodeShape.maxInclusive {
+                if let comparison = compareRangeValueTerm(focusNode, toBoundTerm: maximum) {
+                    if comparison == .orderedDescending {
+                        violations.append(
+                            SHACLViolation(
+                                severity: nodeSeverity,
+                                shapeIRI: nodeShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: nil,
+                                valueNode: focusNode,
+                                sourceConstraintIRI: SHACLIRIs.maxInclusive,
+                                message: "maxInclusive violation: expected <= \(maximum), got \(focusNode)"
+                            )
+                        )
+                    }
+                } else {
                     violations.append(
                         SHACLViolation(
                             severity: nodeSeverity,
@@ -1615,22 +1644,11 @@ public struct SHACLCoreValidator: SHACLValidator {
                             pathIRI: nil,
                             valueNode: focusNode,
                             sourceConstraintIRI: SHACLIRIs.maxInclusive,
-                            message: "maxInclusive violation: expected <= \(maximum), got \(numeric)"
+                            message: rangeTypeViolationMessage(valueTerm: focusNode, boundTerm: maximum)
                         )
                     )
+                    hasComparableRangeValue = false
                 }
-            } else {
-                violations.append(
-                    SHACLViolation(
-                        severity: nodeSeverity,
-                        shapeIRI: nodeShape.shapeIRI,
-                        focusNode: focusNode,
-                        pathIRI: nil,
-                        valueNode: focusNode,
-                        sourceConstraintIRI: nodeShape.minInclusive != nil ? SHACLIRIs.minInclusive : SHACLIRIs.maxInclusive,
-                        message: "range violation: value \(focusNode) is not an integer literal"
-                    )
-                )
             }
         }
 
@@ -2054,47 +2072,66 @@ public struct SHACLCoreValidator: SHACLValidator {
 
             if propertyShape.minInclusive != nil || propertyShape.maxInclusive != nil {
                 for valueNode in values {
-                    guard let numeric = extractIntegerValue(valueNode) else {
-                        violations.append(
-                            SHACLViolation(
-                                severity: severity,
-                                shapeIRI: propertyShape.shapeIRI,
-                                focusNode: focusNode,
-                                pathIRI: pathIRI,
-                                valueNode: valueNode,
-                                sourceConstraintIRI: propertyShape.minInclusive != nil ? SHACLIRIs.minInclusive : SHACLIRIs.maxInclusive,
-                                message: "range violation: value \(valueNode) is not an integer literal"
+                    if let minimum = propertyShape.minInclusive {
+                        guard let comparison = compareRangeValueTerm(valueNode, toBoundTerm: minimum) else {
+                            violations.append(
+                                SHACLViolation(
+                                    severity: severity,
+                                    shapeIRI: propertyShape.shapeIRI,
+                                    focusNode: focusNode,
+                                    pathIRI: pathIRI,
+                                    valueNode: valueNode,
+                                    sourceConstraintIRI: SHACLIRIs.minInclusive,
+                                    message: rangeTypeViolationMessage(valueTerm: valueNode, boundTerm: minimum)
+                                )
                             )
-                        )
-                        continue
+                            continue
+                        }
+
+                        if comparison == .orderedAscending {
+                            violations.append(
+                                SHACLViolation(
+                                    severity: severity,
+                                    shapeIRI: propertyShape.shapeIRI,
+                                    focusNode: focusNode,
+                                    pathIRI: pathIRI,
+                                    valueNode: valueNode,
+                                    sourceConstraintIRI: SHACLIRIs.minInclusive,
+                                    message: "minInclusive violation: expected >= \(minimum), got \(valueNode)"
+                                )
+                            )
+                        }
                     }
 
-                    if let minimum = propertyShape.minInclusive, numeric < minimum {
-                        violations.append(
-                            SHACLViolation(
-                                severity: severity,
-                                shapeIRI: propertyShape.shapeIRI,
-                                focusNode: focusNode,
-                                pathIRI: pathIRI,
-                                valueNode: valueNode,
-                                sourceConstraintIRI: SHACLIRIs.minInclusive,
-                                message: "minInclusive violation: expected >= \(minimum), got \(numeric)"
+                    if let maximum = propertyShape.maxInclusive {
+                        guard let comparison = compareRangeValueTerm(valueNode, toBoundTerm: maximum) else {
+                            violations.append(
+                                SHACLViolation(
+                                    severity: severity,
+                                    shapeIRI: propertyShape.shapeIRI,
+                                    focusNode: focusNode,
+                                    pathIRI: pathIRI,
+                                    valueNode: valueNode,
+                                    sourceConstraintIRI: SHACLIRIs.maxInclusive,
+                                    message: rangeTypeViolationMessage(valueTerm: valueNode, boundTerm: maximum)
+                                )
                             )
-                        )
-                    }
+                            continue
+                        }
 
-                    if let maximum = propertyShape.maxInclusive, numeric > maximum {
-                        violations.append(
-                            SHACLViolation(
-                                severity: severity,
-                                shapeIRI: propertyShape.shapeIRI,
-                                focusNode: focusNode,
-                                pathIRI: pathIRI,
-                                valueNode: valueNode,
-                                sourceConstraintIRI: SHACLIRIs.maxInclusive,
-                                message: "maxInclusive violation: expected <= \(maximum), got \(numeric)"
+                        if comparison == .orderedDescending {
+                            violations.append(
+                                SHACLViolation(
+                                    severity: severity,
+                                    shapeIRI: propertyShape.shapeIRI,
+                                    focusNode: focusNode,
+                                    pathIRI: pathIRI,
+                                    valueNode: valueNode,
+                                    sourceConstraintIRI: SHACLIRIs.maxInclusive,
+                                    message: "maxInclusive violation: expected <= \(maximum), got \(valueNode)"
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -2410,6 +2447,11 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
     }
 
+    private enum SHACLRangeComparable {
+        case integer(Int)
+        case dateTime(Date, hasTimezone: Bool)
+    }
+
     private func inferredDatatypeIRI(for value: String) -> String? {
         if value.allSatisfy({ $0.isNumber }) {
             return SHACLIRIs.xsdInteger
@@ -2450,6 +2492,81 @@ public struct SHACLCoreValidator: SHACLValidator {
             return nil
         }
         return Int(lexical)
+    }
+
+    private func compareRangeValueTerm(_ valueTerm: String, toBoundTerm boundTerm: String) -> ComparisonResult? {
+        guard let valueComparable = parseRangeComparable(valueTerm),
+              let boundComparable = parseRangeComparable(boundTerm) else {
+            return nil
+        }
+
+        switch (valueComparable, boundComparable) {
+        case (.integer(let value), .integer(let bound)):
+            if value < bound {
+                return .orderedAscending
+            }
+            if value > bound {
+                return .orderedDescending
+            }
+            return .orderedSame
+        case (.dateTime(let valueDate, let valueHasTimezone), .dateTime(let boundDate, let boundHasTimezone)):
+            guard valueHasTimezone == boundHasTimezone else {
+                return nil
+            }
+            return valueDate.compare(boundDate)
+        default:
+            return nil
+        }
+    }
+
+    private func rangeTypeViolationMessage(valueTerm: String, boundTerm: String) -> String {
+        if case .integer = parseRangeComparable(boundTerm) {
+            return "range violation: value \(valueTerm) is not an integer literal"
+        }
+        if case .dateTime = parseRangeComparable(boundTerm) {
+            return "range violation: value \(valueTerm) is not comparable to xsd:dateTime boundary"
+        }
+        return "range violation: value \(valueTerm) is not comparable to boundary \(boundTerm)"
+    }
+
+    private func parseRangeComparable(_ term: String) -> SHACLRangeComparable? {
+        if let integer = extractIntegerValue(term) {
+            return .integer(integer)
+        }
+
+        guard inferredDatatypeIRI(for: term) == SHACLIRIs.xsdDateTime,
+              let lexical = extractLiteralLexicalForm(term),
+              let parsedDate = parseDateTimeLexicalForm(lexical) else {
+            return nil
+        }
+        return .dateTime(parsedDate.date, hasTimezone: parsedDate.hasTimezone)
+    }
+
+    private func parseDateTimeLexicalForm(_ lexical: String) -> (date: Date, hasTimezone: Bool)? {
+        let hasTimezone = lexical.hasSuffix("Z")
+            || lexical.range(of: #"[+-]\d{2}:\d{2}$"#, options: .regularExpression) != nil
+
+        if hasTimezone {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let parsed = formatter.date(from: lexical) {
+                return (parsed, true)
+            }
+            formatter.formatOptions = [.withInternetDateTime]
+            if let parsed = formatter.date(from: lexical) {
+                return (parsed, true)
+            }
+            return nil
+        }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        guard let parsed = formatter.date(from: lexical) else {
+            return nil
+        }
+        return (parsed, false)
     }
 
     private func isTrueOnlyExpressionOutput(_ outputNodes: Set<String>) -> Bool {
@@ -2527,6 +2644,7 @@ private enum SHACLIRIs {
     static let xsdInteger = "http://www.w3.org/2001/XMLSchema#integer"
     static let xsdBoolean = "http://www.w3.org/2001/XMLSchema#boolean"
     static let xsdString = "http://www.w3.org/2001/XMLSchema#string"
+    static let xsdDateTime = "http://www.w3.org/2001/XMLSchema#dateTime"
     static let rdfLangString = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
     static let phaseGatedPredicates: Set<String> = [
         prefixes,

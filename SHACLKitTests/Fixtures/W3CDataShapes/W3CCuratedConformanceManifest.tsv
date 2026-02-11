@@ -3,6 +3,8 @@ core-node-datatype-001	data-shapes-test-suite/tests/core/node/datatype-001.ttl	d
 core-node-datatype-002	data-shapes-test-suite/tests/core/node/datatype-002.ttl	data-shapes-test-suite/tests/core/node/datatype-002.ttl	false	Datatype constraint with rdf:langString and mixed literal targets.
 core-node-nodeKind-001	data-shapes-test-suite/tests/core/node/nodeKind-001.ttl	data-shapes-test-suite/tests/core/node/nodeKind-001.ttl	false	Node kind checks for IRI-only shape.
 core-node-minInclusive-001	data-shapes-test-suite/tests/core/node/minInclusive-001.ttl	data-shapes-test-suite/tests/core/node/minInclusive-001.ttl	false	Integer minInclusive boundary checks.
+core-node-minInclusive-002	data-shapes-test-suite/tests/core/node/minInclusive-002.ttl	data-shapes-test-suite/tests/core/node/minInclusive-002.ttl	false	DateTime minInclusive with timezone handling.
+core-node-minInclusive-003	data-shapes-test-suite/tests/core/node/minInclusive-003.ttl	data-shapes-test-suite/tests/core/node/minInclusive-003.ttl	false	DateTime minInclusive without timezone handling.
 core-node-maxInclusive-001	data-shapes-test-suite/tests/core/node/maxInclusive-001.ttl	data-shapes-test-suite/tests/core/node/maxInclusive-001.ttl	false	Integer maxInclusive boundary checks.
 core-node-minLength-001	data-shapes-test-suite/tests/core/node/minLength-001.ttl	data-shapes-test-suite/tests/core/node/minLength-001.ttl	false	String and lexical minLength checks.
 core-node-maxLength-001	data-shapes-test-suite/tests/core/node/maxLength-001.ttl	data-shapes-test-suite/tests/core/node/maxLength-001.ttl	false	String and lexical maxLength checks.
