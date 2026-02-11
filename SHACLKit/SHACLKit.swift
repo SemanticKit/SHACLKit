@@ -219,6 +219,8 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case concat(inputTerm: String, staticListMembers: [String]?)
     case remove(inputTerm: String, removeTerm: String, staticInputListMembers: [String]?, staticRemoveListMembers: [String]?)
     case flatMap(inputTerm: String, mapTerm: String, staticInputListMembers: [String]?)
+    case limit(inputTerm: String, count: Int, staticListMembers: [String]?)
+    case offset(inputTerm: String, count: Int, staticListMembers: [String]?)
 }
 
 public struct SHACLNodeExpressionDefinition: Sendable, Hashable {
@@ -532,6 +534,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var concatObjects: Set<String> = []
             var removeObjects: Set<String> = []
             var flatMapObjects: Set<String> = []
+            var limitObjects: Set<String> = []
+            var offsetObjects: Set<String> = []
         }
 
         struct PartialRule {
@@ -798,6 +802,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.flatMapObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexLimit {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.limitObjects.insert(object)
+                nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexOffset {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.offsetObjects.insert(object)
+                nodeExpressions[subject] = expression
             }
         }
 
@@ -874,6 +886,32 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .flatMap(inputTerm: resolvedInput, mapTerm: mapTerm, staticInputListMembers: staticInputListMembers)
+                )
+            }
+
+            if let limitObject = partial.limitObjects.sorted().first,
+               let limitCount = Int(parsedLiteralLexicalForm(limitObject) ?? limitObject),
+               let inputObject = partial.nodesObjects.sorted().first {
+                let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
+                let staticListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
+                    : nil
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .limit(inputTerm: resolvedInput, count: limitCount, staticListMembers: staticListMembers)
+                )
+            }
+
+            if let offsetObject = partial.offsetObjects.sorted().first,
+               let offsetCount = Int(parsedLiteralLexicalForm(offsetObject) ?? offsetObject),
+               let inputObject = partial.nodesObjects.sorted().first {
+                let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
+                let staticListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
+                    : nil
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .offset(inputTerm: resolvedInput, count: offsetCount, staticListMembers: staticListMembers)
                 )
             }
 
@@ -1868,6 +1906,30 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     )
                 )
             }
+        case .limit(let inputTerm, let count, let staticListMembers):
+            let nodes = staticListMembers.map(Set.init) ?? evaluateTerm(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            let ordered = nodes.sorted()
+            return Set(ordered.prefix(max(0, count)))
+        case .offset(let inputTerm, let count, let staticListMembers):
+            let nodes = staticListMembers.map(Set.init) ?? evaluateTerm(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            let ordered = nodes.sorted()
+            return Set(ordered.dropFirst(max(0, count)))
         }
     }
 }
@@ -4360,6 +4422,8 @@ private enum SHACLIRIs {
     static let shnexConcat = "http://www.w3.org/ns/shacl-node-expr#concat"
     static let shnexRemove = "http://www.w3.org/ns/shacl-node-expr#remove"
     static let shnexFlatMap = "http://www.w3.org/ns/shacl-node-expr#flatMap"
+    static let shnexLimit = "http://www.w3.org/ns/shacl-node-expr#limit"
+    static let shnexOffset = "http://www.w3.org/ns/shacl-node-expr#offset"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"
