@@ -33,6 +33,7 @@ Legend:
   - Implemented string facets: `sh:minLength`, `sh:maxLength`, `sh:pattern`.
 - [~] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).
   - Implemented `sh:hasValue` checks.
+  - Implemented subset `sh:in` checks using direct object-list syntax.
 - [ ] `REQ-SHACL-010` Constraint components: logical composition (`sh:and`, `sh:or`, `sh:not`, `sh:xone`).
 - [ ] `REQ-SHACL-011` Constraint components: shape references (`sh:node`, `sh:property`, qualified value shape family).
 - [ ] `REQ-SHACL-012` Enforce recursion/termination safeguards for cyclic shapes.

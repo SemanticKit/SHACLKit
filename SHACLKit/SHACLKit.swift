@@ -40,6 +40,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let maxLength: Int?
     public let pattern: String?
     public let hasValue: String?
+    public let inValues: [String]
     public let minCount: Int?
     public let maxCount: Int?
 
@@ -56,6 +57,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         maxLength: Int? = nil,
         pattern: String? = nil,
         hasValue: String? = nil,
+        inValues: [String] = [],
         minCount: Int? = nil,
         maxCount: Int? = nil
     ) {
@@ -71,6 +73,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.maxLength = maxLength
         self.pattern = pattern
         self.hasValue = hasValue
+        self.inValues = inValues
         self.minCount = minCount
         self.maxCount = maxCount
     }
@@ -212,6 +215,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var maxLength: Int?
             var pattern: String?
             var hasValue: String?
+            var inValues: Set<String> = []
             var minCount: Int?
             var maxCount: Int?
         }
@@ -263,6 +267,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.pattern = parsedLiteralLexicalForm(object)
             } else if predicate == SHACLIRIs.hasValue {
                 current.hasValue = object
+            } else if predicate == SHACLIRIs.in {
+                current.inValues.insert(object)
             } else if predicate == SHACLIRIs.minCount {
                 guard let count = Int(object) else {
                     throw SHACLError.invalidIntegerLiteral(object)
@@ -295,6 +301,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 maxLength: partial.maxLength,
                 pattern: partial.pattern,
                 hasValue: partial.hasValue,
+                inValues: partial.inValues.sorted(),
                 minCount: partial.minCount,
                 maxCount: partial.maxCount
             )
@@ -607,6 +614,22 @@ public struct SHACLCoreValidator: SHACLValidator {
                     )
                 }
             }
+
+            if !propertyShape.inValues.isEmpty {
+                let allowed = Set(propertyShape.inValues)
+                for valueNode in values {
+                    if !allowed.contains(valueNode) {
+                        violations.append(
+                            SHACLViolation(
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                message: "in violation: value \(valueNode) not in allowed set"
+                            )
+                        )
+                    }
+                }
+            }
         }
 
         return violations
@@ -682,6 +705,7 @@ private enum SHACLIRIs {
     static let maxLength = "http://www.w3.org/ns/shacl#maxLength"
     static let pattern = "http://www.w3.org/ns/shacl#pattern"
     static let hasValue = "http://www.w3.org/ns/shacl#hasValue"
+    static let `in` = "http://www.w3.org/ns/shacl#in"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"

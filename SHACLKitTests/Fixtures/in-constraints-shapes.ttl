@@ -1,0 +1,10 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:PersonShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:property ex:StatusShape .
+
+ex:StatusShape a sh:PropertyShape ;
+  sh:path ex:status ;
+  sh:in ex:Active, ex:Pending .

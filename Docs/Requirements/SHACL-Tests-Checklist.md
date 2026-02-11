@@ -28,7 +28,7 @@ Legend:
 - [~] `TEST-SHACL-022` String/range facet tests.
   - Covered `minLength`, `maxLength`, and `pattern` fixtures.
 - [~] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
-  - Covered `hasValue` fixtures.
+  - Covered `hasValue` and subset `in` fixtures.
 - [ ] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
 - [ ] `TEST-SHACL-025` Shape-reference and qualified shape tests.
 
