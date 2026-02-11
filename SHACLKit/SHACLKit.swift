@@ -53,6 +53,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let hasValue: String?
     public let inValues: [String]
     public let languageInValues: [String]
+    public let equalsIRI: String?
+    public let disjointIRI: String?
     public let nodeByExpressionIRI: String?
     public let nodeShapeReferenceIRI: String?
     public let andShapeIRIs: [String]
@@ -90,6 +92,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         hasValue: String? = nil,
         inValues: [String] = [],
         languageInValues: [String] = [],
+        equalsIRI: String? = nil,
+        disjointIRI: String? = nil,
         nodeByExpressionIRI: String? = nil,
         nodeShapeReferenceIRI: String? = nil,
         andShapeIRIs: [String] = [],
@@ -126,6 +130,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.hasValue = hasValue
         self.inValues = inValues
         self.languageInValues = languageInValues
+        self.equalsIRI = equalsIRI
+        self.disjointIRI = disjointIRI
         self.nodeByExpressionIRI = nodeByExpressionIRI
         self.nodeShapeReferenceIRI = nodeShapeReferenceIRI
         self.andShapeIRIs = andShapeIRIs
@@ -430,6 +436,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var hasValue: String?
             var inValues: Set<String> = []
             var languageInValues: Set<String> = []
+            var equalsIRI: String?
+            var disjointIRI: String?
             var nodeByExpressionIRI: String?
             var nodeShapeReferenceIRI: String?
             var andShapeIRIs: Set<String> = []
@@ -544,6 +552,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.inValues.insert(object)
             } else if predicate == SHACLIRIs.languageIn {
                 current.languageInValues.insert(object)
+            } else if predicate == SHACLIRIs.equals {
+                current.equalsIRI = object
+            } else if predicate == SHACLIRIs.disjoint {
+                current.disjointIRI = object
             } else if predicate == SHACLIRIs.nodeByExpression {
                 current.nodeByExpressionIRI = object
             } else if predicate == SHACLIRIs.node {
@@ -683,6 +695,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 hasValue: partial.hasValue,
                 inValues: resolveInValues(partial.inValues, triplesBySubject: triplesBySubject).sorted(),
                 languageInValues: resolveInValues(partial.languageInValues, triplesBySubject: triplesBySubject).sorted(),
+                equalsIRI: partial.equalsIRI,
+                disjointIRI: partial.disjointIRI,
                 nodeByExpressionIRI: partial.nodeByExpressionIRI,
                 nodeShapeReferenceIRI: partial.nodeShapeReferenceIRI,
                 andShapeIRIs: resolveShapeReferenceIRIs(partial.andShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
@@ -1780,6 +1794,42 @@ public struct SHACLCoreValidator: SHACLValidator {
             }
         }
 
+        if let equalsIRI = nodeShape.equalsIRI {
+            let relatedValues = Set(dataGraph.triples.filter { $0.subject == focusNode && $0.predicate == equalsIRI }.map(\.object))
+            let expectedValues: Set<String> = [focusNode]
+            let mismatchValues = expectedValues.symmetricDifference(relatedValues).sorted()
+            for mismatchValue in mismatchValues {
+                violations.append(
+                    SHACLViolation(
+                        severity: nodeSeverity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: mismatchValue,
+                        sourceConstraintIRI: SHACLIRIs.equals,
+                        message: "equals violation: value \(mismatchValue) not aligned with predicate \(equalsIRI)"
+                    )
+                )
+            }
+        }
+
+        if let disjointIRI = nodeShape.disjointIRI {
+            let relatedValues = Set(dataGraph.triples.filter { $0.subject == focusNode && $0.predicate == disjointIRI }.map(\.object))
+            if relatedValues.contains(focusNode) {
+                violations.append(
+                    SHACLViolation(
+                        severity: nodeSeverity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.disjoint,
+                        message: "disjoint violation: value \(focusNode) overlaps predicate \(disjointIRI)"
+                    )
+                )
+            }
+        }
+
         if !nodeShape.andShapeIRIs.isEmpty {
             let matchesAll = nodeShape.andShapeIRIs.allSatisfy { shapeIRI in
                 conforms(
@@ -2350,6 +2400,50 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
 
+            if let equalsIRI = propertyShape.equalsIRI {
+                let relatedValues = Set(
+                    dataGraph.triples
+                        .filter { $0.subject == focusNode && $0.predicate == equalsIRI }
+                        .map(\.object)
+                )
+                let expectedValues = Set(values)
+                let mismatchValues = expectedValues.symmetricDifference(relatedValues).sorted()
+                for mismatchValue in mismatchValues {
+                    violations.append(
+                        SHACLViolation(
+                            severity: severity,
+                            shapeIRI: propertyShape.shapeIRI,
+                            focusNode: focusNode,
+                            pathIRI: pathIRI,
+                            valueNode: mismatchValue,
+                            sourceConstraintIRI: SHACLIRIs.equals,
+                            message: "equals violation: value \(mismatchValue) not aligned with predicate \(equalsIRI)"
+                        )
+                    )
+                }
+            }
+
+            if let disjointIRI = propertyShape.disjointIRI {
+                let relatedValues = Set(
+                    dataGraph.triples
+                        .filter { $0.subject == focusNode && $0.predicate == disjointIRI }
+                        .map(\.object)
+                )
+                for valueNode in values where relatedValues.contains(valueNode) {
+                    violations.append(
+                        SHACLViolation(
+                            severity: severity,
+                            shapeIRI: propertyShape.shapeIRI,
+                            focusNode: focusNode,
+                            pathIRI: pathIRI,
+                            valueNode: valueNode,
+                            sourceConstraintIRI: SHACLIRIs.disjoint,
+                            message: "disjoint violation: value \(valueNode) overlaps predicate \(disjointIRI)"
+                        )
+                    )
+                }
+            }
+
             if let nodeByExpressionIRI = propertyShape.nodeByExpressionIRI {
                 for valueNode in values {
                     let referencedShapeIRIs = SHACLNodeExpressionEvaluator()
@@ -2829,6 +2923,8 @@ private enum SHACLIRIs {
     static let hasValue = "http://www.w3.org/ns/shacl#hasValue"
     static let `in` = "http://www.w3.org/ns/shacl#in"
     static let languageIn = "http://www.w3.org/ns/shacl#languageIn"
+    static let equals = "http://www.w3.org/ns/shacl#equals"
+    static let disjoint = "http://www.w3.org/ns/shacl#disjoint"
     static let node = "http://www.w3.org/ns/shacl#node"
     static let nodeByExpression = "http://www.w3.org/ns/shacl#nodeByExpression"
     static let and = "http://www.w3.org/ns/shacl#and"
