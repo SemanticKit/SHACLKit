@@ -1,0 +1,12 @@
+@prefix ex: <http://example.com/> .
+
+ex:CompanyA
+    ex:employee ex:Employee1 ;
+    ex:employee ex:Employee2 .
+
+ex:Employee1
+    ex:skill "Java"@en ;
+    ex:skill "Python"@en .
+
+ex:Employee2
+    ex:skill "SQL"@en .

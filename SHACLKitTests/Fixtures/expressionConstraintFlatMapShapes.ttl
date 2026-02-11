@@ -1,0 +1,21 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:ScopeShape
+    a sh:NodeShape ;
+    sh:targetNode ex:scope ;
+    sh:property ex:FlatMapProperty .
+
+ex:FlatMapProperty
+    sh:expression ex:FlatMapExpr ;
+    sh:hasValue "Java"@en .
+
+ex:FlatMapExpr
+    shnex:nodes [
+        shnex:pathValues ex:employee ;
+        shnex:focusNode ex:CompanyA ;
+    ] ;
+    shnex:flatMap [
+        shnex:pathValues ex:skill ;
+    ] .

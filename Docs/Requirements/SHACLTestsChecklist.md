@@ -70,7 +70,7 @@ Legend:
 - [~] `TEST-SHACL-200` Node expression conformance fixtures.
   - Added fixtures/tests for `sh:union` and `sh:intersection` subset evaluation, nesting, and cycle handling.
   - Added fixture coverage for bare Turtle boolean literals in node-expression members.
-  - Added fixtures/tests for `shnex:nodes`, `shnex:exists`, `shnex:count`, `shnex:var`, `shnex:distinct`, `shnex:instancesOf`, `shnex:nodesMatching`, `shnex:matchAll`, `shnex:filterShape`, `shnex:concat`, `shnex:remove`, `shnex:min`, `shnex:max`, and `shnex:sum`.
+  - Added fixtures/tests for `shnex:nodes`, `shnex:exists`, `shnex:count`, `shnex:var`, `shnex:distinct`, `shnex:instancesOf`, `shnex:nodesMatching`, `shnex:matchAll`, `shnex:filterShape`, `shnex:concat`, `shnex:remove`, `shnex:flatMap`, `shnex:min`, `shnex:max`, and `shnex:sum`.
   - Added fixtures/tests for `shnex:if` / `shnex:then` / `shnex:else`.
   - Added fixtures/tests for `shnex:pathValues` with nested `shnex:focusNode` expression chaining.
   - Added fixtures/tests for property-shape `sh:expression` value derivation (conforming and violation cases).

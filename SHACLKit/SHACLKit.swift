@@ -218,6 +218,7 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case pathValues(path: SHACLPropertyPath, focusNodeTerm: String?)
     case concat(inputTerm: String, staticListMembers: [String]?)
     case remove(inputTerm: String, removeTerm: String, staticInputListMembers: [String]?, staticRemoveListMembers: [String]?)
+    case flatMap(inputTerm: String, mapTerm: String, staticInputListMembers: [String]?)
 }
 
 public struct SHACLNodeExpressionDefinition: Sendable, Hashable {
@@ -530,6 +531,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var pathValuesFocusNodeObject: String?
             var concatObjects: Set<String> = []
             var removeObjects: Set<String> = []
+            var flatMapObjects: Set<String> = []
         }
 
         struct PartialRule {
@@ -792,6 +794,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.removeObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexFlatMap {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.flatMapObjects.insert(object)
+                nodeExpressions[subject] = expression
             }
         }
 
@@ -856,6 +862,18 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                         staticInputListMembers: staticInputListMembers,
                         staticRemoveListMembers: staticRemoveListMembers
                     )
+                )
+            }
+
+            if let mapTerm = resolveShapeReferenceIRIs(partial.flatMapObjects, triplesBySubject: triplesBySubject).sorted().first,
+               let inputObject = partial.nodesObjects.sorted().first {
+                let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
+                let staticInputListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
+                    : nil
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .flatMap(inputTerm: resolvedInput, mapTerm: mapTerm, staticInputListMembers: staticInputListMembers)
                 )
             }
 
@@ -1827,6 +1845,29 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 visited: &visited
             )
             return inputNodes.subtracting(removeNodes)
+        case .flatMap(let inputTerm, let mapTerm, let staticInputListMembers):
+            let inputNodes = staticInputListMembers.map(Set.init) ?? evaluateTerm(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            return inputNodes.reduce(into: Set<String>()) { result, inputNode in
+                result.formUnion(
+                    evaluateTerm(
+                        mapTerm,
+                        focusNode: inputNode,
+                        shapesGraph: shapesGraph,
+                        expressionsByIRI: expressionsByIRI,
+                        dataGraph: dataGraph,
+                        depth: depth + 1,
+                        visited: &visited
+                    )
+                )
+            }
         }
     }
 }
@@ -4318,6 +4359,7 @@ private enum SHACLIRIs {
     static let shnexFocusNode = "http://www.w3.org/ns/shacl-node-expr#focusNode"
     static let shnexConcat = "http://www.w3.org/ns/shacl-node-expr#concat"
     static let shnexRemove = "http://www.w3.org/ns/shacl-node-expr#remove"
+    static let shnexFlatMap = "http://www.w3.org/ns/shacl-node-expr#flatMap"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"

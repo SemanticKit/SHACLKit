@@ -586,6 +586,31 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(removeSimple == Set(["http://example.com/alice", "http://example.com/charlie"]))
 }
 
+@Test func nodeExpressionEvaluatorEvaluatesFlatMap() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let graphData = try fixtureData("nodeExpressionFlatMapDefinitions.ttl")
+    let shapesGraph = try loader.load(from: graphData)
+    let dataGraph = try dataLoader.load(from: graphData)
+    let evaluator = SHACLNodeExpressionEvaluator()
+
+    let identity = evaluator.evaluate(
+        expressionIRI: "http://example.com/FlatMapIdentity",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(identity == Set(["http://example.com/alice", "http://example.com/bob", "http://example.com/charlie"]))
+
+    let allSkills = evaluator.evaluate(
+        expressionIRI: "http://example.com/FlatMapSkills",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(allSkills == Set(["\"Java\"@en", "\"Python\"@en", "\"SQL\"@en", "\"JavaScript\"@en", "\"DevOps\"@en"]))
+}
+
 @Test func nodeExpressionEvaluatorEvaluatesMinAndMax() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionMinMaxDefinitions.ttl"))
@@ -918,6 +943,27 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("expressionConstraintRemoveShapes.ttl")
     let dataGraph = try fixtureData("expressionConstraintRemoveInvalidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
+@Test func coreValidatorConformsForFlatMapExpressionConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintFlatMapShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintFlatMapValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsFlatMapExpressionConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintFlatMapShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintFlatMapInvalidData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)
