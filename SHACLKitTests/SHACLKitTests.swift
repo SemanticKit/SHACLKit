@@ -692,3 +692,25 @@ private func fixtureData(_ name: String) throws -> Data {
     let warning = try #require(first.violations.first)
     #expect(warning.severity == .warning)
 }
+
+@Test func coreValidatorRegressionSuiteKnownDefects() async throws {
+    let validator = SHACLCoreValidator()
+
+    let phaseGatedShapes = try fixtureData("phaseGatedRulesShapes.ttl")
+    let baselineData = try fixtureData("invalidShapesData.ttl")
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: baselineData, shapesGraph: phaseGatedShapes)
+    }
+
+    let qualifiedShapes = try fixtureData("qualifiedCountsShapes.ttl")
+    let qualifiedData = try fixtureData("qualifiedCountsMaxInvalid.ttl")
+    let qualifiedResult = try validator.validate(dataGraph: qualifiedData, shapesGraph: qualifiedShapes)
+    #expect(!qualifiedResult.conforms)
+    #expect(qualifiedResult.violations.contains { $0.sourceConstraintIRI == "http://www.w3.org/ns/shacl#qualifiedMaxCount" })
+
+    let rangeShapes = try fixtureData("rangeFacetsShapes.ttl")
+    let rangeData = try fixtureData("rangeFacetsNonNumeric.ttl")
+    let rangeResult = try validator.validate(dataGraph: rangeData, shapesGraph: rangeShapes)
+    #expect(!rangeResult.conforms)
+    #expect(rangeResult.violations.contains { $0.message.contains("not an integer literal") })
+}

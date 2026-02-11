@@ -54,5 +54,6 @@ Legend:
 - [x] `TEST-SHACL-031` Invalid shapes graph diagnostics tests.
   - Covered missing `sh:path`, missing referenced property shape, and missing referenced node shape failures.
 - [x] `TEST-SHACL-032` Large graph smoke test for baseline performance.
-- [~] `TEST-SHACL-033` Regression suite for previously fixed defects.
+- [x] `TEST-SHACL-033` Regression suite for previously fixed defects.
   - Added deterministic regression coverage for prior cycle/severity behavior.
+  - Added consolidated regression checks for phase-gating, qualified counts, and non-numeric range handling.
