@@ -157,3 +157,51 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(violation.message.contains("nodeKind violation"))
     #expect(violation.message.contains("iri"))
 }
+
+@Test func coreValidatorConformsForDatatypeFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("datatype-constraints-shapes.ttl")
+    let dataGraph = try fixtureData("datatype-constraints-valid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsDatatypeViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("datatype-constraints-shapes.ttl")
+    let dataGraph = try fixtureData("datatype-constraints-invalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.message.contains("datatype violation"))
+    #expect(violation.message.contains("XMLSchema#integer"))
+}
+
+@Test func coreValidatorConformsForBroaderNodeKinds() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodekind-broad-shapes.ttl")
+    let dataGraph = try fixtureData("nodekind-broad-valid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsBroaderNodeKindViolations() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodekind-broad-shapes.ttl")
+    let dataGraph = try fixtureData("nodekind-broad-invalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+
+    #expect(!result.conforms)
+    #expect(result.violations.count == 2)
+    let messages = result.violations.map(\.message).joined(separator: " | ")
+    #expect(messages.contains("blankNode"))
+    #expect(messages.contains("iriOrLiteral"))
+}

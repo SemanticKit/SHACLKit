@@ -35,6 +35,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let pathIRI: String?
     public let classIRI: String?
     public let nodeKind: SHACLNodeKindConstraint?
+    public let datatypeIRI: String?
     public let minCount: Int?
     public let maxCount: Int?
 
@@ -46,6 +47,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         pathIRI: String? = nil,
         classIRI: String? = nil,
         nodeKind: SHACLNodeKindConstraint? = nil,
+        datatypeIRI: String? = nil,
         minCount: Int? = nil,
         maxCount: Int? = nil
     ) {
@@ -56,6 +58,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.pathIRI = pathIRI
         self.classIRI = classIRI
         self.nodeKind = nodeKind
+        self.datatypeIRI = datatypeIRI
         self.minCount = minCount
         self.maxCount = maxCount
     }
@@ -192,6 +195,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var pathIRI: String?
             var classIRI: String?
             var nodeKind: SHACLNodeKindConstraint?
+            var datatypeIRI: String?
             var minCount: Int?
             var maxCount: Int?
         }
@@ -227,6 +231,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.classIRI = object
             } else if predicate == SHACLIRIs.nodeKind {
                 current.nodeKind = parseNodeKind(object)
+            } else if predicate == SHACLIRIs.datatype {
+                current.datatypeIRI = object
             } else if predicate == SHACLIRIs.minCount {
                 guard let count = Int(object) else {
                     throw SHACLError.invalidIntegerLiteral(object)
@@ -254,6 +260,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 pathIRI: partial.pathIRI,
                 classIRI: partial.classIRI,
                 nodeKind: partial.nodeKind,
+                datatypeIRI: partial.datatypeIRI,
                 minCount: partial.minCount,
                 maxCount: partial.maxCount
             )
@@ -470,30 +477,67 @@ public struct SHACLCoreValidator: SHACLValidator {
                     }
                 }
             }
+
+            if let datatypeIRI = propertyShape.datatypeIRI {
+                for valueNode in values {
+                    let actualDatatype = inferredDatatypeIRI(for: valueNode)
+                    if actualDatatype != datatypeIRI {
+                        let actualText = actualDatatype ?? "none"
+                        violations.append(
+                            SHACLViolation(
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                message: "datatype violation: value \(valueNode) has datatype \(actualText), expected \(datatypeIRI)"
+                            )
+                        )
+                    }
+                }
+            }
         }
 
         return violations
     }
 
     private func matchesNodeKind(_ value: String, nodeKind: SHACLNodeKindConstraint) -> Bool {
-        let isNumericLiteral = value.allSatisfy { $0.isNumber }
-        let isIRI = value.contains("://") || value.hasPrefix("urn:")
+        let isLiteral = value.allSatisfy { $0.isNumber } || value.hasPrefix("\"")
         let isBlankNode = value.hasPrefix("_:")
+        let isIRI = !isLiteral && !isBlankNode && (value.contains("://") || value.hasPrefix("urn:"))
 
         switch nodeKind {
         case .iri:
             return isIRI
         case .literal:
-            return isNumericLiteral
+            return isLiteral
         case .blankNode:
             return isBlankNode
         case .blankNodeOrIRI:
             return isBlankNode || isIRI
         case .blankNodeOrLiteral:
-            return isBlankNode || isNumericLiteral
+            return isBlankNode || isLiteral
         case .iriOrLiteral:
-            return isIRI || isNumericLiteral
+            return isIRI || isLiteral
         }
+    }
+
+    private func inferredDatatypeIRI(for value: String) -> String? {
+        if value.allSatisfy({ $0.isNumber }) {
+            return SHACLIRIs.xsdInteger
+        }
+
+        guard value.hasPrefix("\"") else {
+            return nil
+        }
+
+        if let typedRange = value.range(of: "^^") {
+            return String(value[typedRange.upperBound...])
+        }
+
+        if value.contains("\"@") {
+            return SHACLIRIs.rdfLangString
+        }
+
+        return SHACLIRIs.xsdString
     }
 }
 
@@ -509,6 +553,7 @@ private enum SHACLIRIs {
     static let path = "http://www.w3.org/ns/shacl#path"
     static let `class` = "http://www.w3.org/ns/shacl#class"
     static let nodeKind = "http://www.w3.org/ns/shacl#nodeKind"
+    static let datatype = "http://www.w3.org/ns/shacl#datatype"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"
@@ -517,6 +562,9 @@ private enum SHACLIRIs {
     static let nodeKindBlankNodeOrIRI = "http://www.w3.org/ns/shacl#BlankNodeOrIRI"
     static let nodeKindBlankNodeOrLiteral = "http://www.w3.org/ns/shacl#BlankNodeOrLiteral"
     static let nodeKindIRIOrLiteral = "http://www.w3.org/ns/shacl#IRIOrLiteral"
+    static let xsdInteger = "http://www.w3.org/2001/XMLSchema#integer"
+    static let xsdString = "http://www.w3.org/2001/XMLSchema#string"
+    static let rdfLangString = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
 }
 
 private struct SHACLTriple {
@@ -708,7 +756,59 @@ private struct SHACLTurtleSubsetParser {
             }
 
             if ch == "\"" {
-                throw SHACLError.unsupportedTerm(String(statement[index...]))
+                var end = statement.index(after: index)
+                var escaped = false
+                while end < statement.endIndex {
+                    let c = statement[end]
+                    if c == "\\" && !escaped {
+                        escaped = true
+                        end = statement.index(after: end)
+                        continue
+                    }
+                    if c == "\"" && !escaped {
+                        break
+                    }
+                    escaped = false
+                    end = statement.index(after: end)
+                }
+                guard end < statement.endIndex else {
+                    throw SHACLError.invalidStatement(statement)
+                }
+                var token = String(statement[index...end])
+                var probe = statement.index(after: end)
+
+                if probe < statement.endIndex, statement[probe] == "@" {
+                    let langStart = probe
+                    probe = statement.index(after: probe)
+                    var langEnd = probe
+                    while langEnd < statement.endIndex,
+                          !statement[langEnd].isWhitespace,
+                          statement[langEnd] != ";",
+                          statement[langEnd] != "," {
+                        langEnd = statement.index(after: langEnd)
+                    }
+                    token += String(statement[langStart..<langEnd])
+                    probe = langEnd
+                } else if probe < statement.endIndex, statement[probe] == "^" {
+                    let next = statement.index(after: probe)
+                    guard next < statement.endIndex, statement[next] == "^" else {
+                        throw SHACLError.invalidStatement(statement)
+                    }
+                    probe = statement.index(after: next)
+                    var dtEnd = probe
+                    while dtEnd < statement.endIndex,
+                          !statement[dtEnd].isWhitespace,
+                          statement[dtEnd] != ";",
+                          statement[dtEnd] != "," {
+                        dtEnd = statement.index(after: dtEnd)
+                    }
+                    token += "^^" + String(statement[probe..<dtEnd])
+                    probe = dtEnd
+                }
+
+                tokens.append(token)
+                index = probe
+                continue
             }
 
             var end = index
@@ -739,6 +839,24 @@ private struct SHACLTurtleSubsetParser {
             return token
         }
 
+        if token.hasPrefix("_:") {
+            return token
+        }
+
+        if token.hasPrefix("\"") {
+            if let typedRange = token.range(of: "^^") {
+                let literal = String(token[..<typedRange.lowerBound])
+                let datatypeToken = String(token[typedRange.upperBound...])
+                let datatypeIRI = try resolveIRIReference(datatypeToken, prefixes: prefixes)
+                return literal + "^^" + datatypeIRI
+            }
+            return token
+        }
+
+        return try resolveIRIReference(token, prefixes: prefixes)
+    }
+
+    private func resolveIRIReference(_ token: String, prefixes: [String: String]) throws -> String {
         if let colon = token.firstIndex(of: ":") {
             let prefix = String(token[..<colon])
             let local = String(token[token.index(after: colon)...])
