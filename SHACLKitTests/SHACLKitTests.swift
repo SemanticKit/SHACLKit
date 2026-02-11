@@ -205,3 +205,26 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(messages.contains("blankNode"))
     #expect(messages.contains("iriOrLiteral"))
 }
+
+@Test func coreValidatorConformsForStringFacetFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("string-facets-shapes.ttl")
+    let dataGraph = try fixtureData("string-facets-valid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsStringFacetViolations() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("string-facets-shapes.ttl")
+    let dataGraph = try fixtureData("string-facets-invalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 2)
+    let messages = result.violations.map(\.message).joined(separator: " | ")
+    #expect(messages.contains("minLength violation"))
+    #expect(messages.contains("pattern violation"))
+}

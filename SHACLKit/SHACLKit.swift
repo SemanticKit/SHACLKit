@@ -36,6 +36,9 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let classIRI: String?
     public let nodeKind: SHACLNodeKindConstraint?
     public let datatypeIRI: String?
+    public let minLength: Int?
+    public let maxLength: Int?
+    public let pattern: String?
     public let minCount: Int?
     public let maxCount: Int?
 
@@ -48,6 +51,9 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         classIRI: String? = nil,
         nodeKind: SHACLNodeKindConstraint? = nil,
         datatypeIRI: String? = nil,
+        minLength: Int? = nil,
+        maxLength: Int? = nil,
+        pattern: String? = nil,
         minCount: Int? = nil,
         maxCount: Int? = nil
     ) {
@@ -59,6 +65,9 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.classIRI = classIRI
         self.nodeKind = nodeKind
         self.datatypeIRI = datatypeIRI
+        self.minLength = minLength
+        self.maxLength = maxLength
+        self.pattern = pattern
         self.minCount = minCount
         self.maxCount = maxCount
     }
@@ -196,6 +205,9 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var classIRI: String?
             var nodeKind: SHACLNodeKindConstraint?
             var datatypeIRI: String?
+            var minLength: Int?
+            var maxLength: Int?
+            var pattern: String?
             var minCount: Int?
             var maxCount: Int?
         }
@@ -233,6 +245,18 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.nodeKind = parseNodeKind(object)
             } else if predicate == SHACLIRIs.datatype {
                 current.datatypeIRI = object
+            } else if predicate == SHACLIRIs.minLength {
+                guard let length = Int(object) else {
+                    throw SHACLError.invalidIntegerLiteral(object)
+                }
+                current.minLength = length
+            } else if predicate == SHACLIRIs.maxLength {
+                guard let length = Int(object) else {
+                    throw SHACLError.invalidIntegerLiteral(object)
+                }
+                current.maxLength = length
+            } else if predicate == SHACLIRIs.pattern {
+                current.pattern = parsedLiteralLexicalForm(object)
             } else if predicate == SHACLIRIs.minCount {
                 guard let count = Int(object) else {
                     throw SHACLError.invalidIntegerLiteral(object)
@@ -261,6 +285,9 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 classIRI: partial.classIRI,
                 nodeKind: partial.nodeKind,
                 datatypeIRI: partial.datatypeIRI,
+                minLength: partial.minLength,
+                maxLength: partial.maxLength,
+                pattern: partial.pattern,
                 minCount: partial.minCount,
                 maxCount: partial.maxCount
             )
@@ -300,6 +327,17 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         default:
             return nil
         }
+    }
+
+    private func parsedLiteralLexicalForm(_ value: String) -> String? {
+        guard value.hasPrefix("\"") else {
+            return nil
+        }
+        guard let closing = value.dropFirst().firstIndex(of: "\"") else {
+            return nil
+        }
+        let start = value.index(after: value.startIndex)
+        return String(value[start..<closing])
     }
 }
 
@@ -494,6 +532,60 @@ public struct SHACLCoreValidator: SHACLValidator {
                     }
                 }
             }
+
+            if propertyShape.minLength != nil || propertyShape.maxLength != nil || propertyShape.pattern != nil {
+                for valueNode in values {
+                    guard let lexical = extractLiteralLexicalForm(valueNode) else {
+                        violations.append(
+                            SHACLViolation(
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                message: "string facet violation: value \(valueNode) is not a literal"
+                            )
+                        )
+                        continue
+                    }
+
+                    if let minLength = propertyShape.minLength, lexical.count < minLength {
+                        violations.append(
+                            SHACLViolation(
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                message: "minLength violation: expected >= \(minLength), got \(lexical.count)"
+                            )
+                        )
+                    }
+
+                    if let maxLength = propertyShape.maxLength, lexical.count > maxLength {
+                        violations.append(
+                            SHACLViolation(
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                message: "maxLength violation: expected <= \(maxLength), got \(lexical.count)"
+                            )
+                        )
+                    }
+
+                    if let pattern = propertyShape.pattern {
+                        let range = NSRange(lexical.startIndex..<lexical.endIndex, in: lexical)
+                        let regex = try? NSRegularExpression(pattern: pattern)
+                        let matches = regex?.firstMatch(in: lexical, options: [], range: range) != nil
+                        if !matches {
+                            violations.append(
+                                SHACLViolation(
+                                    shapeIRI: propertyShape.shapeIRI,
+                                    focusNode: focusNode,
+                                    pathIRI: pathIRI,
+                                    message: "pattern violation: value \(lexical) does not match \(pattern)"
+                                )
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         return violations
@@ -539,6 +631,17 @@ public struct SHACLCoreValidator: SHACLValidator {
 
         return SHACLIRIs.xsdString
     }
+
+    private func extractLiteralLexicalForm(_ value: String) -> String? {
+        guard value.hasPrefix("\"") else {
+            return nil
+        }
+        guard let closing = value.dropFirst().firstIndex(of: "\"") else {
+            return nil
+        }
+        let start = value.index(after: value.startIndex)
+        return String(value[start..<closing])
+    }
 }
 
 private enum SHACLIRIs {
@@ -554,6 +657,9 @@ private enum SHACLIRIs {
     static let `class` = "http://www.w3.org/ns/shacl#class"
     static let nodeKind = "http://www.w3.org/ns/shacl#nodeKind"
     static let datatype = "http://www.w3.org/ns/shacl#datatype"
+    static let minLength = "http://www.w3.org/ns/shacl#minLength"
+    static let maxLength = "http://www.w3.org/ns/shacl#maxLength"
+    static let pattern = "http://www.w3.org/ns/shacl#pattern"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"

@@ -25,7 +25,8 @@ Legend:
 - [~] `TEST-SHACL-020` Cardinality component tests.
 - [~] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
   - Covered `class`, `datatype`, and subset `nodeKind` (`IRI`, `Literal`, `BlankNode`, `IRIOrLiteral`) fixtures.
-- [ ] `TEST-SHACL-022` String/range facet tests.
+- [~] `TEST-SHACL-022` String/range facet tests.
+  - Covered `minLength`, `maxLength`, and `pattern` fixtures.
 - [ ] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
 - [ ] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
 - [ ] `TEST-SHACL-025` Shape-reference and qualified shape tests.

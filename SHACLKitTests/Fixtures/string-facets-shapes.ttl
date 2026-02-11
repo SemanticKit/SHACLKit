@@ -1,0 +1,12 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:PersonShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:property ex:CodeShape .
+
+ex:CodeShape a sh:PropertyShape ;
+  sh:path ex:code ;
+  sh:minLength 2 ;
+  sh:maxLength 5 ;
+  sh:pattern "^[A-Z]+$" .
