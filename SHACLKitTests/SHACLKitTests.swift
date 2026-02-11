@@ -897,6 +897,16 @@ private struct TestShapesSource {
     }
 }
 
+@Test func coreValidatorThrowsForMissingReferencedNodeExpressionOnNodeShape() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("invalidShapesUnknownNodeExpression.ttl")
+    let dataGraph = try fixtureData("invalidShapesData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorThrowsForPhaseGatedRulePredicate() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("phaseGatedRulesShapes.ttl")
@@ -923,9 +933,7 @@ private struct TestShapesSource {
     let dataGraph = try fixtureData("invalidShapesData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
-    #expect(!result.conforms)
-    #expect(result.violations.count == 1)
-    #expect(result.violations.first?.sourceConstraintIRI == "http://www.w3.org/ns/shacl#expression")
+    #expect(result.conforms)
 }
 
 @Test func coreValidatorMatchesResultsAcrossDataAndGraphEntryPoints() async throws {

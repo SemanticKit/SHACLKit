@@ -855,6 +855,11 @@ public struct SHACLCoreValidator: SHACLValidator {
         let expressionByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.nodeExpressions.map { ($0.expressionIRI, $0) })
 
         for shape in shapesGraph.shapes where shape.kind == .nodeShape {
+            if let expressionIRI = shape.expressionIRI, expressionByIRI[expressionIRI] == nil {
+                throw SHACLError.invalidShapesGraph(
+                    "Node shape \(shape.shapeIRI) references missing node expression \(expressionIRI)"
+                )
+            }
             for propertyShapeIRI in shape.propertyShapeIRIs {
                 guard let propertyShape = byIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
                     throw SHACLError.invalidShapesGraph(
