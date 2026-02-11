@@ -1133,6 +1133,19 @@ public struct SHACLCoreValidator: SHACLValidator {
                     )
                 }
             }
+            let referencedNodeShapeIRIs =
+                [shape.nodeShapeReferenceIRI, shape.notShapeIRI, shape.qualifiedValueShapeIRI].compactMap { $0 }
+                + shape.andShapeIRIs
+                + shape.orShapeIRIs
+                + shape.xoneShapeIRIs
+
+            for referencedIRI in referencedNodeShapeIRIs {
+                guard let nodeShape = byIRI[referencedIRI], nodeShape.kind == .nodeShape else {
+                    throw SHACLError.invalidShapesGraph(
+                        "Node shape \(shape.shapeIRI) references missing or non-node shape \(referencedIRI)"
+                    )
+                }
+            }
             for propertyShapeIRI in shape.propertyShapeIRIs {
                 guard let propertyShape = byIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
                     throw SHACLError.invalidShapesGraph(
@@ -1813,6 +1826,26 @@ public struct SHACLCoreValidator: SHACLValidator {
                         )
                     )
                 }
+            }
+        }
+
+        if let nodeReference = nodeShape.nodeShapeReferenceIRI,
+           let referencedShape = shapesByIRI[nodeReference],
+           referencedShape.kind == .nodeShape {
+            let key = "\(referencedShape.shapeIRI)|\(focusNode)"
+            if !visited.contains(key) {
+                visited.insert(key)
+                let nestedViolations = evaluate(
+                    nodeShape: referencedShape,
+                    focusNode: focusNode,
+                    dataGraph: dataGraph,
+                    shapesByIRI: shapesByIRI,
+                    nodeExpressionsByIRI: nodeExpressionsByIRI,
+                    depth: depth + 1,
+                    visited: &visited
+                )
+                visited.remove(key)
+                violations.append(contentsOf: nestedViolations)
             }
         }
 

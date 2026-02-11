@@ -45,7 +45,7 @@ Legend:
   - Added curated W3C node-shape logical conformance subset coverage (`and-001`, `or-001`, `not-001`, `xone-001`).
 - [x] `TEST-SHACL-025` Shape-reference and qualified shape tests.
   - Covered `sh:node` fixtures, qualified value shape count fixtures, and invalid reference diagnostics.
-  - Added curated W3C node-shape conformance subset coverage for `class-001`.
+  - Added curated W3C node-shape conformance subset coverage for `class-001`, `node-001`, and `qualified-001`.
 
 ## Phase 2: Node Expressions and Rules
 
@@ -73,6 +73,7 @@ Legend:
 - [x] `TEST-SHACL-030` Recursion/cycle guard tests.
 - [x] `TEST-SHACL-031` Invalid shapes graph diagnostics tests.
   - Covered missing `sh:path`, missing referenced property shape, missing referenced node shape, missing referenced node expression, and missing `sh:nodeByExpression` reference failures.
+  - Added coverage for missing `sh:node` references on node shapes.
 - [x] `TEST-SHACL-032` Large graph smoke test for baseline performance.
 - [x] `TEST-SHACL-033` Regression suite for previously fixed defects.
   - Added deterministic regression coverage for prior cycle/severity behavior.
