@@ -37,7 +37,7 @@ Legend:
 - [ ] `REQ-SHACL-010` Constraint components: logical composition (`sh:and`, `sh:or`, `sh:not`, `sh:xone`).
 - [~] `REQ-SHACL-011` Constraint components: shape references (`sh:node`, `sh:property`, qualified value shape family).
   - Implemented subset `sh:node` evaluation for referenced node shapes.
-- [ ] `REQ-SHACL-012` Enforce recursion/termination safeguards for cyclic shapes.
+- [x] `REQ-SHACL-012` Enforce recursion/termination safeguards for cyclic shapes.
 - [~] `REQ-SHACL-013` Emit stable machine-readable diagnostics (focus node, path, value, source shape, source constraint).
   - Implemented: `focusNode`, `pathIRI`, `valueNode`, `shapeIRI` (source shape), and `sourceConstraintIRI` on validation results.
 - [ ] `REQ-SHACL-014` Keep execution side-effect free (pure validation result model).

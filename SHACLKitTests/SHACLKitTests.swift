@@ -334,3 +334,26 @@ private func fixtureData(_ name: String) throws -> Data {
     let inResult = result.violations[2]
     #expect(inResult.valueNode == "http://example.com/Archived")
 }
+
+@Test func coreValidatorTerminatesOnCyclicNodeReferences() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("cycleGuardShapes.ttl")
+    let dataGraph = try fixtureData("cycleGuardData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
+@Test func coreValidatorReportsStableViolationForCycleGuardFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("cycleGuardShapes.ttl")
+    let dataGraph = try fixtureData("cycleGuardData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    let violation = try #require(result.violations.first)
+    #expect(violation.shapeIRI == "http://example.com/EmployeeIdShape")
+    #expect(violation.focusNode == "http://example.com/bob")
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#minCount")
+    #expect(violation.message.contains("minCount violation"))
+}
