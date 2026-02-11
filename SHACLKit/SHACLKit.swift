@@ -216,6 +216,8 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case sum(inputTerm: String, staticListMembers: [String]?)
     case ifThenElse(condition: String, thenTerm: String, elseTerm: String?)
     case pathValues(path: SHACLPropertyPath, focusNodeTerm: String?)
+    case concat(inputTerm: String, staticListMembers: [String]?)
+    case remove(inputTerm: String, removeTerm: String, staticInputListMembers: [String]?, staticRemoveListMembers: [String]?)
 }
 
 public struct SHACLNodeExpressionDefinition: Sendable, Hashable {
@@ -526,6 +528,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var elseObjects: Set<String> = []
             var pathValuesObject: String?
             var pathValuesFocusNodeObject: String?
+            var concatObjects: Set<String> = []
+            var removeObjects: Set<String> = []
         }
 
         struct PartialRule {
@@ -780,6 +784,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.pathValuesFocusNodeObject = object
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexConcat {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.concatObjects.insert(object)
+                nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexRemove {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.removeObjects.insert(object)
+                nodeExpressions[subject] = expression
             }
         }
 
@@ -826,11 +838,55 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 )
             }
 
+            if let removeObject = partial.removeObjects.sorted().first,
+               let inputObject = partial.nodesObjects.sorted().first {
+                let resolvedInput = resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted().first ?? inputObject
+                let staticInputListMembers = rdfListLength(inputObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveShapeReferenceIRIs([inputObject], triplesBySubject: triplesBySubject).sorted()
+                    : nil
+                let resolvedRemove = resolveShapeReferenceIRIs([removeObject], triplesBySubject: triplesBySubject).sorted().first ?? removeObject
+                let staticRemoveListMembers = rdfListLength(removeObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveShapeReferenceIRIs([removeObject], triplesBySubject: triplesBySubject).sorted()
+                    : nil
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .remove(
+                        inputTerm: resolvedInput,
+                        removeTerm: resolvedRemove,
+                        staticInputListMembers: staticInputListMembers,
+                        staticRemoveListMembers: staticRemoveListMembers
+                    )
+                )
+            }
+
             let nodesMembers = resolveShapeReferenceIRIs(partial.nodesObjects, triplesBySubject: triplesBySubject).sorted()
             if !nodesMembers.isEmpty || partial.nodesObjects.contains(SHACLIRIs.rdfNil) {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .nodes(nodesMembers)
+                )
+            }
+
+            if let concatObject = partial.concatObjects.sorted().first {
+                let resolvedConcatInput = resolveShapeReferenceIRIs([concatObject], triplesBySubject: triplesBySubject).sorted().first ?? concatObject
+                let staticListMembers: [String]?
+                if rdfListLength(concatObject, triplesBySubject: triplesBySubject) != nil {
+                    let members = resolveShapeReferenceIRIs([concatObject], triplesBySubject: triplesBySubject)
+                    var flattened: Set<String> = []
+                    for member in members {
+                        if rdfListLength(member, triplesBySubject: triplesBySubject) != nil {
+                            flattened.formUnion(resolveShapeReferenceIRIs([member], triplesBySubject: triplesBySubject))
+                        } else {
+                            flattened.insert(member)
+                        }
+                    }
+                    staticListMembers = flattened.sorted()
+                } else {
+                    staticListMembers = nil
+                }
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .concat(inputTerm: resolvedConcatInput, staticListMembers: staticListMembers)
                 )
             }
 
@@ -1736,6 +1792,41 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             return focusNodes.reduce(into: Set<String>()) { result, node in
                 result.formUnion(evaluatePropertyPathValues(path, from: node, dataGraph: dataGraph))
             }
+        case .concat(let inputTerm, let staticListMembers):
+            let terms = staticListMembers ?? [inputTerm]
+            return terms.reduce(into: Set<String>()) { result, term in
+                result.formUnion(
+                    evaluateTerm(
+                        term,
+                        focusNode: focusNode,
+                        shapesGraph: shapesGraph,
+                        expressionsByIRI: expressionsByIRI,
+                        dataGraph: dataGraph,
+                        depth: depth + 1,
+                        visited: &visited
+                    )
+                )
+            }
+        case .remove(let inputTerm, let removeTerm, let staticInputListMembers, let staticRemoveListMembers):
+            let inputNodes = staticInputListMembers.map(Set.init) ?? evaluateTerm(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            let removeNodes = staticRemoveListMembers.map(Set.init) ?? evaluateTerm(
+                removeTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            return inputNodes.subtracting(removeNodes)
         }
     }
 }
@@ -4225,6 +4316,8 @@ private enum SHACLIRIs {
     static let shnexElse = "http://www.w3.org/ns/shacl-node-expr#else"
     static let shnexPathValues = "http://www.w3.org/ns/shacl-node-expr#pathValues"
     static let shnexFocusNode = "http://www.w3.org/ns/shacl-node-expr#focusNode"
+    static let shnexConcat = "http://www.w3.org/ns/shacl-node-expr#concat"
+    static let shnexRemove = "http://www.w3.org/ns/shacl-node-expr#remove"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"

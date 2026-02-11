@@ -1,0 +1,20 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:ScopeShape
+    a sh:NodeShape ;
+    sh:targetNode ex:scope ;
+    sh:property ex:RemoveProperty .
+
+ex:RemoveProperty
+    sh:expression ex:RemoveExpr ;
+    sh:hasValue ex:alice .
+
+ex:RemoveExpr
+    shnex:nodesMatching ex:PersonShape ;
+    shnex:remove ( ex:bob ) .
+
+ex:PersonShape
+    a sh:NodeShape ;
+    sh:class ex:Person .

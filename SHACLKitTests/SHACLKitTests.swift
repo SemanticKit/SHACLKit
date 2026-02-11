@@ -561,6 +561,31 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(filterUnconstrained == Set(["http://example.com/alice", "http://example.com/bob", "http://example.com/charlie"]))
 }
 
+@Test func nodeExpressionEvaluatorEvaluatesConcatAndRemove() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let graphData = try fixtureData("nodeExpressionConcatRemoveDefinitions.ttl")
+    let shapesGraph = try loader.load(from: graphData)
+    let dataGraph = try dataLoader.load(from: graphData)
+    let evaluator = SHACLNodeExpressionEvaluator()
+
+    let concatSimple = evaluator.evaluate(
+        expressionIRI: "http://example.com/ConcatSimple",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(concatSimple == Set(["http://example.com/alice", "http://example.com/bob", "false"]))
+
+    let removeSimple = evaluator.evaluate(
+        expressionIRI: "http://example.com/RemoveSimple",
+        focusNode: "http://example.com/focus",
+        shapesGraph: shapesGraph,
+        dataGraph: dataGraph
+    )
+    #expect(removeSimple == Set(["http://example.com/alice", "http://example.com/charlie"]))
+}
+
 @Test func nodeExpressionEvaluatorEvaluatesMinAndMax() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionMinMaxDefinitions.ttl"))
@@ -872,6 +897,27 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("expressionConstraintFilterShapeShapes.ttl")
     let dataGraph = try fixtureData("expressionConstraintFilterShapeInvalidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
+@Test func coreValidatorConformsForRemoveExpressionConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintRemoveShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintRemoveValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsRemoveExpressionConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("expressionConstraintRemoveShapes.ttl")
+    let dataGraph = try fixtureData("expressionConstraintRemoveInvalidData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)

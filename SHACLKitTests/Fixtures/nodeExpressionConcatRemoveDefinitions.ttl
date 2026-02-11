@@ -1,0 +1,23 @@
+@prefix ex: <http://example.com/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:ConcatSimple
+    shnex:concat (
+        ex:alice
+        ex:bob
+        [ shnex:exists [] ]
+    ) .
+
+ex:RemoveSimple
+    shnex:nodes ( ex:alice ex:bob ex:charlie ) ;
+    shnex:remove ( ex:bob ) .
+
+ex:alice rdf:type ex:Person .
+ex:bob rdf:type ex:Person .
+ex:charlie rdf:type ex:Robot .
+
+ex:PersonShape
+    a sh:NodeShape ;
+    sh:class ex:Person .
