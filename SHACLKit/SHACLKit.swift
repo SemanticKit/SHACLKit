@@ -24,6 +24,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let targets: [SHACLTargetSelector]
     public let propertyShapeIRIs: [String]
     public let pathIRI: String?
+    public let classIRI: String?
     public let minCount: Int?
     public let maxCount: Int?
 
@@ -33,6 +34,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         targets: [SHACLTargetSelector],
         propertyShapeIRIs: [String] = [],
         pathIRI: String? = nil,
+        classIRI: String? = nil,
         minCount: Int? = nil,
         maxCount: Int? = nil
     ) {
@@ -41,6 +43,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.targets = targets
         self.propertyShapeIRIs = propertyShapeIRIs
         self.pathIRI = pathIRI
+        self.classIRI = classIRI
         self.minCount = minCount
         self.maxCount = maxCount
     }
@@ -175,6 +178,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var targets: Set<SHACLTargetSelector> = []
             var propertyShapeIRIs: Set<String> = []
             var pathIRI: String?
+            var classIRI: String?
             var minCount: Int?
             var maxCount: Int?
         }
@@ -206,6 +210,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.propertyShapeIRIs.insert(object)
             } else if predicate == SHACLIRIs.path {
                 current.pathIRI = object
+            } else if predicate == SHACLIRIs.class {
+                current.classIRI = object
             } else if predicate == SHACLIRIs.minCount {
                 guard let count = Int(object) else {
                     throw SHACLError.invalidIntegerLiteral(object)
@@ -231,6 +237,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 targets: partial.targets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
                 pathIRI: partial.pathIRI,
+                classIRI: partial.classIRI,
                 minCount: partial.minCount,
                 maxCount: partial.maxCount
             )
@@ -370,6 +377,9 @@ public struct SHACLCoreValidator: SHACLValidator {
             let valueCount = dataGraph.triples.filter {
                 $0.subject == focusNode && $0.predicate == pathIRI
             }.count
+            let values = dataGraph.triples
+                .filter { $0.subject == focusNode && $0.predicate == pathIRI }
+                .map(\.object)
 
             if let minCount = propertyShape.minCount, valueCount < minCount {
                 violations.append(
@@ -392,6 +402,24 @@ public struct SHACLCoreValidator: SHACLValidator {
                     )
                 )
             }
+
+            if let classIRI = propertyShape.classIRI {
+                for valueNode in values {
+                    let hasRequiredType = dataGraph.triples.contains {
+                        $0.subject == valueNode && $0.predicate == SHACLIRIs.rdfType && $0.object == classIRI
+                    }
+                    if !hasRequiredType {
+                        violations.append(
+                            SHACLViolation(
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                message: "class violation: value \(valueNode) is not typed as \(classIRI)"
+                            )
+                        )
+                    }
+                }
+            }
         }
 
         return violations
@@ -408,6 +436,7 @@ private enum SHACLIRIs {
     static let targetObjectsOf = "http://www.w3.org/ns/shacl#targetObjectsOf"
     static let property = "http://www.w3.org/ns/shacl#property"
     static let path = "http://www.w3.org/ns/shacl#path"
+    static let `class` = "http://www.w3.org/ns/shacl#class"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
 }

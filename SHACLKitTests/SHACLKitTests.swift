@@ -109,3 +109,27 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(summary[1].0 == "http://example.com/bob")
     #expect(summary[1].1.contains("maxCount violation"))
 }
+
+@Test func coreValidatorConformsForClassConstraintFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("class-constraints-shapes.ttl")
+    let dataGraph = try fixtureData("class-constraints-valid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsClassConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("class-constraints-shapes.ttl")
+    let dataGraph = try fixtureData("class-constraints-invalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.message.contains("class violation"))
+    #expect(violation.message.contains("http://example.com/org1"))
+}

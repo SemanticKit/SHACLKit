@@ -23,7 +23,7 @@ Legend:
 ## Phase 1: Constraint Component Coverage
 
 - [~] `TEST-SHACL-020` Cardinality component tests.
-- [ ] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
+- [~] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
 - [ ] `TEST-SHACL-022` String/range facet tests.
 - [ ] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
 - [ ] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
