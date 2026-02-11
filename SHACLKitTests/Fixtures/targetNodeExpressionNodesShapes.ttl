@@ -1,0 +1,10 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:NodesTargetShape
+    a sh:NodeShape ;
+    sh:targetNode ex:ExprNodesTarget .
+
+ex:ExprNodesTarget
+    shnex:nodes ( ex:alice ex:bob ) .

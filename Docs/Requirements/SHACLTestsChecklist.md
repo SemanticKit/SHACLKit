@@ -21,6 +21,7 @@ Legend:
 
 - [x] `TEST-SHACL-010` Target selection tests for all core target selectors.
   - Added coverage for `sh:targetNode` selectors backed by node-expression definitions.
+  - Added coverage for `sh:targetNode` selectors backed by `shnex:nodes`.
   - Added coverage for `sh:targetNode` selectors backed by `shnex:pathValues` + explicit `shnex:focusNode`.
   - Added regression coverage ensuring empty target outputs are ignored.
   - Added curated W3C core target selector subset coverage (`targetNode`, `targetClass`, implicit `targetClass`, `targetSubjectsOf`, `targetObjectsOf`, `multipleTargets`).
