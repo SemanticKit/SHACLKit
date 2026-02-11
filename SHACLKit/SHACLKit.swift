@@ -1982,6 +1982,10 @@ private struct SHACLTurtleSubsetParser {
             return token
         }
 
+        if token == "true" || token == "false" {
+            return "\"\(token)\"^^\(SHACLIRIs.xsdBoolean)"
+        }
+
         if token.hasPrefix("_:") {
             return token
         }

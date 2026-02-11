@@ -61,6 +61,20 @@ private func fixtureData(_ name: String) throws -> Data {
     }
 }
 
+@Test func shapesLoaderParsesBooleanLiteralNodeExpressionMembers() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("nodeExpressionBooleanDefinitions.ttl"))
+    let kind = try #require(graph.nodeExpressions.first?.kind)
+    if case .union(let members) = kind {
+        #expect(Set(members) == Set([
+            "\"true\"^^http://www.w3.org/2001/XMLSchema#boolean",
+            "\"false\"^^http://www.w3.org/2001/XMLSchema#boolean",
+        ]))
+    } else {
+        Issue.record("Expected union node expression with boolean members.")
+    }
+}
+
 @Test func nodeExpressionEvaluatorEvaluatesUnionIntersectionAndCycle() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionDefinitions.ttl"))
