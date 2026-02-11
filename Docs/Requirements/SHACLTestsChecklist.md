@@ -54,9 +54,12 @@ Legend:
 
 ## Phase 3: SHACL SPARQL Extensions
 
-- [ ] `TEST-SHACL-300` SPARQL constraint fixtures.
-- [ ] `TEST-SHACL-301` SPARQL target fixtures.
-- [ ] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.
+- [~] `TEST-SHACL-300` SPARQL constraint fixtures.
+  - Added first-slice fixture/tests for `sh:sparql` + `sh:select` constraint execution through an injected executor boundary.
+- [~] `TEST-SHACL-301` SPARQL target fixtures.
+  - Added first-slice fixture/tests for `sh:target` + `sh:select` focus-node resolution through an injected executor boundary.
+- [~] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.
+  - Added default-deny executor behavior test coverage proving SPARQL evaluation requires explicit sandboxed executor injection.
 
 ## Robustness and Regression
 

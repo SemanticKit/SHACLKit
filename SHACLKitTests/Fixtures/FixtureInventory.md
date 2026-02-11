@@ -18,3 +18,4 @@ Current local families:
 - Invalid shapes graph diagnostics
 - Regression and smoke scenarios
 - Rules (`sh:TripleRule`) first-slice execution scenarios
+- SPARQL extension first-slice scenarios (`sh:sparql` constraints, `sh:target` selectors, sandbox boundary)

@@ -35,6 +35,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let targets: [SHACLTargetSelector]
     public let propertyShapeIRIs: [String]
     public let tripleRuleIRIs: [String]
+    public let sparqlConstraintIRIs: [String]
+    public let sparqlTargetIRIs: [String]
     public let pathIRI: String?
     public let expressionIRI: String?
     public let classIRI: String?
@@ -66,6 +68,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         targets: [SHACLTargetSelector],
         propertyShapeIRIs: [String] = [],
         tripleRuleIRIs: [String] = [],
+        sparqlConstraintIRIs: [String] = [],
+        sparqlTargetIRIs: [String] = [],
         pathIRI: String? = nil,
         expressionIRI: String? = nil,
         classIRI: String? = nil,
@@ -96,6 +100,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.targets = targets
         self.propertyShapeIRIs = propertyShapeIRIs
         self.tripleRuleIRIs = tripleRuleIRIs
+        self.sparqlConstraintIRIs = sparqlConstraintIRIs
+        self.sparqlTargetIRIs = sparqlTargetIRIs
         self.pathIRI = pathIRI
         self.expressionIRI = expressionIRI
         self.classIRI = classIRI
@@ -126,15 +132,18 @@ public struct SHACLShapesGraph: Sendable, Equatable {
     public let shapes: [SHACLShapeDefinition]
     public let nodeExpressions: [SHACLNodeExpressionDefinition]
     public let tripleRules: [SHACLTripleRuleDefinition]
+    public let sparqlDefinitions: [SHACLSPARQLDefinition]
 
     public init(
         shapes: [SHACLShapeDefinition],
         nodeExpressions: [SHACLNodeExpressionDefinition] = [],
-        tripleRules: [SHACLTripleRuleDefinition] = []
+        tripleRules: [SHACLTripleRuleDefinition] = [],
+        sparqlDefinitions: [SHACLSPARQLDefinition] = []
     ) {
         self.shapes = shapes
         self.nodeExpressions = nodeExpressions
         self.tripleRules = tripleRules
+        self.sparqlDefinitions = sparqlDefinitions
     }
 }
 
@@ -172,6 +181,18 @@ public struct SHACLTripleRuleDefinition: Sendable, Hashable {
         self.subjectTerm = subjectTerm
         self.predicateTerm = predicateTerm
         self.objectTerm = objectTerm
+    }
+}
+
+public struct SHACLSPARQLDefinition: Sendable, Hashable {
+    public let sparqlIRI: String
+    public let selectQuery: String?
+    public let askQuery: String?
+
+    public init(sparqlIRI: String, selectQuery: String? = nil, askQuery: String? = nil) {
+        self.sparqlIRI = sparqlIRI
+        self.selectQuery = selectQuery
+        self.askQuery = askQuery
     }
 }
 
@@ -258,6 +279,44 @@ public protocol SHACLValidator: Sendable {
     func validate(dataGraph: SHACLDataGraph, shapesGraph: SHACLShapesGraph) throws -> SHACLValidationResult
 }
 
+public protocol SHACLSPARQLExecutor: Sendable {
+    func select(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> [String]
+
+    func ask(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> Bool
+}
+
+public struct SHACLDeniedSPARQLExecutor: SHACLSPARQLExecutor {
+    public init() {}
+
+    public func select(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> [String] {
+        throw SHACLError.notImplemented("SPARQL execution requires an explicit sandboxed SHACLSPARQLExecutor.")
+    }
+
+    public func ask(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> Bool {
+        throw SHACLError.notImplemented("SPARQL execution requires an explicit sandboxed SHACLSPARQLExecutor.")
+    }
+}
+
 public protocol SHACLDataGraphAdapting: Sendable {
     associatedtype Source
     func adapt(_ source: Source) throws -> SHACLDataGraph
@@ -341,6 +400,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var targets: Set<SHACLTargetSelector> = []
             var propertyShapeIRIs: Set<String> = []
             var ruleIRIs: Set<String> = []
+            var sparqlConstraintIRIs: Set<String> = []
+            var sparqlTargetIRIs: Set<String> = []
             var pathIRI: String?
             var expressionIRI: String?
             var classIRI: String?
@@ -379,9 +440,15 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var objectTerm: String?
         }
 
+        struct PartialSPARQL {
+            var selectQuery: String?
+            var askQuery: String?
+        }
+
         var shapes: [String: PartialShape] = [:]
         var nodeExpressions: [String: PartialNodeExpression] = [:]
         var rules: [String: PartialRule] = [:]
+        var sparqlDefinitions: [String: PartialSPARQL] = [:]
 
         for triple in triples {
             let subject = triple.subject
@@ -419,6 +486,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.propertyShapeIRIs.insert(object)
             } else if predicate == SHACLIRIs.rule {
                 current.ruleIRIs.insert(object)
+            } else if predicate == SHACLIRIs.sparql {
+                current.sparqlConstraintIRIs.insert(object)
+            } else if predicate == SHACLIRIs.target {
+                current.sparqlTargetIRIs.insert(object)
             } else if predicate == SHACLIRIs.path {
                 current.pathIRI = object
             } else if predicate == SHACLIRIs.expression {
@@ -505,6 +576,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var rule = rules[subject] ?? PartialRule()
                 rule.objectTerm = object
                 rules[subject] = rule
+            } else if predicate == SHACLIRIs.select {
+                var sparql = sparqlDefinitions[subject] ?? PartialSPARQL()
+                sparql.selectQuery = parsedLiteralLexicalForm(object) ?? object
+                sparqlDefinitions[subject] = sparql
+            } else if predicate == SHACLIRIs.ask {
+                var sparql = sparqlDefinitions[subject] ?? PartialSPARQL()
+                sparql.askQuery = parsedLiteralLexicalForm(object) ?? object
+                sparqlDefinitions[subject] = sparql
             }
 
             shapes[subject] = current
@@ -561,6 +640,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 targets: normalizedTargets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
                 tripleRuleIRIs: resolveShapeReferenceIRIs(partial.ruleIRIs, triplesBySubject: triplesBySubject).sorted(),
+                sparqlConstraintIRIs: resolveShapeReferenceIRIs(partial.sparqlConstraintIRIs, triplesBySubject: triplesBySubject).sorted(),
+                sparqlTargetIRIs: resolveShapeReferenceIRIs(partial.sparqlTargetIRIs, triplesBySubject: triplesBySubject).sorted(),
                 pathIRI: partial.pathIRI,
                 expressionIRI: partial.expressionIRI,
                 classIRI: partial.classIRI,
@@ -614,7 +695,27 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             )
         }
 
-        return SHACLShapesGraph(shapes: definitions, nodeExpressions: expressionDefinitions, tripleRules: tripleRuleDefinitions)
+        let referencedSPARQLIRIs = Set(definitions.flatMap(\.sparqlConstraintIRIs) + definitions.flatMap(\.sparqlTargetIRIs))
+        let parsedSPARQLDefinitions = try referencedSPARQLIRIs.sorted().map { sparqlIRI in
+            guard let partial = sparqlDefinitions[sparqlIRI] else {
+                throw SHACLError.invalidShapesGraph("Shape references missing SPARQL definition \(sparqlIRI)")
+            }
+            if partial.selectQuery == nil && partial.askQuery == nil {
+                throw SHACLError.invalidShapesGraph("SPARQL definition \(sparqlIRI) is missing sh:select/sh:ask")
+            }
+            return SHACLSPARQLDefinition(
+                sparqlIRI: sparqlIRI,
+                selectQuery: partial.selectQuery,
+                askQuery: partial.askQuery
+            )
+        }
+
+        return SHACLShapesGraph(
+            shapes: definitions,
+            nodeExpressions: expressionDefinitions,
+            tripleRules: tripleRuleDefinitions,
+            sparqlDefinitions: parsedSPARQLDefinitions
+        )
     }
 
     private func targetSortKey(_ selector: SHACLTargetSelector) -> String {
@@ -870,17 +971,20 @@ public struct SHACLCoreValidator: SHACLValidator {
     private let shapesLoader: any SHACLShapesGraphLoading
     private let dataLoader: any SHACLDataGraphLoading
     private let focusResolver: SHACLFocusNodeResolver
+    private let sparqlExecutor: any SHACLSPARQLExecutor
     private let maxReferenceDepth = 16
     private let maxRuleIterations = 16
 
     public init(
         shapesLoader: any SHACLShapesGraphLoading = SHACLShapesGraphLoader(),
         dataLoader: any SHACLDataGraphLoading = SHACLDataGraphLoader(),
-        focusResolver: SHACLFocusNodeResolver = SHACLFocusNodeResolver()
+        focusResolver: SHACLFocusNodeResolver = SHACLFocusNodeResolver(),
+        sparqlExecutor: any SHACLSPARQLExecutor = SHACLDeniedSPARQLExecutor()
     ) {
         self.shapesLoader = shapesLoader
         self.dataLoader = dataLoader
         self.focusResolver = focusResolver
+        self.sparqlExecutor = sparqlExecutor
     }
 
     public func validate(dataGraph: Data, shapesGraph: Data) throws -> SHACLValidationResult {
@@ -900,7 +1004,12 @@ public struct SHACLCoreValidator: SHACLValidator {
             shapesByIRI: shapeByIRI,
             nodeExpressionsByIRI: nodeExpressionsByIRI
         )
-        let resolutions = focusResolver.resolve(dataGraph: parsedData, shapesGraph: parsedShapes)
+        let sparqlDefinitionsByIRI = Dictionary(uniqueKeysWithValues: parsedShapes.sparqlDefinitions.map { ($0.sparqlIRI, $0) })
+        let resolutions = try resolveFocusNodes(
+            dataGraph: parsedData,
+            shapesGraph: parsedShapes,
+            sparqlDefinitionsByIRI: sparqlDefinitionsByIRI
+        )
 
         var violations: [SHACLViolation] = []
 
@@ -923,6 +1032,16 @@ public struct SHACLCoreValidator: SHACLValidator {
                 )
             }
         }
+
+        violations.append(
+            contentsOf: try evaluateSPARQLConstraints(
+                resolutions: resolutions,
+                dataGraph: parsedData,
+                shapesGraph: parsedShapes,
+                shapesByIRI: shapeByIRI,
+                sparqlDefinitionsByIRI: sparqlDefinitionsByIRI
+            )
+        )
 
         let sortedViolations = violations.sorted { lhs, rhs in
             (
@@ -975,6 +1094,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         let byIRI = Dictionary(uniqueKeysWithValues: shapesGraph.shapes.map { ($0.shapeIRI, $0) })
         let expressionByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.nodeExpressions.map { ($0.expressionIRI, $0) })
         let ruleByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.tripleRules.map { ($0.ruleIRI, $0) })
+        let sparqlByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.sparqlDefinitions.map { ($0.sparqlIRI, $0) })
 
         for shape in shapesGraph.shapes where shape.kind == .nodeShape {
             if let expressionIRI = shape.expressionIRI, expressionByIRI[expressionIRI] == nil {
@@ -1008,6 +1128,26 @@ public struct SHACLCoreValidator: SHACLValidator {
                     }
                 }
             }
+            for sparqlIRI in shape.sparqlConstraintIRIs {
+                guard let sparql = sparqlByIRI[sparqlIRI] else {
+                    throw SHACLError.invalidShapesGraph(
+                        "Node shape \(shape.shapeIRI) references missing SPARQL constraint \(sparqlIRI)"
+                    )
+                }
+                if sparql.selectQuery == nil && sparql.askQuery == nil {
+                    throw SHACLError.invalidShapesGraph("SPARQL constraint \(sparqlIRI) is missing sh:select/sh:ask")
+                }
+            }
+            for sparqlTargetIRI in shape.sparqlTargetIRIs {
+                guard let sparql = sparqlByIRI[sparqlTargetIRI] else {
+                    throw SHACLError.invalidShapesGraph(
+                        "Node shape \(shape.shapeIRI) references missing SPARQL target \(sparqlTargetIRI)"
+                    )
+                }
+                if sparql.selectQuery == nil {
+                    throw SHACLError.invalidShapesGraph("SPARQL target \(sparqlTargetIRI) must define sh:select")
+                }
+            }
         }
 
         for shape in shapesGraph.shapes where shape.kind == .propertyShape {
@@ -1039,6 +1179,103 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
         }
+    }
+
+    private func resolveFocusNodes(
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph,
+        sparqlDefinitionsByIRI: [String: SHACLSPARQLDefinition]
+    ) throws -> [SHACLTargetResolution] {
+        let baseline = focusResolver.resolve(dataGraph: dataGraph, shapesGraph: shapesGraph)
+        let baselineByShapeIRI = Dictionary(uniqueKeysWithValues: baseline.map { ($0.shapeIRI, Set($0.focusNodes)) })
+
+        return try shapesGraph.shapes.map { shape in
+            var focus = baselineByShapeIRI[shape.shapeIRI] ?? []
+            for sparqlTargetIRI in shape.sparqlTargetIRIs.sorted() {
+                guard let sparql = sparqlDefinitionsByIRI[sparqlTargetIRI], let selectQuery = sparql.selectQuery else {
+                    continue
+                }
+                let resolved = try sparqlExecutor.select(
+                    query: selectQuery,
+                    focusNode: nil,
+                    dataGraph: dataGraph,
+                    shapesGraph: shapesGraph
+                )
+                focus.formUnion(resolved.filter { !$0.isEmpty })
+            }
+            return SHACLTargetResolution(shapeIRI: shape.shapeIRI, focusNodes: focus.sorted())
+        }
+    }
+
+    private func evaluateSPARQLConstraints(
+        resolutions: [SHACLTargetResolution],
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph,
+        shapesByIRI: [String: SHACLShapeDefinition],
+        sparqlDefinitionsByIRI: [String: SHACLSPARQLDefinition]
+    ) throws -> [SHACLViolation] {
+        var violations: [SHACLViolation] = []
+
+        for resolution in resolutions {
+            guard let shape = shapesByIRI[resolution.shapeIRI], shape.kind == .nodeShape else {
+                continue
+            }
+            let severity = shape.severity ?? .violation
+
+            for focusNode in resolution.focusNodes {
+                for sparqlConstraintIRI in shape.sparqlConstraintIRIs.sorted() {
+                    guard let sparql = sparqlDefinitionsByIRI[sparqlConstraintIRI] else {
+                        continue
+                    }
+
+                    if let askQuery = sparql.askQuery {
+                        let result = try sparqlExecutor.ask(
+                            query: askQuery,
+                            focusNode: focusNode,
+                            dataGraph: dataGraph,
+                            shapesGraph: shapesGraph
+                        )
+                        if !result {
+                            violations.append(
+                                SHACLViolation(
+                                    severity: severity,
+                                    shapeIRI: shape.shapeIRI,
+                                    focusNode: focusNode,
+                                    pathIRI: nil,
+                                    valueNode: focusNode,
+                                    sourceConstraintIRI: sparqlConstraintIRI,
+                                    message: "SPARQL ASK constraint violation for focus node \(focusNode)"
+                                )
+                            )
+                        }
+                    }
+
+                    if let selectQuery = sparql.selectQuery {
+                        let boundNodes = try sparqlExecutor.select(
+                            query: selectQuery,
+                            focusNode: focusNode,
+                            dataGraph: dataGraph,
+                            shapesGraph: shapesGraph
+                        )
+                        for valueNode in boundNodes.filter({ !$0.isEmpty }).sorted() {
+                            violations.append(
+                                SHACLViolation(
+                                    severity: severity,
+                                    shapeIRI: shape.shapeIRI,
+                                    focusNode: focusNode,
+                                    pathIRI: nil,
+                                    valueNode: valueNode,
+                                    sourceConstraintIRI: sparqlConstraintIRI,
+                                    message: "SPARQL SELECT constraint violation produced value \(valueNode)"
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        return violations
     }
 
     private func applyRules(
@@ -1955,11 +2192,7 @@ private enum SHACLIRIs {
     static let xsdString = "http://www.w3.org/2001/XMLSchema#string"
     static let rdfLangString = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
     static let phaseGatedPredicates: Set<String> = [
-        sparql,
-        select,
-        ask,
         prefixes,
-        target,
     ]
 }
 

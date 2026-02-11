@@ -95,6 +95,16 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(promoteRule.conditionShapeIRIs == ["http://example.com/AdultConditionShape"])
 }
 
+@Test func shapesLoaderParsesSPARQLDefinitions() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("sparqlConstraintShapes.ttl"))
+
+    #expect(graph.sparqlDefinitions.count == 1)
+    let definition = try #require(graph.sparqlDefinitions.first)
+    #expect(definition.sparqlIRI == "http://example.com/NameConstraint")
+    #expect(definition.selectQuery?.contains("SELECT ?this") == true)
+}
+
 @Test func nodeExpressionEvaluatorEvaluatesUnionIntersectionAndCycle() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionDefinitions.ttl"))
@@ -1074,7 +1084,7 @@ private struct TestShapesSource {
     #expect(result.violations.isEmpty)
 }
 
-@Test func coreValidatorThrowsForPhaseGatedSparqlPredicate() async throws {
+@Test func coreValidatorThrowsWithoutSandboxedSPARQLExecutor() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("phaseGatedSparqlShapes.ttl")
     let dataGraph = try fixtureData("invalidShapesData.ttl")
@@ -1082,6 +1092,43 @@ private struct TestShapesSource {
     #expect(throws: SHACLError.self) {
         _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     }
+}
+
+@Test func coreValidatorExecutesSPARQLSelectConstraintThroughExecutorBoundary() async throws {
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/alice": ["http://example.com/alice"],
+            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/bob": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlConstraintShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.focusNode == "http://example.com/alice")
+    #expect(violation.sourceConstraintIRI == "http://example.com/NameConstraint")
+}
+
+@Test func coreValidatorExecutesSPARQLTargetThroughExecutorBoundary() async throws {
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "SELECT ?this WHERE { ?this ex:segment ex:vip }|": ["http://example.com/alice"],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlTargetShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.focusNode == "http://example.com/alice")
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
 }
 
 @Test func coreValidatorAcceptsNodeExpressionPredicate() async throws {
@@ -1174,4 +1221,34 @@ private struct TestShapesSource {
     let rangeResult = try validator.validate(dataGraph: rangeData, shapesGraph: rangeShapes)
     #expect(!rangeResult.conforms)
     #expect(rangeResult.violations.contains { $0.message.contains("not an integer literal") })
+}
+
+private struct TestSPARQLExecutor: SHACLSPARQLExecutor {
+    let selectResults: [String: [String]]
+    let askResults: [String: Bool]
+
+    init(selectResults: [String: [String]] = [:], askResults: [String: Bool] = [:]) {
+        self.selectResults = selectResults
+        self.askResults = askResults
+    }
+
+    func select(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> [String] {
+        let key = "\(query)|\(focusNode ?? "")"
+        return selectResults[key] ?? []
+    }
+
+    func ask(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> Bool {
+        let key = "\(query)|\(focusNode ?? "")"
+        return askResults[key] ?? true
+    }
 }

@@ -3,4 +3,7 @@
 
 ex:PersonShape a sh:NodeShape ;
   sh:targetClass ex:Person ;
+  sh:sparql ex:PersonConstraint .
+
+ex:PersonConstraint
   sh:select "SELECT ?this WHERE { ?this ?p ?o }" .

@@ -1,0 +1,11 @@
+@prefix ex: <http://example.com/> .
+
+ex:alice a ex:Person ;
+  ex:name "" ;
+  ex:segment ex:vip ;
+  ex:status "pending" .
+
+ex:bob a ex:Person ;
+  ex:name "Bob" ;
+  ex:segment "standard" ;
+  ex:status "approved" .
