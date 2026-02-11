@@ -956,9 +956,21 @@ public struct SHACLFocusNodeResolver: Sendable {
                 nodes.formUnion(resolve(selector: selector, in: dataGraph, shapesGraph: shapesGraph))
             }
             if shape.kind == .nodeShape && shape.isRDFSClass {
+                let subclassMap = Dictionary(grouping: dataGraph.triples.filter { $0.predicate == SHACLIRIs.rdfsSubClassOf }, by: \.subject)
+                var closure: Set<String> = [shape.shapeIRI]
+                var pending: [String] = [shape.shapeIRI]
+                while let current = pending.popLast() {
+                    let directSubclasses = subclassMap
+                        .filter { _, triples in triples.contains(where: { $0.object == current }) }
+                        .map(\.key)
+                    for subclass in directSubclasses where !closure.contains(subclass) {
+                        closure.insert(subclass)
+                        pending.append(subclass)
+                    }
+                }
                 nodes.formUnion(
                     dataGraph.triples
-                        .filter { $0.predicate == SHACLIRIs.rdfType && $0.object == shape.shapeIRI }
+                        .filter { $0.predicate == SHACLIRIs.rdfType && closure.contains($0.object) }
                         .map(\.subject)
                 )
             }
@@ -3181,6 +3193,7 @@ public struct SHACLCoreValidator: SHACLValidator {
 private enum SHACLIRIs {
     static let rdfType = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
     static let rdfsClass = "http://www.w3.org/2000/01/rdf-schema#Class"
+    static let rdfsSubClassOf = "http://www.w3.org/2000/01/rdf-schema#subClassOf"
     static let rdfFirst = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first"
     static let rdfRest = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"
     static let rdfNil = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"
