@@ -29,6 +29,7 @@ Legend:
 - [x] `TEST-SHACL-012` Property shape validation pass/fail matrix.
   - Covered fixture matrix assertions across implemented property-shape constraint components.
   - Added curated W3C node-shape conformance subset coverage for property-pair constraints (`equals-001`, `disjoint-001`).
+  - Added curated W3C property-shape conformance subset coverage for property-pair constraints (`lessThan-001`, `lessThan-002`, `lessThanOrEquals-001`).
   - Expanded curated W3C property-shape conformance subset coverage across cardinality, type, string/range, logical, shape-reference, and nested `sh:property` cases.
 - [x] `TEST-SHACL-013` Severity propagation tests (`Violation`, `Warning`, `Info`).
 - [x] `TEST-SHACL-014` Report model shape and deterministic ordering assertions.
@@ -48,6 +49,7 @@ Legend:
 - [x] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
   - Covered `hasValue` and `in` fixtures, including RDF list-based `sh:in`.
   - Added curated W3C node-shape conformance subset coverage for `languageIn-001`.
+  - Added curated W3C property-shape conformance subset coverage for `uniqueLang-001` and `uniqueLang-002`.
 - [x] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
   - Covered fixtures for `and`, `or`, `not`, and `xone` across direct shape references and RDF list syntax.
   - Added curated W3C node-shape logical conformance subset coverage (`and-001`, `and-002`, `or-001`, `not-001`, `not-002`, `xone-001`, `xone-duplicate`).

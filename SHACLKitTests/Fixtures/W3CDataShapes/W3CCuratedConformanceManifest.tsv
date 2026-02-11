@@ -52,6 +52,11 @@ core-property-maxExclusive-001	data-shapes-test-suite/tests/core/property/maxExc
 core-property-hasValue-001	data-shapes-test-suite/tests/core/property/hasValue-001.ttl	data-shapes-test-suite/tests/core/property/hasValue-001.ttl	false	Property hasValue checks.
 core-property-in-001	data-shapes-test-suite/tests/core/property/in-001.ttl	data-shapes-test-suite/tests/core/property/in-001.ttl	false	Property in-list membership checks.
 core-property-languageIn-001	data-shapes-test-suite/tests/core/property/languageIn-001.ttl	data-shapes-test-suite/tests/core/property/languageIn-001.ttl	false	Property languageIn checks.
+core-property-uniqueLang-001	data-shapes-test-suite/tests/core/property/uniqueLang-001.ttl	data-shapes-test-suite/tests/core/property/uniqueLang-001.ttl	false	Property uniqueLang duplicate-language checks.
+core-property-uniqueLang-002	data-shapes-test-suite/tests/core/property/uniqueLang-002-data.ttl	data-shapes-test-suite/tests/core/property/uniqueLang-002-shapes.ttl	true	Property uniqueLang should not activate for lexical boolean 1.
+core-property-lessThan-001	data-shapes-test-suite/tests/core/property/lessThan-001.ttl	data-shapes-test-suite/tests/core/property/lessThan-001.ttl	false	Property lessThan checks over numeric values.
+core-property-lessThan-002	data-shapes-test-suite/tests/core/property/lessThan-002.ttl	data-shapes-test-suite/tests/core/property/lessThan-002.ttl	false	Property lessThan checks over incompatible value types.
+core-property-lessThanOrEquals-001	data-shapes-test-suite/tests/core/property/lessThanOrEquals-001.ttl	data-shapes-test-suite/tests/core/property/lessThanOrEquals-001.ttl	false	Property lessThanOrEquals checks.
 core-property-equals-001	data-shapes-test-suite/tests/core/property/equals-001.ttl	data-shapes-test-suite/tests/core/property/equals-001.ttl	false	Property equals property-pair checks.
 core-property-disjoint-001	data-shapes-test-suite/tests/core/property/disjoint-001.ttl	data-shapes-test-suite/tests/core/property/disjoint-001.ttl	false	Property disjoint property-pair checks.
 core-property-and-001	data-shapes-test-suite/tests/core/property/and-001.ttl	data-shapes-test-suite/tests/core/property/and-001.ttl	false	Property logical and checks.

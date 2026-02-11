@@ -53,8 +53,11 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let hasValue: String?
     public let inValues: [String]
     public let languageInValues: [String]
+    public let uniqueLang: Bool
     public let equalsIRI: String?
     public let disjointIRI: String?
+    public let lessThanIRI: String?
+    public let lessThanOrEqualsIRI: String?
     public let isClosed: Bool
     public let ignoredPropertyIRIs: [String]
     public let nodeByExpressionIRI: String?
@@ -94,8 +97,11 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         hasValue: String? = nil,
         inValues: [String] = [],
         languageInValues: [String] = [],
+        uniqueLang: Bool = false,
         equalsIRI: String? = nil,
         disjointIRI: String? = nil,
+        lessThanIRI: String? = nil,
+        lessThanOrEqualsIRI: String? = nil,
         isClosed: Bool = false,
         ignoredPropertyIRIs: [String] = [],
         nodeByExpressionIRI: String? = nil,
@@ -134,8 +140,11 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.hasValue = hasValue
         self.inValues = inValues
         self.languageInValues = languageInValues
+        self.uniqueLang = uniqueLang
         self.equalsIRI = equalsIRI
         self.disjointIRI = disjointIRI
+        self.lessThanIRI = lessThanIRI
+        self.lessThanOrEqualsIRI = lessThanOrEqualsIRI
         self.isClosed = isClosed
         self.ignoredPropertyIRIs = ignoredPropertyIRIs
         self.nodeByExpressionIRI = nodeByExpressionIRI
@@ -442,8 +451,11 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var hasValue: String?
             var inValues: Set<String> = []
             var languageInValues: Set<String> = []
+            var uniqueLang = false
             var equalsIRI: String?
             var disjointIRI: String?
+            var lessThanIRI: String?
+            var lessThanOrEqualsIRI: String?
             var isClosed = false
             var ignoredPropertyIRIs: Set<String> = []
             var nodeByExpressionIRI: String?
@@ -560,10 +572,16 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.inValues.insert(object)
             } else if predicate == SHACLIRIs.languageIn {
                 current.languageInValues.insert(object)
+            } else if predicate == SHACLIRIs.uniqueLang {
+                current.uniqueLang = isStrictTrueBooleanTerm(object)
             } else if predicate == SHACLIRIs.equals {
                 current.equalsIRI = object
             } else if predicate == SHACLIRIs.disjoint {
                 current.disjointIRI = object
+            } else if predicate == SHACLIRIs.lessThan {
+                current.lessThanIRI = object
+            } else if predicate == SHACLIRIs.lessThanOrEquals {
+                current.lessThanOrEqualsIRI = object
             } else if predicate == SHACLIRIs.closed {
                 current.isClosed = isTrueBooleanTerm(object)
             } else if predicate == SHACLIRIs.ignoredProperties {
@@ -707,8 +725,11 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 hasValue: partial.hasValue,
                 inValues: resolveInValues(partial.inValues, triplesBySubject: triplesBySubject).sorted(),
                 languageInValues: resolveInValues(partial.languageInValues, triplesBySubject: triplesBySubject).sorted(),
+                uniqueLang: partial.uniqueLang,
                 equalsIRI: partial.equalsIRI,
                 disjointIRI: partial.disjointIRI,
+                lessThanIRI: partial.lessThanIRI,
+                lessThanOrEqualsIRI: partial.lessThanOrEqualsIRI,
                 isClosed: partial.isClosed,
                 ignoredPropertyIRIs: resolveShapeReferenceIRIs(partial.ignoredPropertyIRIs, triplesBySubject: triplesBySubject).sorted(),
                 nodeByExpressionIRI: partial.nodeByExpressionIRI,
@@ -828,6 +849,12 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             || term == "\"true\""
             || term == "\"true\"^^\(SHACLIRIs.xsdBoolean)"
             || term == "\"1\"^^\(SHACLIRIs.xsdBoolean)"
+    }
+
+    private func isStrictTrueBooleanTerm(_ term: String) -> Bool {
+        term == "true"
+            || term == "\"true\""
+            || term == "\"true\"^^\(SHACLIRIs.xsdBoolean)"
     }
 
     private func parsedLiteralLexicalForm(_ value: String) -> String? {
@@ -2455,6 +2482,80 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
 
+            if propertyShape.uniqueLang {
+                var languageCounts: [String: Int] = [:]
+                for valueNode in values {
+                    guard let language = extractLiteralLanguageTag(valueNode)?.lowercased() else {
+                        continue
+                    }
+                    languageCounts[language, default: 0] += 1
+                }
+                for (_, count) in languageCounts where count > 1 {
+                    for _ in 0..<(count - 1) {
+                        violations.append(
+                            SHACLViolation(
+                                severity: severity,
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                sourceConstraintIRI: SHACLIRIs.uniqueLang,
+                                message: "uniqueLang violation: duplicate language-tagged values detected"
+                            )
+                        )
+                    }
+                }
+            }
+
+            if let lessThanIRI = propertyShape.lessThanIRI {
+                let comparisonValues = dataGraph.triples
+                    .filter { $0.subject == focusNode && $0.predicate == lessThanIRI }
+                    .map(\.object)
+                for valueNode in values {
+                    for comparisonValue in comparisonValues {
+                        guard let comparison = compareRangeValueTerm(valueNode, toBoundTerm: comparisonValue),
+                              comparison == .orderedAscending else {
+                            violations.append(
+                                SHACLViolation(
+                                    severity: severity,
+                                    shapeIRI: propertyShape.shapeIRI,
+                                    focusNode: focusNode,
+                                    pathIRI: pathIRI,
+                                    valueNode: valueNode,
+                                    sourceConstraintIRI: SHACLIRIs.lessThan,
+                                    message: "lessThan violation: value \(valueNode) is not < \(comparisonValue)"
+                                )
+                            )
+                            continue
+                        }
+                    }
+                }
+            }
+
+            if let lessThanOrEqualsIRI = propertyShape.lessThanOrEqualsIRI {
+                let comparisonValues = dataGraph.triples
+                    .filter { $0.subject == focusNode && $0.predicate == lessThanOrEqualsIRI }
+                    .map(\.object)
+                for valueNode in values {
+                    for comparisonValue in comparisonValues {
+                        guard let comparison = compareRangeValueTerm(valueNode, toBoundTerm: comparisonValue),
+                              comparison == .orderedAscending || comparison == .orderedSame else {
+                            violations.append(
+                                SHACLViolation(
+                                    severity: severity,
+                                    shapeIRI: propertyShape.shapeIRI,
+                                    focusNode: focusNode,
+                                    pathIRI: pathIRI,
+                                    valueNode: valueNode,
+                                    sourceConstraintIRI: SHACLIRIs.lessThanOrEquals,
+                                    message: "lessThanOrEquals violation: value \(valueNode) is not <= \(comparisonValue)"
+                                )
+                            )
+                            continue
+                        }
+                    }
+                }
+            }
+
             if let equalsIRI = propertyShape.equalsIRI {
                 let relatedValues = Set(
                     dataGraph.triples
@@ -3000,8 +3101,11 @@ private enum SHACLIRIs {
     static let hasValue = "http://www.w3.org/ns/shacl#hasValue"
     static let `in` = "http://www.w3.org/ns/shacl#in"
     static let languageIn = "http://www.w3.org/ns/shacl#languageIn"
+    static let uniqueLang = "http://www.w3.org/ns/shacl#uniqueLang"
     static let equals = "http://www.w3.org/ns/shacl#equals"
     static let disjoint = "http://www.w3.org/ns/shacl#disjoint"
+    static let lessThan = "http://www.w3.org/ns/shacl#lessThan"
+    static let lessThanOrEquals = "http://www.w3.org/ns/shacl#lessThanOrEquals"
     static let closed = "http://www.w3.org/ns/shacl#closed"
     static let ignoredProperties = "http://www.w3.org/ns/shacl#ignoredProperties"
     static let node = "http://www.w3.org/ns/shacl#node"
