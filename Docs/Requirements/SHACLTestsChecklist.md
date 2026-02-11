@@ -44,6 +44,7 @@ Legend:
   - Added fixtures/tests for `sh:union` and `sh:intersection` subset evaluation, nesting, and cycle handling.
   - Added fixtures/tests for property-shape `sh:expression` value derivation (conforming and violation cases).
   - Added invalid-shapes diagnostic coverage for unknown node-expression references.
+  - Added fixtures/tests for `sh:expression` constraints on node shapes and path-backed property shapes.
 - [ ] `TEST-SHACL-210` Rule evaluation fixtures (order, repeatability, termination).
 
 ## Phase 3: SHACL SPARQL Extensions

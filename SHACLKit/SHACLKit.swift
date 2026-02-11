@@ -904,6 +904,10 @@ public struct SHACLCoreValidator: SHACLValidator {
             return violations
         }
         let nodeSeverity = nodeShape.severity ?? .violation
+        let expressionGraph = SHACLShapesGraph(
+            shapes: [],
+            nodeExpressions: Array(nodeExpressionsByIRI.values)
+        )
 
         if let classIRI = nodeShape.classIRI {
             let hasRequiredType = dataGraph.triples.contains {
@@ -938,6 +942,27 @@ public struct SHACLCoreValidator: SHACLValidator {
             )
         }
 
+        if let expressionIRI = nodeShape.expressionIRI {
+            let outputNodes = SHACLNodeExpressionEvaluator().evaluate(
+                expressionIRI: expressionIRI,
+                focusNode: focusNode,
+                shapesGraph: expressionGraph
+            )
+            if !isTrueOnlyExpressionOutput(outputNodes) {
+                violations.append(
+                    SHACLViolation(
+                        severity: nodeSeverity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.expression,
+                        message: "expression violation: expression \(expressionIRI) did not return true for focus node \(focusNode)"
+                    )
+                )
+            }
+        }
+
         for propertyShapeIRI in nodeShape.propertyShapeIRIs {
             guard let propertyShape = shapesByIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
                 continue
@@ -955,10 +980,6 @@ public struct SHACLCoreValidator: SHACLValidator {
                     .filter { $0.subject == focusNode && $0.predicate == pathIRI }
                     .map(\.object)
             } else if let expressionIRI {
-                let expressionGraph = SHACLShapesGraph(
-                    shapes: [],
-                    nodeExpressions: Array(nodeExpressionsByIRI.values)
-                )
                 values = SHACLNodeExpressionEvaluator()
                     .evaluate(
                         expressionIRI: expressionIRI,
@@ -970,6 +991,29 @@ public struct SHACLCoreValidator: SHACLValidator {
                 values = []
             }
             let valueCount = values.count
+
+            if let expressionIRI, pathIRI != nil {
+                for valueNode in values {
+                    let outputNodes = SHACLNodeExpressionEvaluator().evaluate(
+                        expressionIRI: expressionIRI,
+                        focusNode: valueNode,
+                        shapesGraph: expressionGraph
+                    )
+                    if !isTrueOnlyExpressionOutput(outputNodes) {
+                        violations.append(
+                            SHACLViolation(
+                                severity: severity,
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.expression,
+                                message: "expression violation: expression \(expressionIRI) did not return true for value \(valueNode)"
+                            )
+                        )
+                    }
+                }
+            }
 
             if let minCount = propertyShape.minCount, valueCount < minCount {
                 violations.append(
@@ -1485,6 +1529,17 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
         return Int(lexical)
     }
+
+    private func isTrueOnlyExpressionOutput(_ outputNodes: Set<String>) -> Bool {
+        guard outputNodes.count == 1, let only = outputNodes.first else {
+            return false
+        }
+        return only == "true"
+            || only == "1"
+            || only == "\"true\""
+            || only == "\"true\"^^\(SHACLIRIs.xsdBoolean)"
+            || only == "\"1\"^^\(SHACLIRIs.xsdBoolean)"
+    }
 }
 
 private enum SHACLIRIs {
@@ -1542,6 +1597,7 @@ private enum SHACLIRIs {
     static let severityWarning = "http://www.w3.org/ns/shacl#Warning"
     static let severityInfo = "http://www.w3.org/ns/shacl#Info"
     static let xsdInteger = "http://www.w3.org/2001/XMLSchema#integer"
+    static let xsdBoolean = "http://www.w3.org/2001/XMLSchema#boolean"
     static let xsdString = "http://www.w3.org/2001/XMLSchema#string"
     static let rdfLangString = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
     static let phaseGatedPredicates: Set<String> = [
