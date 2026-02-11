@@ -2,6 +2,8 @@ import Foundation
 import Testing
 @testable import SHACLKit
 
+private let rdfTypeIRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+
 private func fixtureData(_ name: String) throws -> Data {
     let fileURL = URL(fileURLWithPath: #filePath)
     let fixturesURL = fileURL.deletingLastPathComponent().appendingPathComponent("Fixtures")
@@ -532,4 +534,51 @@ private func fixtureData(_ name: String) throws -> Data {
     let fromGraphs = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
 
     #expect(fromData == fromGraphs)
+}
+
+@Test func coreValidatorLargeGraphSmokeTest() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = SHACLShapesGraph(
+        shapes: [
+            SHACLShapeDefinition(
+                shapeIRI: "http://example.com/PersonShape",
+                kind: .nodeShape,
+                targets: [.targetClass("http://example.com/Person")],
+                propertyShapeIRIs: ["http://example.com/AgeShape"]
+            ),
+            SHACLShapeDefinition(
+                shapeIRI: "http://example.com/AgeShape",
+                kind: .propertyShape,
+                targets: [],
+                pathIRI: "http://example.com/age",
+                minInclusive: 18,
+                maxInclusive: 90
+            ),
+        ]
+    )
+
+    var triples: [SHACLDataTriple] = []
+    for index in 0..<500 {
+        let person = "http://example.com/person\(index)"
+        triples.append(SHACLDataTriple(subject: person, predicate: rdfTypeIRI, object: "http://example.com/Person"))
+        triples.append(SHACLDataTriple(subject: person, predicate: "http://example.com/age", object: "25"))
+    }
+    let dataGraph = SHACLDataGraph(triples: triples)
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorRegressionCycleAndSeverityStability() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("severityWarningShapes.ttl")
+    let dataGraph = try fixtureData("severityWarningData.ttl")
+
+    let first = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    let second = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(first == second)
+    #expect(first.conforms)
+    let warning = try #require(first.violations.first)
+    #expect(warning.severity == .warning)
 }
