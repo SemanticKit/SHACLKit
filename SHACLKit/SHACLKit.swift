@@ -205,6 +205,8 @@ public enum SHACLNodeExpressionKind: Sendable, Hashable {
     case nodes([String])
     case exists(String)
     case count(inputTerm: String, staticListLength: Int?)
+    case min(inputTerm: String, staticListMembers: [String]?)
+    case max(inputTerm: String, staticListMembers: [String]?)
     case ifThenElse(condition: String, thenTerm: String, elseTerm: String?)
     case pathValues(path: SHACLPropertyPath, focusNodeTerm: String?)
 }
@@ -503,6 +505,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var nodesObjects: Set<String> = []
             var existsObjects: Set<String> = []
             var countObjects: Set<String> = []
+            var minObjects: Set<String> = []
+            var maxObjects: Set<String> = []
             var ifObjects: Set<String> = []
             var thenObjects: Set<String> = []
             var elseObjects: Set<String> = []
@@ -706,6 +710,14 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.countObjects.insert(object)
                 nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexMin {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.minObjects.insert(object)
+                nodeExpressions[subject] = expression
+            } else if predicate == SHACLIRIs.shnexMax {
+                var expression = nodeExpressions[subject] ?? PartialNodeExpression()
+                expression.maxObjects.insert(object)
+                nodeExpressions[subject] = expression
             } else if predicate == SHACLIRIs.shnexIf {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 expression.ifObjects.insert(object)
@@ -769,6 +781,28 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 return SHACLNodeExpressionDefinition(
                     expressionIRI: expressionIRI,
                     kind: .count(inputTerm: resolvedCountInput, staticListLength: staticListLength)
+                )
+            }
+
+            if let minObject = partial.minObjects.sorted().first {
+                let resolvedMinInput = resolveShapeReferenceIRIs([minObject], triplesBySubject: triplesBySubject).sorted().first ?? minObject
+                let staticListMembers = rdfListLength(minObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveShapeReferenceIRIs([minObject], triplesBySubject: triplesBySubject).sorted()
+                    : nil
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .min(inputTerm: resolvedMinInput, staticListMembers: staticListMembers)
+                )
+            }
+
+            if let maxObject = partial.maxObjects.sorted().first {
+                let resolvedMaxInput = resolveShapeReferenceIRIs([maxObject], triplesBySubject: triplesBySubject).sorted().first ?? maxObject
+                let staticListMembers = rdfListLength(maxObject, triplesBySubject: triplesBySubject) != nil
+                    ? resolveShapeReferenceIRIs([maxObject], triplesBySubject: triplesBySubject).sorted()
+                    : nil
+                return SHACLNodeExpressionDefinition(
+                    expressionIRI: expressionIRI,
+                    kind: .max(inputTerm: resolvedMaxInput, staticListMembers: staticListMembers)
                 )
             }
 
@@ -1415,6 +1449,32 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 visited: &visited
             )
             return ["\(output.count)"]
+        case .min(let inputTerm, let staticListMembers):
+            let output = staticListMembers.map(Set.init) ?? evaluateTerm(
+                inputTerm,
+                focusNode: focusNode,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            guard let minimum = numericExtremeTerm(from: output, findMaximum: false) else {
+                return []
+            }
+            return [minimum]
+        case .max(let inputTerm, let staticListMembers):
+            let output = staticListMembers.map(Set.init) ?? evaluateTerm(
+                inputTerm,
+                focusNode: focusNode,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            guard let maximum = numericExtremeTerm(from: output, findMaximum: true) else {
+                return []
+            }
+            return [maximum]
         case .ifThenElse(let condition, let thenTerm, let elseTerm):
             let conditionOutput = evaluateTerm(
                 condition,
@@ -1478,6 +1538,48 @@ private func isTrueOnlyExpressionSet(_ outputNodes: Set<String>) -> Bool {
         || only == "\"true\""
         || only == "\"true\"^^\(SHACLIRIs.xsdBoolean)"
         || only == "\"1\"^^\(SHACLIRIs.xsdBoolean)"
+}
+
+private func numericExtremeTerm(from outputNodes: Set<String>, findMaximum: Bool) -> String? {
+    var chosen: (term: String, value: Double)?
+    for term in outputNodes {
+        guard let value = nodeExpressionNumericValue(term) else {
+            continue
+        }
+        guard let current = chosen else {
+            chosen = (term, value)
+            continue
+        }
+        if findMaximum {
+            if value > current.value {
+                chosen = (term, value)
+            }
+        } else if value < current.value {
+            chosen = (term, value)
+        }
+    }
+    return chosen?.term
+}
+
+private func nodeExpressionNumericValue(_ term: String) -> Double? {
+    if let direct = Double(term) {
+        return direct
+    }
+    guard let lexical = nodeExpressionLiteralLexicalForm(term) else {
+        return nil
+    }
+    return Double(lexical)
+}
+
+private func nodeExpressionLiteralLexicalForm(_ value: String) -> String? {
+    guard value.hasPrefix("\"") else {
+        return nil
+    }
+    guard let closing = value.dropFirst().firstIndex(of: "\"") else {
+        return nil
+    }
+    let start = value.index(after: value.startIndex)
+    return String(value[start..<closing])
 }
 
 private func evaluatePropertyPathValues(
@@ -3760,6 +3862,8 @@ private enum SHACLIRIs {
     static let shnexNodes = "http://www.w3.org/ns/shacl-node-expr#nodes"
     static let shnexExists = "http://www.w3.org/ns/shacl-node-expr#exists"
     static let shnexCount = "http://www.w3.org/ns/shacl-node-expr#count"
+    static let shnexMin = "http://www.w3.org/ns/shacl-node-expr#min"
+    static let shnexMax = "http://www.w3.org/ns/shacl-node-expr#max"
     static let shnexIf = "http://www.w3.org/ns/shacl-node-expr#if"
     static let shnexThen = "http://www.w3.org/ns/shacl-node-expr#then"
     static let shnexElse = "http://www.w3.org/ns/shacl-node-expr#else"

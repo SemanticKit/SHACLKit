@@ -1,0 +1,20 @@
+@prefix ex: <http://example.com/> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:MinEmpty
+    shnex:min [] .
+
+ex:MinList
+    shnex:min ( 4 5 3 ) .
+
+ex:MaxEmpty
+    shnex:max [] .
+
+ex:MaxList
+    shnex:max ( 4 5 3 ) .
+
+ex:MaxNodes
+    shnex:max ex:ScoreNodes .
+
+ex:ScoreNodes
+    shnex:nodes ( 2 9 7 ) .

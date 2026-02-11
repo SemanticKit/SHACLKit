@@ -1,0 +1,17 @@
+@prefix ex: <http://example.com/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shnex: <http://www.w3.org/ns/shacl-node-expr#> .
+
+ex:PersonShape
+    a sh:NodeShape ;
+    sh:targetNode ex:alice ;
+    sh:property ex:ScoreMaxShape .
+
+ex:ScoreMaxShape
+    sh:expression ex:ScoreMaxExpr ;
+    sh:hasValue 2 .
+
+ex:ScoreMaxExpr
+    shnex:max [
+        shnex:pathValues ex:score
+    ] .
