@@ -30,6 +30,7 @@ public enum SHACLNodeKindConstraint: String, Sendable, Codable, Hashable {
 public struct SHACLShapeDefinition: Sendable, Hashable {
     public let shapeIRI: String
     public let kind: SHACLShapeKind
+    public let severity: SHACLSeverity?
     public let targets: [SHACLTargetSelector]
     public let propertyShapeIRIs: [String]
     public let pathIRI: String?
@@ -48,6 +49,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public init(
         shapeIRI: String,
         kind: SHACLShapeKind,
+        severity: SHACLSeverity? = nil,
         targets: [SHACLTargetSelector],
         propertyShapeIRIs: [String] = [],
         pathIRI: String? = nil,
@@ -65,6 +67,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     ) {
         self.shapeIRI = shapeIRI
         self.kind = kind
+        self.severity = severity
         self.targets = targets
         self.propertyShapeIRIs = propertyShapeIRIs
         self.pathIRI = pathIRI
@@ -125,6 +128,8 @@ public struct SHACLViolation: Sendable, Equatable {
     public let shapeIRI: String
     public let focusNode: String
     public let pathIRI: String?
+    public let valueNode: String?
+    public let sourceConstraintIRI: String?
     public let message: String
 
     public init(
@@ -132,12 +137,16 @@ public struct SHACLViolation: Sendable, Equatable {
         shapeIRI: String,
         focusNode: String,
         pathIRI: String?,
+        valueNode: String? = nil,
+        sourceConstraintIRI: String? = nil,
         message: String
     ) {
         self.severity = severity
         self.shapeIRI = shapeIRI
         self.focusNode = focusNode
         self.pathIRI = pathIRI
+        self.valueNode = valueNode
+        self.sourceConstraintIRI = sourceConstraintIRI
         self.message = message
     }
 }
@@ -208,6 +217,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
 
         struct PartialShape {
             var kind: SHACLShapeKind?
+            var severity: SHACLSeverity?
             var targets: Set<SHACLTargetSelector> = []
             var propertyShapeIRIs: Set<String> = []
             var pathIRI: String?
@@ -247,6 +257,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.targets.insert(.targetSubjectsOf(object))
             } else if predicate == SHACLIRIs.targetObjectsOf {
                 current.targets.insert(.targetObjectsOf(object))
+            } else if predicate == SHACLIRIs.severity {
+                current.severity = parseSeverity(object)
             } else if predicate == SHACLIRIs.property {
                 current.propertyShapeIRIs.insert(object)
             } else if predicate == SHACLIRIs.path {
@@ -297,6 +309,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             return SHACLShapeDefinition(
                 shapeIRI: shapeIRI,
                 kind: kind,
+                severity: partial.severity,
                 targets: partial.targets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
                 pathIRI: partial.pathIRI,
@@ -345,6 +358,19 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             return .blankNodeOrLiteral
         case SHACLIRIs.nodeKindIRIOrLiteral:
             return .iriOrLiteral
+        default:
+            return nil
+        }
+    }
+
+    private func parseSeverity(_ iri: String) -> SHACLSeverity? {
+        switch iri {
+        case SHACLIRIs.severityViolation:
+            return .violation
+        case SHACLIRIs.severityWarning:
+            return .warning
+        case SHACLIRIs.severityInfo:
+            return .info
         default:
             return nil
         }
@@ -452,8 +478,24 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         let sortedViolations = violations.sorted { lhs, rhs in
-            (lhs.shapeIRI, lhs.focusNode, lhs.pathIRI ?? "", lhs.message) < (rhs.shapeIRI, rhs.focusNode, rhs.pathIRI ?? "", rhs.message)
+            (
+                lhs.shapeIRI,
+                lhs.focusNode,
+                lhs.pathIRI ?? "",
+                lhs.sourceConstraintIRI ?? "",
+                lhs.valueNode ?? "",
+                lhs.message
+            ) < (
+                rhs.shapeIRI,
+                rhs.focusNode,
+                rhs.pathIRI ?? "",
+                rhs.sourceConstraintIRI ?? "",
+                rhs.valueNode ?? "",
+                rhs.message
+            )
         }
+
+        let violationCount = sortedViolations.filter { $0.severity == .violation }.count
 
         if sortedViolations.isEmpty {
             return SHACLValidationResult(
@@ -464,8 +506,8 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         return SHACLValidationResult(
-            conforms: false,
-            message: "SHACL Core subset validation failed with \(sortedViolations.count) violation(s).",
+            conforms: violationCount == 0,
+            message: "SHACL Core subset validation produced \(sortedViolations.count) result(s), including \(violationCount) violation(s).",
             violations: sortedViolations
         )
     }
@@ -490,6 +532,7 @@ public struct SHACLCoreValidator: SHACLValidator {
             guard let pathIRI = propertyShape.pathIRI else {
                 continue
             }
+            let severity = propertyShape.severity ?? nodeShape.severity ?? .violation
 
             let valueCount = dataGraph.triples.filter {
                 $0.subject == focusNode && $0.predicate == pathIRI
@@ -501,9 +544,11 @@ public struct SHACLCoreValidator: SHACLValidator {
             if let minCount = propertyShape.minCount, valueCount < minCount {
                 violations.append(
                     SHACLViolation(
+                        severity: severity,
                         shapeIRI: propertyShape.shapeIRI,
                         focusNode: focusNode,
                         pathIRI: pathIRI,
+                        sourceConstraintIRI: SHACLIRIs.minCount,
                         message: "minCount violation: expected >= \(minCount), got \(valueCount)"
                     )
                 )
@@ -512,9 +557,11 @@ public struct SHACLCoreValidator: SHACLValidator {
             if let maxCount = propertyShape.maxCount, valueCount > maxCount {
                 violations.append(
                     SHACLViolation(
+                        severity: severity,
                         shapeIRI: propertyShape.shapeIRI,
                         focusNode: focusNode,
                         pathIRI: pathIRI,
+                        sourceConstraintIRI: SHACLIRIs.maxCount,
                         message: "maxCount violation: expected <= \(maxCount), got \(valueCount)"
                     )
                 )
@@ -528,9 +575,12 @@ public struct SHACLCoreValidator: SHACLValidator {
                     if !hasRequiredType {
                         violations.append(
                             SHACLViolation(
+                                severity: severity,
                                 shapeIRI: propertyShape.shapeIRI,
                                 focusNode: focusNode,
                                 pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.class,
                                 message: "class violation: value \(valueNode) is not typed as \(classIRI)"
                             )
                         )
@@ -543,9 +593,12 @@ public struct SHACLCoreValidator: SHACLValidator {
                     if !matchesNodeKind(valueNode, nodeKind: nodeKind) {
                         violations.append(
                             SHACLViolation(
+                                severity: severity,
                                 shapeIRI: propertyShape.shapeIRI,
                                 focusNode: focusNode,
                                 pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.nodeKind,
                                 message: "nodeKind violation: value \(valueNode) does not satisfy \(nodeKind.rawValue)"
                             )
                         )
@@ -560,9 +613,12 @@ public struct SHACLCoreValidator: SHACLValidator {
                         let actualText = actualDatatype ?? "none"
                         violations.append(
                             SHACLViolation(
+                                severity: severity,
                                 shapeIRI: propertyShape.shapeIRI,
                                 focusNode: focusNode,
                                 pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.datatype,
                                 message: "datatype violation: value \(valueNode) has datatype \(actualText), expected \(datatypeIRI)"
                             )
                         )
@@ -575,9 +631,12 @@ public struct SHACLCoreValidator: SHACLValidator {
                     guard let lexical = extractLiteralLexicalForm(valueNode) else {
                         violations.append(
                             SHACLViolation(
+                                severity: severity,
                                 shapeIRI: propertyShape.shapeIRI,
                                 focusNode: focusNode,
                                 pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.minLength,
                                 message: "string facet violation: value \(valueNode) is not a literal"
                             )
                         )
@@ -587,9 +646,12 @@ public struct SHACLCoreValidator: SHACLValidator {
                     if let minLength = propertyShape.minLength, lexical.count < minLength {
                         violations.append(
                             SHACLViolation(
+                                severity: severity,
                                 shapeIRI: propertyShape.shapeIRI,
                                 focusNode: focusNode,
                                 pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.minLength,
                                 message: "minLength violation: expected >= \(minLength), got \(lexical.count)"
                             )
                         )
@@ -598,9 +660,12 @@ public struct SHACLCoreValidator: SHACLValidator {
                     if let maxLength = propertyShape.maxLength, lexical.count > maxLength {
                         violations.append(
                             SHACLViolation(
+                                severity: severity,
                                 shapeIRI: propertyShape.shapeIRI,
                                 focusNode: focusNode,
                                 pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.maxLength,
                                 message: "maxLength violation: expected <= \(maxLength), got \(lexical.count)"
                             )
                         )
@@ -613,9 +678,12 @@ public struct SHACLCoreValidator: SHACLValidator {
                         if !matches {
                             violations.append(
                                 SHACLViolation(
+                                    severity: severity,
                                     shapeIRI: propertyShape.shapeIRI,
                                     focusNode: focusNode,
                                     pathIRI: pathIRI,
+                                    valueNode: valueNode,
+                                    sourceConstraintIRI: SHACLIRIs.pattern,
                                     message: "pattern violation: value \(lexical) does not match \(pattern)"
                                 )
                             )
@@ -629,9 +697,11 @@ public struct SHACLCoreValidator: SHACLValidator {
                 if !hasRequiredValue {
                     violations.append(
                         SHACLViolation(
+                            severity: severity,
                             shapeIRI: propertyShape.shapeIRI,
                             focusNode: focusNode,
                             pathIRI: pathIRI,
+                            sourceConstraintIRI: SHACLIRIs.hasValue,
                             message: "hasValue violation: required value \(requiredValue) not present"
                         )
                     )
@@ -644,9 +714,12 @@ public struct SHACLCoreValidator: SHACLValidator {
                     if !allowed.contains(valueNode) {
                         violations.append(
                             SHACLViolation(
+                                severity: severity,
                                 shapeIRI: propertyShape.shapeIRI,
                                 focusNode: focusNode,
                                 pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.in,
                                 message: "in violation: value \(valueNode) not in allowed set"
                             )
                         )
@@ -741,6 +814,7 @@ private enum SHACLIRIs {
     static let targetNode = "http://www.w3.org/ns/shacl#targetNode"
     static let targetSubjectsOf = "http://www.w3.org/ns/shacl#targetSubjectsOf"
     static let targetObjectsOf = "http://www.w3.org/ns/shacl#targetObjectsOf"
+    static let severity = "http://www.w3.org/ns/shacl#severity"
     static let property = "http://www.w3.org/ns/shacl#property"
     static let path = "http://www.w3.org/ns/shacl#path"
     static let `class` = "http://www.w3.org/ns/shacl#class"
@@ -760,6 +834,9 @@ private enum SHACLIRIs {
     static let nodeKindBlankNodeOrIRI = "http://www.w3.org/ns/shacl#BlankNodeOrIRI"
     static let nodeKindBlankNodeOrLiteral = "http://www.w3.org/ns/shacl#BlankNodeOrLiteral"
     static let nodeKindIRIOrLiteral = "http://www.w3.org/ns/shacl#IRIOrLiteral"
+    static let severityViolation = "http://www.w3.org/ns/shacl#Violation"
+    static let severityWarning = "http://www.w3.org/ns/shacl#Warning"
+    static let severityInfo = "http://www.w3.org/ns/shacl#Info"
     static let xsdInteger = "http://www.w3.org/2001/XMLSchema#integer"
     static let xsdString = "http://www.w3.org/2001/XMLSchema#string"
     static let rdfLangString = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"

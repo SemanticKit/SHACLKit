@@ -297,3 +297,40 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(violation.shapeIRI == "http://example.com/EmployeeIdShape")
     #expect(violation.message.contains("minCount violation"))
 }
+
+@Test func coreValidatorKeepsConformanceTrueForWarningOnlyResults() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("severityWarningShapes.ttl")
+    let dataGraph = try fixtureData("severityWarningData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.count == 1)
+    let warning = try #require(result.violations.first)
+    #expect(warning.severity == .warning)
+    #expect(warning.sourceConstraintIRI == "http://www.w3.org/ns/shacl#minCount")
+}
+
+@Test func coreValidatorPropagatesMixedSeverityAndDeterministicDiagnostics() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("severityMixedShapes.ttl")
+    let dataGraph = try fixtureData("severityMixedData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 3)
+
+    let ordered = result.violations.map { ($0.shapeIRI, $0.severity, $0.sourceConstraintIRI ?? "") }
+    #expect(ordered[0].0 == "http://example.com/NameRequiredShape")
+    #expect(ordered[0].1 == .violation)
+    #expect(ordered[0].2 == "http://www.w3.org/ns/shacl#minCount")
+    #expect(ordered[1].0 == "http://example.com/NickHintShape")
+    #expect(ordered[1].1 == .info)
+    #expect(ordered[1].2 == "http://www.w3.org/ns/shacl#minCount")
+    #expect(ordered[2].0 == "http://example.com/StatusAllowedShape")
+    #expect(ordered[2].1 == .warning)
+    #expect(ordered[2].2 == "http://www.w3.org/ns/shacl#in")
+
+    let inResult = result.violations[2]
+    #expect(inResult.valueNode == "http://example.com/Archived")
+}

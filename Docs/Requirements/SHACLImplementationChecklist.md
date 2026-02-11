@@ -22,8 +22,8 @@ Legend:
 - [~] `REQ-SHACL-003` Evaluate node shapes and property shapes against RDF terms/triples.
   - Implemented target-to-focus-node resolution over parsed RDF triples.
   - Implemented node/property evaluation path for `sh:minCount` and `sh:maxCount`.
-- [ ] `REQ-SHACL-004` Support SHACL severity levels and result reporting model.
-- [~] `REQ-SHACL-005` Generate deterministic validation reports (conforms + detailed results).
+- [x] `REQ-SHACL-004` Support SHACL severity levels and result reporting model.
+- [x] `REQ-SHACL-005` Generate deterministic validation reports (conforms + detailed results).
 - [~] `REQ-SHACL-006` Constraint components: cardinality (`sh:minCount`, `sh:maxCount`).
 - [~] `REQ-SHACL-007` Constraint components: value type checks (`sh:class`, `sh:datatype`, `sh:nodeKind`).
   - Implemented `sh:class` checks for property values.
@@ -38,7 +38,8 @@ Legend:
 - [~] `REQ-SHACL-011` Constraint components: shape references (`sh:node`, `sh:property`, qualified value shape family).
   - Implemented subset `sh:node` evaluation for referenced node shapes.
 - [ ] `REQ-SHACL-012` Enforce recursion/termination safeguards for cyclic shapes.
-- [ ] `REQ-SHACL-013` Emit stable machine-readable diagnostics (focus node, path, value, source shape, source constraint).
+- [~] `REQ-SHACL-013` Emit stable machine-readable diagnostics (focus node, path, value, source shape, source constraint).
+  - Implemented: `focusNode`, `pathIRI`, `valueNode`, `shapeIRI` (source shape), and `sourceConstraintIRI` on validation results.
 - [ ] `REQ-SHACL-014` Keep execution side-effect free (pure validation result model).
 
 ## Phase 2: Node Expressions and Rules
