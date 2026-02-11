@@ -51,7 +51,9 @@ Legend:
 
 - [~] `REQ-SHACL-200` Implement SHACL 1.2 Node Expressions evaluation model.
   - Implemented subset evaluator for `sh:union` and `sh:intersection`, including nested expressions and `sh:this`.
-- [ ] `REQ-SHACL-201` Integrate node expression evaluation into constraints/targets where applicable.
+- [~] `REQ-SHACL-201` Integrate node expression evaluation into constraints/targets where applicable.
+  - Integrated subset into property-shape evaluation via `sh:expression` as a value source.
+  - Added shape-graph validation for missing/unknown node-expression references.
 - [ ] `REQ-SHACL-210` Implement SHACL 1.2 Rules execution model.
 - [ ] `REQ-SHACL-211` Define deterministic rule execution order/termination behavior.
 

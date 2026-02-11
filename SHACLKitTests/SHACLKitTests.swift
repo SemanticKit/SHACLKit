@@ -96,6 +96,27 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(cycleResult == Set(["http://example.com/ConstD"]))
 }
 
+@Test func coreValidatorConformsForExpressionDerivedPropertyValues() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeExpressionConstraintValidShapes.ttl")
+    let dataGraph = try fixtureData("nodeExpressionConstraintData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsExpressionDerivedPropertyViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeExpressionConstraintInvalidShapes.ttl")
+    let dataGraph = try fixtureData("nodeExpressionConstraintData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
 @Test func focusNodeResolverResolvesSelectorsAgainstDataGraph() async throws {
     let shapesLoader = SHACLShapesGraphLoader()
     let dataLoader = SHACLDataGraphLoader()
@@ -824,6 +845,16 @@ private struct TestShapesSource {
     }
 }
 
+@Test func coreValidatorThrowsForMissingReferencedNodeExpression() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("invalidShapesUnknownExpression.ttl")
+    let dataGraph = try fixtureData("invalidShapesData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorThrowsForPhaseGatedRulePredicate() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("phaseGatedRulesShapes.ttl")
@@ -844,14 +875,13 @@ private struct TestShapesSource {
     }
 }
 
-@Test func coreValidatorThrowsForPhaseGatedNodeExpressionPredicate() async throws {
+@Test func coreValidatorAcceptsNodeExpressionPredicate() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("phaseGatedNodeExpressionsShapes.ttl")
     let dataGraph = try fixtureData("invalidShapesData.ttl")
 
-    #expect(throws: SHACLError.self) {
-        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
-    }
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
 }
 
 @Test func coreValidatorMatchesResultsAcrossDataAndGraphEntryPoints() async throws {

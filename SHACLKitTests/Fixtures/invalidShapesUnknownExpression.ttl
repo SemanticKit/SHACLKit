@@ -1,0 +1,10 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:TaskShape a sh:NodeShape ;
+  sh:targetNode ex:task1 ;
+  sh:property ex:DerivedShape .
+
+ex:DerivedShape a sh:PropertyShape ;
+  sh:expression ex:MissingExpr ;
+  sh:hasValue ex:Ready .

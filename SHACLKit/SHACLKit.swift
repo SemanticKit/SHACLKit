@@ -34,6 +34,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let targets: [SHACLTargetSelector]
     public let propertyShapeIRIs: [String]
     public let pathIRI: String?
+    public let expressionIRI: String?
     public let classIRI: String?
     public let nodeKind: SHACLNodeKindConstraint?
     public let datatypeIRI: String?
@@ -62,6 +63,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         targets: [SHACLTargetSelector],
         propertyShapeIRIs: [String] = [],
         pathIRI: String? = nil,
+        expressionIRI: String? = nil,
         classIRI: String? = nil,
         nodeKind: SHACLNodeKindConstraint? = nil,
         datatypeIRI: String? = nil,
@@ -89,6 +91,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.targets = targets
         self.propertyShapeIRIs = propertyShapeIRIs
         self.pathIRI = pathIRI
+        self.expressionIRI = expressionIRI
         self.classIRI = classIRI
         self.nodeKind = nodeKind
         self.datatypeIRI = datatypeIRI
@@ -303,6 +306,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var targets: Set<SHACLTargetSelector> = []
             var propertyShapeIRIs: Set<String> = []
             var pathIRI: String?
+            var expressionIRI: String?
             var classIRI: String?
             var nodeKind: SHACLNodeKindConstraint?
             var datatypeIRI: String?
@@ -364,6 +368,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.propertyShapeIRIs.insert(object)
             } else if predicate == SHACLIRIs.path {
                 current.pathIRI = object
+            } else if predicate == SHACLIRIs.expression {
+                current.expressionIRI = object
             } else if predicate == SHACLIRIs.class {
                 current.classIRI = object
             } else if predicate == SHACLIRIs.nodeKind {
@@ -456,6 +462,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 targets: partial.targets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
                 pathIRI: partial.pathIRI,
+                expressionIRI: partial.expressionIRI,
                 classIRI: partial.classIRI,
                 nodeKind: partial.nodeKind,
                 datatypeIRI: partial.datatypeIRI,
@@ -772,6 +779,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         let parsedData = dataGraph
         let resolutions = focusResolver.resolve(dataGraph: parsedData, shapesGraph: parsedShapes)
         let shapeByIRI = Dictionary(uniqueKeysWithValues: parsedShapes.shapes.map { ($0.shapeIRI, $0) })
+        let nodeExpressionsByIRI = Dictionary(uniqueKeysWithValues: parsedShapes.nodeExpressions.map { ($0.expressionIRI, $0) })
 
         var violations: [SHACLViolation] = []
 
@@ -787,6 +795,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                         focusNode: focusNode,
                         dataGraph: parsedData,
                         shapesByIRI: shapeByIRI,
+                        nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: 0,
                         visited: &visited
                     )
@@ -843,6 +852,7 @@ public struct SHACLCoreValidator: SHACLValidator {
 
     private func validateShapesGraph(_ shapesGraph: SHACLShapesGraph) throws {
         let byIRI = Dictionary(uniqueKeysWithValues: shapesGraph.shapes.map { ($0.shapeIRI, $0) })
+        let expressionByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.nodeExpressions.map { ($0.expressionIRI, $0) })
 
         for shape in shapesGraph.shapes where shape.kind == .nodeShape {
             for propertyShapeIRI in shape.propertyShapeIRIs {
@@ -855,8 +865,13 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         for shape in shapesGraph.shapes where shape.kind == .propertyShape {
-            guard shape.pathIRI != nil else {
-                throw SHACLError.invalidShapesGraph("Property shape \(shape.shapeIRI) is missing sh:path")
+            if shape.pathIRI == nil && shape.expressionIRI == nil {
+                throw SHACLError.invalidShapesGraph("Property shape \(shape.shapeIRI) is missing both sh:path and sh:expression")
+            }
+            if let expressionIRI = shape.expressionIRI, expressionByIRI[expressionIRI] == nil {
+                throw SHACLError.invalidShapesGraph(
+                    "Property shape \(shape.shapeIRI) references missing node expression \(expressionIRI)"
+                )
             }
 
             let referencedNodeShapeIRIs =
@@ -880,6 +895,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         focusNode: String,
         dataGraph: SHACLDataGraph,
         shapesByIRI: [String: SHACLShapeDefinition],
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition] = [:],
         depth: Int,
         visited: inout Set<String>
     ) -> [SHACLViolation] {
@@ -926,17 +942,34 @@ public struct SHACLCoreValidator: SHACLValidator {
             guard let propertyShape = shapesByIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
                 continue
             }
-            guard let pathIRI = propertyShape.pathIRI else {
+            let pathIRI = propertyShape.pathIRI
+            let expressionIRI = propertyShape.expressionIRI
+            if pathIRI == nil && expressionIRI == nil {
                 continue
             }
             let severity = propertyShape.severity ?? nodeShape.severity ?? .violation
 
-            let valueCount = dataGraph.triples.filter {
-                $0.subject == focusNode && $0.predicate == pathIRI
-            }.count
-            let values = dataGraph.triples
-                .filter { $0.subject == focusNode && $0.predicate == pathIRI }
-                .map(\.object)
+            let values: [String]
+            if let pathIRI {
+                values = dataGraph.triples
+                    .filter { $0.subject == focusNode && $0.predicate == pathIRI }
+                    .map(\.object)
+            } else if let expressionIRI {
+                let expressionGraph = SHACLShapesGraph(
+                    shapes: [],
+                    nodeExpressions: Array(nodeExpressionsByIRI.values)
+                )
+                values = SHACLNodeExpressionEvaluator()
+                    .evaluate(
+                        expressionIRI: expressionIRI,
+                        focusNode: focusNode,
+                        shapesGraph: expressionGraph
+                    )
+                    .sorted()
+            } else {
+                values = []
+            }
+            let valueCount = values.count
 
             if let minCount = propertyShape.minCount, valueCount < minCount {
                 violations.append(
@@ -1185,6 +1218,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                         focusNode: valueNode,
                         dataGraph: dataGraph,
                         shapesByIRI: shapesByIRI,
+                        nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: depth + 1,
                         visited: &visited
                     )
@@ -1201,6 +1235,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             toNodeShapeIRI: shapeIRI,
                             dataGraph: dataGraph,
                             shapesByIRI: shapesByIRI,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: depth,
                             visited: &visited
                         )
@@ -1229,6 +1264,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             toNodeShapeIRI: shapeIRI,
                             dataGraph: dataGraph,
                             shapesByIRI: shapesByIRI,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: depth,
                             visited: &visited
                         )
@@ -1256,6 +1292,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                         toNodeShapeIRI: forbiddenShapeIRI,
                         dataGraph: dataGraph,
                         shapesByIRI: shapesByIRI,
+                        nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: depth,
                         visited: &visited
                     )
@@ -1283,6 +1320,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             toNodeShapeIRI: shapeIRI,
                             dataGraph: dataGraph,
                             shapesByIRI: shapesByIRI,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: depth,
                             visited: &visited
                         ) {
@@ -1313,6 +1351,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                         toNodeShapeIRI: qualifiedShapeIRI,
                         dataGraph: dataGraph,
                         shapesByIRI: shapesByIRI,
+                        nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: depth,
                         visited: &visited
                     ) {
@@ -1356,6 +1395,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         toNodeShapeIRI shapeIRI: String,
         dataGraph: SHACLDataGraph,
         shapesByIRI: [String: SHACLShapeDefinition],
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition] = [:],
         depth: Int,
         visited: inout Set<String>
     ) -> Bool {
@@ -1376,6 +1416,7 @@ public struct SHACLCoreValidator: SHACLValidator {
             focusNode: valueNode,
             dataGraph: dataGraph,
             shapesByIRI: shapesByIRI,
+            nodeExpressionsByIRI: nodeExpressionsByIRI,
             depth: depth + 1,
             visited: &visited
         )
@@ -1511,7 +1552,6 @@ private enum SHACLIRIs {
         ask,
         prefixes,
         target,
-        expression,
     ]
 }
 
