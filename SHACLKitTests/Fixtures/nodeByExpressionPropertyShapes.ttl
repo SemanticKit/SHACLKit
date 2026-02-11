@@ -1,0 +1,19 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:PersonShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:property ex:FriendShape .
+
+ex:FriendShape a sh:PropertyShape ;
+  sh:path ex:friend ;
+  sh:nodeByExpression ex:ExprFriendShapeRef .
+
+ex:ExprFriendShapeRef sh:union ( ex:NamedNodeShape ) .
+
+ex:NamedNodeShape a sh:NodeShape ;
+  sh:property ex:RequiredNameShape .
+
+ex:RequiredNameShape a sh:PropertyShape ;
+  sh:path ex:name ;
+  sh:minCount 1 .

@@ -1,0 +1,15 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:PersonShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:nodeByExpression ex:ExprTargetShapeRef .
+
+ex:ExprTargetShapeRef sh:union ( ex:AdultShape ) .
+
+ex:AdultShape a sh:NodeShape ;
+  sh:property ex:AdultAgeShape .
+
+ex:AdultAgeShape a sh:PropertyShape ;
+  sh:path ex:age ;
+  sh:minInclusive 18 .

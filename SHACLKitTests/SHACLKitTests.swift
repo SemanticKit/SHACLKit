@@ -180,6 +180,48 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(result.violations.allSatisfy { $0.sourceConstraintIRI == "http://www.w3.org/ns/shacl#expression" })
 }
 
+@Test func coreValidatorConformsForNodeByExpressionNodeConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeByExpressionNodeShapes.ttl")
+    let dataGraph = try fixtureData("nodeByExpressionNodeValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsNodeByExpressionNodeConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeByExpressionNodeShapes.ttl")
+    let dataGraph = try fixtureData("nodeByExpressionNodeInvalidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://example.com/AdultShape")
+}
+
+@Test func coreValidatorConformsForNodeByExpressionPropertyConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeByExpressionPropertyShapes.ttl")
+    let dataGraph = try fixtureData("nodeByExpressionPropertyValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsNodeByExpressionPropertyConstraintViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("nodeByExpressionPropertyShapes.ttl")
+    let dataGraph = try fixtureData("nodeByExpressionPropertyInvalidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://example.com/NamedNodeShape")
+}
+
 @Test func focusNodeResolverResolvesSelectorsAgainstDataGraph() async throws {
     let shapesLoader = SHACLShapesGraphLoader()
     let dataLoader = SHACLDataGraphLoader()

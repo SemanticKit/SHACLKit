@@ -46,6 +46,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let pattern: String?
     public let hasValue: String?
     public let inValues: [String]
+    public let nodeByExpressionIRI: String?
     public let nodeShapeReferenceIRI: String?
     public let andShapeIRIs: [String]
     public let orShapeIRIs: [String]
@@ -75,6 +76,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         pattern: String? = nil,
         hasValue: String? = nil,
         inValues: [String] = [],
+        nodeByExpressionIRI: String? = nil,
         nodeShapeReferenceIRI: String? = nil,
         andShapeIRIs: [String] = [],
         orShapeIRIs: [String] = [],
@@ -103,6 +105,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.pattern = pattern
         self.hasValue = hasValue
         self.inValues = inValues
+        self.nodeByExpressionIRI = nodeByExpressionIRI
         self.nodeShapeReferenceIRI = nodeShapeReferenceIRI
         self.andShapeIRIs = andShapeIRIs
         self.orShapeIRIs = orShapeIRIs
@@ -318,6 +321,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var pattern: String?
             var hasValue: String?
             var inValues: Set<String> = []
+            var nodeByExpressionIRI: String?
             var nodeShapeReferenceIRI: String?
             var andShapeIRIs: Set<String> = []
             var orShapeIRIs: Set<String> = []
@@ -403,6 +407,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.hasValue = object
             } else if predicate == SHACLIRIs.in {
                 current.inValues.insert(object)
+            } else if predicate == SHACLIRIs.nodeByExpression {
+                current.nodeByExpressionIRI = object
             } else if predicate == SHACLIRIs.node {
                 current.nodeShapeReferenceIRI = object
             } else if predicate == SHACLIRIs.and {
@@ -502,6 +508,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 pattern: partial.pattern,
                 hasValue: partial.hasValue,
                 inValues: resolveInValues(partial.inValues, triplesBySubject: triplesBySubject).sorted(),
+                nodeByExpressionIRI: partial.nodeByExpressionIRI,
                 nodeShapeReferenceIRI: partial.nodeShapeReferenceIRI,
                 andShapeIRIs: resolveShapeReferenceIRIs(partial.andShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
                 orShapeIRIs: resolveShapeReferenceIRIs(partial.orShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
@@ -877,6 +884,11 @@ public struct SHACLCoreValidator: SHACLValidator {
                     "Node shape \(shape.shapeIRI) references missing node expression \(expressionIRI)"
                 )
             }
+            if let nodeByExpressionIRI = shape.nodeByExpressionIRI, expressionByIRI[nodeByExpressionIRI] == nil {
+                throw SHACLError.invalidShapesGraph(
+                    "Node shape \(shape.shapeIRI) references missing nodeByExpression \(nodeByExpressionIRI)"
+                )
+            }
             for propertyShapeIRI in shape.propertyShapeIRIs {
                 guard let propertyShape = byIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
                     throw SHACLError.invalidShapesGraph(
@@ -893,6 +905,11 @@ public struct SHACLCoreValidator: SHACLValidator {
             if let expressionIRI = shape.expressionIRI, expressionByIRI[expressionIRI] == nil {
                 throw SHACLError.invalidShapesGraph(
                     "Property shape \(shape.shapeIRI) references missing node expression \(expressionIRI)"
+                )
+            }
+            if let nodeByExpressionIRI = shape.nodeByExpressionIRI, expressionByIRI[nodeByExpressionIRI] == nil {
+                throw SHACLError.invalidShapesGraph(
+                    "Property shape \(shape.shapeIRI) references missing nodeByExpression \(nodeByExpressionIRI)"
                 )
             }
 
@@ -982,6 +999,40 @@ public struct SHACLCoreValidator: SHACLValidator {
                         message: "expression violation: expression \(expressionIRI) did not return true for focus node \(focusNode)"
                     )
                 )
+            }
+        }
+
+        if let nodeByExpressionIRI = nodeShape.nodeByExpressionIRI {
+            let referencedShapeIRIs = SHACLNodeExpressionEvaluator()
+                .evaluate(
+                    expressionIRI: nodeByExpressionIRI,
+                    focusNode: focusNode,
+                    shapesGraph: expressionGraph
+                )
+                .sorted()
+            for referencedShapeIRI in referencedShapeIRIs {
+                let doesConform = conforms(
+                    valueNode: focusNode,
+                    toNodeShapeIRI: referencedShapeIRI,
+                    dataGraph: dataGraph,
+                    shapesByIRI: shapesByIRI,
+                    nodeExpressionsByIRI: nodeExpressionsByIRI,
+                    depth: depth,
+                    visited: &visited
+                )
+                if !doesConform {
+                    violations.append(
+                        SHACLViolation(
+                            severity: nodeSeverity,
+                            shapeIRI: nodeShape.shapeIRI,
+                            focusNode: focusNode,
+                            pathIRI: nil,
+                            valueNode: focusNode,
+                            sourceConstraintIRI: referencedShapeIRI,
+                            message: "nodeByExpression violation: focus node \(focusNode) does not conform to \(referencedShapeIRI)"
+                        )
+                    )
+                }
             }
         }
 
@@ -1266,6 +1317,42 @@ public struct SHACLCoreValidator: SHACLValidator {
                                 message: "in violation: value \(valueNode) not in allowed set"
                             )
                         )
+                    }
+                }
+            }
+
+            if let nodeByExpressionIRI = propertyShape.nodeByExpressionIRI {
+                for valueNode in values {
+                    let referencedShapeIRIs = SHACLNodeExpressionEvaluator()
+                        .evaluate(
+                            expressionIRI: nodeByExpressionIRI,
+                            focusNode: valueNode,
+                            shapesGraph: expressionGraph
+                        )
+                        .sorted()
+                    for referencedShapeIRI in referencedShapeIRIs {
+                        let doesConform = conforms(
+                            valueNode: valueNode,
+                            toNodeShapeIRI: referencedShapeIRI,
+                            dataGraph: dataGraph,
+                            shapesByIRI: shapesByIRI,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI,
+                            depth: depth,
+                            visited: &visited
+                        )
+                        if !doesConform {
+                            violations.append(
+                                SHACLViolation(
+                                    severity: severity,
+                                    shapeIRI: propertyShape.shapeIRI,
+                                    focusNode: focusNode,
+                                    pathIRI: pathIRI,
+                                    valueNode: valueNode,
+                                    sourceConstraintIRI: referencedShapeIRI,
+                                    message: "nodeByExpression violation: value \(valueNode) does not conform to \(referencedShapeIRI)"
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -1589,6 +1676,7 @@ private enum SHACLIRIs {
     static let hasValue = "http://www.w3.org/ns/shacl#hasValue"
     static let `in` = "http://www.w3.org/ns/shacl#in"
     static let node = "http://www.w3.org/ns/shacl#node"
+    static let nodeByExpression = "http://www.w3.org/ns/shacl#nodeByExpression"
     static let and = "http://www.w3.org/ns/shacl#and"
     static let or = "http://www.w3.org/ns/shacl#or"
     static let not = "http://www.w3.org/ns/shacl#not"

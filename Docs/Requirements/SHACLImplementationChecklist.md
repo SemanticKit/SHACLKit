@@ -56,6 +56,7 @@ Legend:
   - Added shape-graph validation for missing/unknown node-expression references.
   - Added `sh:expression` constraint evaluation for node shapes and path-backed property shapes.
   - Added target resolution support for `sh:targetNode` values that reference node-expression definitions.
+  - Added first-slice `sh:nodeByExpression` support for node-shape and property-shape conformance checks.
 - [ ] `REQ-SHACL-210` Implement SHACL 1.2 Rules execution model.
 - [ ] `REQ-SHACL-211` Define deterministic rule execution order/termination behavior.
 
