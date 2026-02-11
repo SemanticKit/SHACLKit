@@ -688,6 +688,37 @@ private func fixtureData(_ name: String) throws -> Data {
     }
 }
 
+private struct TestDataSource {
+    let payload: Data
+}
+
+private struct TestShapesSource {
+    let payload: Data
+}
+
+@Test func coreValidatorSupportsAdapterBoundaryEntryPoint() async throws {
+    let validator = SHACLCoreValidator()
+    let dataSource = TestDataSource(payload: try fixtureData("inListConstraintsValid.ttl"))
+    let shapesSource = TestShapesSource(payload: try fixtureData("inListConstraintsShapes.ttl"))
+
+    let dataAdapter = AnySHACLDataGraphAdapter<TestDataSource> { source in
+        try SHACLDataGraphLoader().load(from: source.payload)
+    }
+    let shapesAdapter = AnySHACLShapesGraphAdapter<TestShapesSource> { source in
+        try SHACLShapesGraphLoader().load(from: source.payload)
+    }
+
+    let result = try validator.validate(
+        dataSource: dataSource,
+        shapesSource: shapesSource,
+        dataAdapter: dataAdapter,
+        shapesAdapter: shapesAdapter
+    )
+
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
 @Test func coreValidatorEmitsCompleteMachineReadableDiagnostics() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("logicalOrShapes.ttl")

@@ -213,6 +213,30 @@ public protocol SHACLShapesGraphAdapting: Sendable {
     func adapt(_ source: Source) throws -> SHACLShapesGraph
 }
 
+public struct AnySHACLDataGraphAdapter<Source>: SHACLDataGraphAdapting {
+    private let adapter: @Sendable (Source) throws -> SHACLDataGraph
+
+    public init(_ adapter: @escaping @Sendable (Source) throws -> SHACLDataGraph) {
+        self.adapter = adapter
+    }
+
+    public func adapt(_ source: Source) throws -> SHACLDataGraph {
+        try adapter(source)
+    }
+}
+
+public struct AnySHACLShapesGraphAdapter<Source>: SHACLShapesGraphAdapting {
+    private let adapter: @Sendable (Source) throws -> SHACLShapesGraph
+
+    public init(_ adapter: @escaping @Sendable (Source) throws -> SHACLShapesGraph) {
+        self.adapter = adapter
+    }
+
+    public func adapt(_ source: Source) throws -> SHACLShapesGraph {
+        try adapter(source)
+    }
+}
+
 public enum SHACLError: Error, LocalizedError {
     case invalidUTF8
     case invalidPrefixDeclaration(String)
@@ -667,6 +691,18 @@ public struct SHACLCoreValidator: SHACLValidator {
             message: "SHACL Core subset validation produced \(sortedViolations.count) result(s), including \(violationCount) violation(s).",
             violations: sortedViolations
         )
+    }
+
+    public func validate<DataSource, ShapesSource, DataAdapter: SHACLDataGraphAdapting, ShapesAdapter: SHACLShapesGraphAdapting>(
+        dataSource: DataSource,
+        shapesSource: ShapesSource,
+        dataAdapter: DataAdapter,
+        shapesAdapter: ShapesAdapter
+    ) throws -> SHACLValidationResult
+    where DataAdapter.Source == DataSource, ShapesAdapter.Source == ShapesSource {
+        let dataGraph = try dataAdapter.adapt(dataSource)
+        let shapesGraph = try shapesAdapter.adapt(shapesSource)
+        return try validate(dataGraph: dataGraph, shapesGraph: shapesGraph)
     }
 
     private func validateShapesGraph(_ shapesGraph: SHACLShapesGraph) throws {
