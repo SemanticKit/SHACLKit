@@ -8,12 +8,12 @@ Legend:
 ## Test Infrastructure
 
 - [x] `TEST-SHACL-000` Create test target and fixtures directory (`SHACLKitTests/Fixtures`).
-- [ ] `TEST-SHACL-001` Add canonical SHACL Core fixture corpus copied from Knowledge master set.
-- [ ] `TEST-SHACL-002` Add helper loaders for data graph + shapes graph fixture pairs.
+- [~] `TEST-SHACL-001` Add canonical SHACL Core fixture corpus copied from Knowledge master set.
+- [x] `TEST-SHACL-002` Add helper loaders for data graph + shapes graph fixture pairs.
 
 ## Phase 1: Core Behavior Tests
 
-- [ ] `TEST-SHACL-010` Target selection tests for all core target selectors.
+- [x] `TEST-SHACL-010` Target selection tests for all core target selectors.
 - [ ] `TEST-SHACL-011` Node shape validation pass/fail matrix.
 - [ ] `TEST-SHACL-012` Property shape validation pass/fail matrix.
 - [ ] `TEST-SHACL-013` Severity propagation tests (`Violation`, `Warning`, `Info`).

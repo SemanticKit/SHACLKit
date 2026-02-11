@@ -17,8 +17,8 @@ Legend:
 ## Phase 1: Core Scope (In Progress)
 
 - [x] `REQ-SHACL-000` Create standalone Swift package library (`SHACLKit`) with source/tests/docs scaffolding.
-- [ ] `REQ-SHACL-001` Parse/ingest SHACL shapes graph terms required for Core constraints.
-- [ ] `REQ-SHACL-002` Resolve targets (`sh:targetClass`, `sh:targetNode`, `sh:targetSubjectsOf`, `sh:targetObjectsOf`).
+- [x] `REQ-SHACL-001` Parse/ingest SHACL shapes graph terms required for Core constraints.
+- [x] `REQ-SHACL-002` Resolve targets (`sh:targetClass`, `sh:targetNode`, `sh:targetSubjectsOf`, `sh:targetObjectsOf`).
 - [ ] `REQ-SHACL-003` Evaluate node shapes and property shapes against RDF terms/triples.
 - [ ] `REQ-SHACL-004` Support SHACL severity levels and result reporting model.
 - [ ] `REQ-SHACL-005` Generate deterministic validation reports (conforms + detailed results).

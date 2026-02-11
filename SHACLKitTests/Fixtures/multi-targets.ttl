@@ -1,0 +1,8 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:ThingShape a sh:NodeShape ;
+  sh:targetClass ex:Person, ex:Agent .
+
+ex:NamePropShape a sh:PropertyShape ;
+  sh:targetNode ex:alice .

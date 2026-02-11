@@ -17,7 +17,10 @@ let package = Package(
         .testTarget(
             name: "SHACLKitTests",
             dependencies: ["SHACLKit"],
-            path: "SHACLKitTests"
+            path: "SHACLKitTests",
+            resources: [
+                .copy("Fixtures")
+            ]
         )
     ]
 )
