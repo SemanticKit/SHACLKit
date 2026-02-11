@@ -636,6 +636,13 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         shapesGraph: graph
     )
     #expect(offsetAfterLimit == Set(["6"]))
+
+    let offsetThenLimitFromConcat = evaluator.evaluate(
+        expressionIRI: "http://example.com/OffsetThenLimitFromConcatExpr",
+        focusNode: "http://example.com/focus",
+        shapesGraph: graph
+    )
+    #expect(offsetThenLimitFromConcat == Set(["3"]))
 }
 
 @Test func nodeExpressionEvaluatorEvaluatesFindFirst() async throws {

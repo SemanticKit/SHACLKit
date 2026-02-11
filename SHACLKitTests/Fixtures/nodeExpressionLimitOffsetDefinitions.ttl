@@ -15,3 +15,15 @@ ex:OffsetAfterLimitExpr
         shnex:limit 2 ;
     ] ;
     shnex:offset 1 .
+
+ex:OffsetThenLimitFromConcatExpr
+    shnex:nodes [
+        shnex:nodes [
+            shnex:concat (
+                ( 5 4 )
+                ( 3 2 1 )
+            ) ;
+        ] ;
+        shnex:offset 2 ;
+    ] ;
+    shnex:limit 1 .

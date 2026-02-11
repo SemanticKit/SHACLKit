@@ -2076,6 +2076,124 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
         }
 
         switch expression.kind {
+        case .nodes(let members):
+            var ordered: [String] = []
+            for member in members {
+                ordered.append(contentsOf: evaluateTermOrdered(
+                    member,
+                    focusNode: focusNode,
+                    shapesGraph: shapesGraph,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    depth: depth + 1,
+                    visited: &visited
+                ))
+            }
+            return ordered
+        case .concat(let inputTerm, let staticListMembers):
+            let terms = staticListMembers ?? [inputTerm]
+            var ordered: [String] = []
+            for term in terms {
+                ordered.append(contentsOf: evaluateTermOrdered(
+                    term,
+                    focusNode: focusNode,
+                    shapesGraph: shapesGraph,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    depth: depth + 1,
+                    visited: &visited
+                ))
+            }
+            return ordered
+        case .remove(let inputTerm, let removeTerm, let staticInputListMembers, let staticRemoveListMembers):
+            let input = staticInputListMembers ?? evaluateTermOrdered(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            let removeNodes = Set(staticRemoveListMembers ?? evaluateTermOrdered(
+                removeTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            ))
+            return input.filter { !removeNodes.contains($0) }
+        case .flatMap(let inputTerm, let mapTerm, let staticInputListMembers):
+            let inputs = staticInputListMembers ?? evaluateTermOrdered(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            var ordered: [String] = []
+            for input in inputs {
+                ordered.append(contentsOf: evaluateTermOrdered(
+                    mapTerm,
+                    focusNode: input,
+                    shapesGraph: shapesGraph,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    depth: depth + 1,
+                    visited: &visited
+                ))
+            }
+            return ordered
+        case .limit(let inputTerm, let count, let staticListMembers):
+            let ordered = staticListMembers ?? evaluateTermOrdered(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            return Array(ordered.prefix(max(0, count)))
+        case .offset(let inputTerm, let count, let staticListMembers):
+            let ordered = staticListMembers ?? evaluateTermOrdered(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            return Array(ordered.dropFirst(max(0, count)))
+        case .findFirst(let inputTerm, let shapeTerm, let staticOrderedInputMembers):
+            let orderedInputs = staticOrderedInputMembers ?? evaluateTermOrdered(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                depth: depth + 1,
+                visited: &visited
+            )
+            if orderedInputs.isEmpty {
+                return []
+            }
+            let evaluationGraph = dataGraph ?? SHACLDataGraph(triples: [])
+            let matched = nodesMatching(
+                shapeIRI: shapeTerm,
+                candidates: Set(orderedInputs),
+                shapesGraph: shapesGraph,
+                dataGraph: evaluationGraph
+            )
+            guard let first = orderedInputs.first(where: { matched.contains($0) }) else {
+                return []
+            }
+            return [first]
         case .orderBy(let inputTerm, let keyTerm, let descending, let staticListMembers):
             let input = staticListMembers ?? evaluateTermOrdered(
                 inputTerm,
