@@ -23,8 +23,8 @@ Legend:
 ## Phase 1: Constraint Component Coverage
 
 - [x] `TEST-SHACL-020` Cardinality component tests.
-- [~] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
-  - Covered `class`, `datatype`, and subset `nodeKind` (`IRI`, `Literal`, `BlankNode`, `IRIOrLiteral`) fixtures.
+- [x] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
+  - Covered `class`, `datatype`, and all `nodeKind` fixtures.
 - [x] `TEST-SHACL-022` String/range facet tests.
   - Covered `minLength`, `maxLength`, and `pattern` fixtures.
   - Covered integer range fixtures for `minInclusive` and `maxInclusive`, including non-numeric values.

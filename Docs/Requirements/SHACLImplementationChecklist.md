@@ -25,10 +25,10 @@ Legend:
 - [x] `REQ-SHACL-004` Support SHACL severity levels and result reporting model.
 - [x] `REQ-SHACL-005` Generate deterministic validation reports (conforms + detailed results).
 - [x] `REQ-SHACL-006` Constraint components: cardinality (`sh:minCount`, `sh:maxCount`).
-- [~] `REQ-SHACL-007` Constraint components: value type checks (`sh:class`, `sh:datatype`, `sh:nodeKind`).
+- [x] `REQ-SHACL-007` Constraint components: value type checks (`sh:class`, `sh:datatype`, `sh:nodeKind`).
   - Implemented `sh:class` checks for property values.
   - Implemented `sh:datatype` checks with literal datatype inference (`xsd:integer`, typed literals).
-  - Implemented subset `sh:nodeKind` checks (`sh:IRI`, `sh:Literal`, `sh:BlankNode`, `sh:IRIOrLiteral`).
+  - Implemented `sh:nodeKind` checks (`sh:IRI`, `sh:Literal`, `sh:BlankNode`, `sh:BlankNodeOrIRI`, `sh:BlankNodeOrLiteral`, `sh:IRIOrLiteral`).
 - [x] `REQ-SHACL-008` Constraint components: value range/string facets (`sh:minLength`, `sh:maxLength`, `sh:pattern`, `sh:minInclusive`, `sh:maxInclusive`).
   - Implemented string facets: `sh:minLength`, `sh:maxLength`, `sh:pattern`.
   - Implemented integer range facets: `sh:minInclusive`, `sh:maxInclusive`.

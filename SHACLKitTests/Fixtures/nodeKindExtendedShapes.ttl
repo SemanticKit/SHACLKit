@@ -1,0 +1,15 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:PersonShape a sh:NodeShape ;
+  sh:targetNode ex:alice ;
+  sh:property ex:ManagerShape ;
+  sh:property ex:AltLabelShape .
+
+ex:ManagerShape a sh:PropertyShape ;
+  sh:path ex:manager ;
+  sh:nodeKind sh:BlankNodeOrIRI .
+
+ex:AltLabelShape a sh:PropertyShape ;
+  sh:path ex:altLabel ;
+  sh:nodeKind sh:BlankNodeOrLiteral .
