@@ -40,6 +40,7 @@ Legend:
 - [x] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
   - Covered `class`, `datatype`, and all `nodeKind` fixtures.
   - Added curated W3C node-shape conformance subset coverage for `datatype-002`, `class-002`, and `class-003`.
+  - Added curated W3C property-shape ill-formed datatype coverage (`datatype-ill-formed`) for lexical/range validation.
 - [x] `TEST-SHACL-022` String/range facet tests.
   - Covered `minLength`, `maxLength`, and `pattern` fixtures.
   - Added curated W3C node-shape conformance subset coverage for dateTime range boundaries (`minInclusive-002`, `minInclusive-003`).

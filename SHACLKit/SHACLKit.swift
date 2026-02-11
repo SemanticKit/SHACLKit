@@ -1120,22 +1120,43 @@ public struct SHACLCoreValidator: SHACLValidator {
         var violations: [SHACLViolation] = []
 
         for resolution in resolutions {
-            guard let shape = shapeByIRI[resolution.shapeIRI], shape.kind == .nodeShape else {
+            guard let shape = shapeByIRI[resolution.shapeIRI] else {
                 continue
             }
             for focusNode in resolution.focusNodes {
                 var visited: Set<String> = []
-                violations.append(
-                    contentsOf: evaluate(
-                        nodeShape: shape,
-                        focusNode: focusNode,
-                        dataGraph: parsedData,
-                        shapesByIRI: shapeByIRI,
-                        nodeExpressionsByIRI: nodeExpressionsByIRI,
-                        depth: 0,
-                        visited: &visited
+                if shape.kind == .nodeShape {
+                    violations.append(
+                        contentsOf: evaluate(
+                            nodeShape: shape,
+                            focusNode: focusNode,
+                            dataGraph: parsedData,
+                            shapesByIRI: shapeByIRI,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI,
+                            depth: 0,
+                            visited: &visited
+                        )
                     )
-                )
+                } else if shape.kind == .propertyShape {
+                    let wrapperShape = SHACLShapeDefinition(
+                        shapeIRI: "\(shape.shapeIRI)#direct-property-target-wrapper",
+                        kind: .nodeShape,
+                        severity: shape.severity,
+                        targets: [],
+                        propertyShapeIRIs: [shape.shapeIRI]
+                    )
+                    violations.append(
+                        contentsOf: evaluate(
+                            nodeShape: wrapperShape,
+                            focusNode: focusNode,
+                            dataGraph: parsedData,
+                            shapesByIRI: shapeByIRI,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI,
+                            depth: 0,
+                            visited: &visited
+                        )
+                    )
+                }
             }
         }
 
@@ -1602,12 +1623,12 @@ public struct SHACLCoreValidator: SHACLValidator {
             )
         }
 
-        if let datatypeIRI = nodeShape.datatypeIRI {
-            let actualDatatype = inferredDatatypeIRI(for: focusNode)
-            if actualDatatype != datatypeIRI {
-                let actualText = actualDatatype ?? "none"
-                violations.append(
-                    SHACLViolation(
+            if let datatypeIRI = nodeShape.datatypeIRI {
+                let actualDatatype = inferredDatatypeIRI(for: focusNode)
+                if actualDatatype != datatypeIRI || !isLexicallyValidLiteral(focusNode, forDatatypeIRI: datatypeIRI) {
+                    let actualText = actualDatatype ?? "none"
+                    violations.append(
+                        SHACLViolation(
                         severity: nodeSeverity,
                         shapeIRI: nodeShape.shapeIRI,
                         focusNode: focusNode,
@@ -2223,7 +2244,7 @@ public struct SHACLCoreValidator: SHACLValidator {
             if let datatypeIRI = propertyShape.datatypeIRI {
                 for valueNode in values {
                     let actualDatatype = inferredDatatypeIRI(for: valueNode)
-                    if actualDatatype != datatypeIRI {
+                    if actualDatatype != datatypeIRI || !isLexicallyValidLiteral(valueNode, forDatatypeIRI: datatypeIRI) {
                         let actualText = actualDatatype ?? "none"
                         violations.append(
                             SHACLViolation(
@@ -3104,6 +3125,47 @@ public struct SHACLCoreValidator: SHACLValidator {
         return (parsed, false)
     }
 
+    private func isLexicallyValidLiteral(_ valueNode: String, forDatatypeIRI datatypeIRI: String) -> Bool {
+        if let numeric = parseNumericValue(valueNode) {
+            switch datatypeIRI {
+            case SHACLIRIs.xsdInteger:
+                return numeric.isInteger
+            case SHACLIRIs.xsdDecimal:
+                return true
+            case SHACLIRIs.xsdByte:
+                guard numeric.isInteger else {
+                    return false
+                }
+                let intValue = Int(numeric.number)
+                return (-128...127).contains(intValue)
+            default:
+                break
+            }
+        }
+
+        guard let lexical = extractLiteralLexicalForm(valueNode) else {
+            return false
+        }
+
+        switch datatypeIRI {
+        case SHACLIRIs.xsdInteger:
+            return Int(lexical) != nil
+        case SHACLIRIs.xsdDecimal:
+            return lexical.range(of: #"^-?\d+(\.\d+)?$"#, options: .regularExpression) != nil
+        case SHACLIRIs.xsdBoolean:
+            return lexical == "true" || lexical == "false" || lexical == "1" || lexical == "0"
+        case SHACLIRIs.xsdDateTime:
+            return parseDateTimeLexicalForm(lexical) != nil
+        case SHACLIRIs.xsdByte:
+            guard let parsed = Int(lexical) else {
+                return false
+            }
+            return (-128...127).contains(parsed)
+        default:
+            return true
+        }
+    }
+
     private func isTrueOnlyExpressionOutput(_ outputNodes: Set<String>) -> Bool {
         guard outputNodes.count == 1, let only = outputNodes.first else {
             return false
@@ -3192,6 +3254,7 @@ private enum SHACLIRIs {
     static let xsdBoolean = "http://www.w3.org/2001/XMLSchema#boolean"
     static let xsdString = "http://www.w3.org/2001/XMLSchema#string"
     static let xsdDateTime = "http://www.w3.org/2001/XMLSchema#dateTime"
+    static let xsdByte = "http://www.w3.org/2001/XMLSchema#byte"
     static let rdfLangString = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
     static let phaseGatedPredicates: Set<String> = [
         prefixes,

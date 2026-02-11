@@ -41,6 +41,7 @@ core-property-class-001	data-shapes-test-suite/tests/core/property/class-001.ttl
 core-property-datatype-001	data-shapes-test-suite/tests/core/property/datatype-001.ttl	data-shapes-test-suite/tests/core/property/datatype-001.ttl	false	Property datatype integer checks.
 core-property-datatype-002	data-shapes-test-suite/tests/core/property/datatype-002.ttl	data-shapes-test-suite/tests/core/property/datatype-002.ttl	false	Property datatype checks over language-tagged literals.
 core-property-datatype-003	data-shapes-test-suite/tests/core/property/datatype-003.ttl	data-shapes-test-suite/tests/core/property/datatype-003.ttl	false	Property datatype checks over booleans and numerics.
+core-property-datatype-ill-formed	data-shapes-test-suite/tests/core/property/datatype-ill-formed-data.ttl	data-shapes-test-suite/tests/core/property/datatype-ill-formed-shapes.ttl	false	Property datatype lexical/range validation for ill-formed literals.
 core-property-nodeKind-001	data-shapes-test-suite/tests/core/property/nodeKind-001.ttl	data-shapes-test-suite/tests/core/property/nodeKind-001.ttl	false	Property nodeKind checks over mixed value terms.
 core-property-minLength-001	data-shapes-test-suite/tests/core/property/minLength-001.ttl	data-shapes-test-suite/tests/core/property/minLength-001.ttl	false	Property minLength checks.
 core-property-maxLength-001	data-shapes-test-suite/tests/core/property/maxLength-001.ttl	data-shapes-test-suite/tests/core/property/maxLength-001.ttl	false	Property maxLength checks.
