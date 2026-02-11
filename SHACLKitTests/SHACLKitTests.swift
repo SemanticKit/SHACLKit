@@ -46,16 +46,58 @@ private func fixtureData(_ name: String) throws -> Data {
 @Test func coreValidatorStillReportsNotImplementedWithParsedCount() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("basic-targets.ttl")
+    let dataGraph = try fixtureData("data-graph.ttl")
 
     do {
-        _ = try validator.validate(dataGraph: Data(), shapesGraph: shapes)
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
         Issue.record("Expected notImplemented until core engine lands")
     } catch let error as SHACLError {
         switch error {
         case .notImplemented(let detail):
             #expect(detail.contains("Parsed 1 shape"))
+            #expect(detail.contains("resolved 3 focus nodes"))
         default:
             Issue.record("Unexpected SHACLError: \(error)")
         }
     }
+}
+
+@Test func focusNodeResolverResolvesSelectorsAgainstDataGraph() async throws {
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let resolver = SHACLFocusNodeResolver()
+
+    let shapes = try shapesLoader.load(from: fixtureData("basic-targets.ttl"))
+    let dataGraph = try dataLoader.load(from: fixtureData("data-graph.ttl"))
+    let resolutions = resolver.resolve(dataGraph: dataGraph, shapesGraph: shapes)
+
+    #expect(resolutions.count == 1)
+    let resolution = try #require(resolutions.first)
+    #expect(resolution.shapeIRI == "http://example.com/PersonShape")
+    #expect(resolution.focusNodes == [
+        "http://example.com/alice",
+        "http://example.com/carol",
+        "http://example.com/org1",
+    ])
+}
+
+@Test func focusNodeResolverSupportsMultipleShapes() async throws {
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+    let resolver = SHACLFocusNodeResolver()
+
+    let shapes = try shapesLoader.load(from: fixtureData("multi-targets.ttl"))
+    let dataGraph = try dataLoader.load(from: fixtureData("data-graph.ttl"))
+    let resolutions = resolver.resolve(dataGraph: dataGraph, shapesGraph: shapes)
+
+    #expect(resolutions.count == 2)
+
+    let byShape = Dictionary(uniqueKeysWithValues: resolutions.map { ($0.shapeIRI, $0.focusNodes) })
+    #expect(byShape["http://example.com/ThingShape"] == [
+        "http://example.com/alice",
+        "http://example.com/bob",
+    ])
+    #expect(byShape["http://example.com/NamePropShape"] == [
+        "http://example.com/alice",
+    ])
 }

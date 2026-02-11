@@ -19,7 +19,9 @@ Legend:
 - [x] `REQ-SHACL-000` Create standalone Swift package library (`SHACLKit`) with source/tests/docs scaffolding.
 - [x] `REQ-SHACL-001` Parse/ingest SHACL shapes graph terms required for Core constraints.
 - [x] `REQ-SHACL-002` Resolve targets (`sh:targetClass`, `sh:targetNode`, `sh:targetSubjectsOf`, `sh:targetObjectsOf`).
-- [ ] `REQ-SHACL-003` Evaluate node shapes and property shapes against RDF terms/triples.
+- [~] `REQ-SHACL-003` Evaluate node shapes and property shapes against RDF terms/triples.
+  - Implemented target-to-focus-node resolution over parsed RDF triples.
+  - Constraint-component evaluation is still pending.
 - [ ] `REQ-SHACL-004` Support SHACL severity levels and result reporting model.
 - [ ] `REQ-SHACL-005` Generate deterministic validation reports (conforms + detailed results).
 - [ ] `REQ-SHACL-006` Constraint components: cardinality (`sh:minCount`, `sh:maxCount`).

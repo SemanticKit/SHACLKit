@@ -38,6 +38,36 @@ public struct SHACLShapesGraph: Sendable, Equatable {
     }
 }
 
+public struct SHACLDataTriple: Sendable, Equatable, Hashable {
+    public let subject: String
+    public let predicate: String
+    public let object: String
+
+    public init(subject: String, predicate: String, object: String) {
+        self.subject = subject
+        self.predicate = predicate
+        self.object = object
+    }
+}
+
+public struct SHACLDataGraph: Sendable, Equatable {
+    public let triples: [SHACLDataTriple]
+
+    public init(triples: [SHACLDataTriple]) {
+        self.triples = triples
+    }
+}
+
+public struct SHACLTargetResolution: Sendable, Equatable {
+    public let shapeIRI: String
+    public let focusNodes: [String]
+
+    public init(shapeIRI: String, focusNodes: [String]) {
+        self.shapeIRI = shapeIRI
+        self.focusNodes = focusNodes
+    }
+}
+
 public struct SHACLValidationResult: Sendable, Equatable {
     public let conforms: Bool
     public let message: String
@@ -50,6 +80,10 @@ public struct SHACLValidationResult: Sendable, Equatable {
 
 public protocol SHACLShapesGraphLoading: Sendable {
     func load(from data: Data) throws -> SHACLShapesGraph
+}
+
+public protocol SHACLDataGraphLoading: Sendable {
+    func load(from data: Data) throws -> SHACLDataGraph
 }
 
 public protocol SHACLValidator: Sendable {
@@ -144,16 +178,77 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
     }
 }
 
+public struct SHACLDataGraphLoader: SHACLDataGraphLoading {
+    public init() {}
+
+    public func load(from data: Data) throws -> SHACLDataGraph {
+        guard let source = String(data: data, encoding: .utf8) else {
+            throw SHACLError.invalidUTF8
+        }
+        let parser = SHACLTurtleSubsetParser(source: source)
+        let triples = try parser.parseTriples().map {
+            SHACLDataTriple(subject: $0.subject, predicate: $0.predicate, object: $0.object)
+        }
+        return SHACLDataGraph(triples: triples)
+    }
+}
+
+public struct SHACLFocusNodeResolver: Sendable {
+    public init() {}
+
+    public func resolve(dataGraph: SHACLDataGraph, shapesGraph: SHACLShapesGraph) -> [SHACLTargetResolution] {
+        shapesGraph.shapes.map { shape in
+            var nodes: Set<String> = []
+            for selector in shape.targets {
+                nodes.formUnion(resolve(selector: selector, in: dataGraph))
+            }
+            return SHACLTargetResolution(shapeIRI: shape.shapeIRI, focusNodes: nodes.sorted())
+        }
+    }
+
+    private func resolve(selector: SHACLTargetSelector, in graph: SHACLDataGraph) -> Set<String> {
+        switch selector {
+        case .targetClass(let classIRI):
+            return Set(
+                graph.triples
+                    .filter { $0.predicate == SHACLIRIs.rdfType && $0.object == classIRI }
+                    .map(\.subject)
+            )
+        case .targetNode(let nodeIRI):
+            return Set([nodeIRI])
+        case .targetSubjectsOf(let predicateIRI):
+            return Set(graph.triples.filter { $0.predicate == predicateIRI }.map(\.subject))
+        case .targetObjectsOf(let predicateIRI):
+            return Set(graph.triples.filter { $0.predicate == predicateIRI }.map(\.object))
+        }
+    }
+}
+
 public struct SHACLCoreValidator: SHACLValidator {
     private let shapesLoader: any SHACLShapesGraphLoading
+    private let dataLoader: any SHACLDataGraphLoading
+    private let focusResolver: SHACLFocusNodeResolver
 
-    public init(shapesLoader: any SHACLShapesGraphLoading = SHACLShapesGraphLoader()) {
+    public init(
+        shapesLoader: any SHACLShapesGraphLoading = SHACLShapesGraphLoader(),
+        dataLoader: any SHACLDataGraphLoading = SHACLDataGraphLoader(),
+        focusResolver: SHACLFocusNodeResolver = SHACLFocusNodeResolver()
+    ) {
         self.shapesLoader = shapesLoader
+        self.dataLoader = dataLoader
+        self.focusResolver = focusResolver
     }
 
     public func validate(dataGraph: Data, shapesGraph: Data) throws -> SHACLValidationResult {
-        let parsed = try shapesLoader.load(from: shapesGraph)
-        throw SHACLError.notImplemented("Core SHACL validation engine. Parsed \(parsed.shapes.count) shape definitions.")
+        let parsedShapes = try shapesLoader.load(from: shapesGraph)
+        let parsedData = try dataLoader.load(from: dataGraph)
+        let resolutions = focusResolver.resolve(dataGraph: parsedData, shapesGraph: parsedShapes)
+        let resolvedFocusNodes = resolutions.reduce(into: 0) { partial, item in
+            partial += item.focusNodes.count
+        }
+        throw SHACLError.notImplemented(
+            "Core SHACL validation engine. Parsed \(parsedShapes.shapes.count) shape definitions and resolved \(resolvedFocusNodes) focus nodes."
+        )
     }
 }
 
