@@ -1349,6 +1349,9 @@ private enum SHACLIRIs {
     static let ask = "http://www.w3.org/ns/shacl#ask"
     static let prefixes = "http://www.w3.org/ns/shacl#prefixes"
     static let target = "http://www.w3.org/ns/shacl#target"
+    static let expression = "http://www.w3.org/ns/shacl#expression"
+    static let union = "http://www.w3.org/ns/shacl#union"
+    static let intersection = "http://www.w3.org/ns/shacl#intersection"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"
@@ -1371,6 +1374,9 @@ private enum SHACLIRIs {
         ask,
         prefixes,
         target,
+        expression,
+        union,
+        intersection,
     ]
 }
 

@@ -793,6 +793,16 @@ private struct TestShapesSource {
     }
 }
 
+@Test func coreValidatorThrowsForPhaseGatedNodeExpressionPredicate() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("phaseGatedNodeExpressionsShapes.ttl")
+    let dataGraph = try fixtureData("invalidShapesData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorMatchesResultsAcrossDataAndGraphEntryPoints() async throws {
     let validator = SHACLCoreValidator()
     let shapesData = try fixtureData("logicalOrShapes.ttl")
