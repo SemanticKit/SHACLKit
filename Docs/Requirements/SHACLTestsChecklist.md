@@ -10,6 +10,9 @@ Legend:
 - [x] `TEST-SHACL-000` Create test target and fixtures directory (`SHACLKitTests/Fixtures`).
 - [x] `TEST-SHACL-001` Add canonical SHACL Core fixture corpus copied from Knowledge master set.
   - Canonical fixtures now live in `Knowledge/SHACL/Fixtures` and sync via `Scripts/SyncFixturesFromKnowledge.sh`.
+- [x] `TEST-SHACL-003` Add curated W3C fixture-pack sync target for conformance expansion.
+  - Optional corpus sync now materializes under `SHACLKitTests/Fixtures/W3CDataShapes` from newest `Knowledge/Inbox/Fixtures/W3CDataShapes*`.
+  - Added smoke coverage asserting curated fixture availability in the test bundle.
 - [x] `TEST-SHACL-002` Add helper loaders for data graph + shapes graph fixture pairs.
 
 ## Phase 1: Core Behavior Tests
