@@ -1407,6 +1407,16 @@ private struct TestShapesSource {
     }
 }
 
+@Test func coreValidatorThrowsWithoutSandboxedSPARQLExecutorForAskConstraint() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("sparqlAskConstraintShapes.ttl")
+    let dataGraph = try fixtureData("sparqlAskData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorExecutesSPARQLSelectConstraintThroughExecutorBoundary() async throws {
     let executor = TestSPARQLExecutor(
         selectResults: [
