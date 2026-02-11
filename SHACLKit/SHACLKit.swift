@@ -2382,6 +2382,7 @@ private struct SHACLTurtleSubsetParser {
 
         var triples: [SHACLTriple] = []
         var listCounter = 0
+        var blankNodeCounter = 0
 
         for statement in statements {
             if statement.isEmpty {
@@ -2391,7 +2392,8 @@ private struct SHACLTurtleSubsetParser {
                 contentsOf: try parseStatement(
                     statement,
                     prefixes: parsed.prefixes,
-                    listCounter: &listCounter
+                    listCounter: &listCounter,
+                    blankNodeCounter: &blankNodeCounter
                 )
             )
         }
@@ -2469,7 +2471,8 @@ private struct SHACLTurtleSubsetParser {
     private func parseStatement(
         _ statement: String,
         prefixes: [String: String],
-        listCounter: inout Int
+        listCounter: inout Int,
+        blankNodeCounter: inout Int
     ) throws -> [SHACLTriple] {
         let tokens = try tokenize(statement)
         guard !tokens.isEmpty else {
@@ -2486,12 +2489,16 @@ private struct SHACLTurtleSubsetParser {
             return tokens[index]
         }
 
-        guard let subjectToken = takeToken() else {
-            throw SHACLError.invalidStatement(statement)
-        }
-        let subject = try resolveTerm(subjectToken, prefixes: prefixes)
-
         var triples: [SHACLTriple] = []
+        let subject = try parseTerm(
+            tokens: tokens,
+            index: &index,
+            prefixes: prefixes,
+            triples: &triples,
+            listCounter: &listCounter,
+            blankNodeCounter: &blankNodeCounter,
+            statement: statement
+        )
 
         while index < tokens.count {
             guard let predicateToken = takeToken() else {
@@ -2504,49 +2511,31 @@ private struct SHACLTurtleSubsetParser {
 
             let predicate = try resolveTerm(predicateToken, prefixes: prefixes)
 
-            guard let firstObjectToken = takeToken() else {
-                throw SHACLError.invalidStatement(statement)
-            }
-
-            if firstObjectToken == ";" || firstObjectToken == "," {
-                throw SHACLError.invalidStatement(statement)
-            }
-
-            let firstObject: String
-            if firstObjectToken == "(" {
-                firstObject = try parseObjectList(
+            var objects: [String] = [
+                try parseTerm(
                     tokens: tokens,
                     index: &index,
                     prefixes: prefixes,
                     triples: &triples,
                     listCounter: &listCounter,
+                    blankNodeCounter: &blankNodeCounter,
                     statement: statement
                 )
-            } else {
-                firstObject = try resolveTerm(firstObjectToken, prefixes: prefixes)
-            }
-
-            var objects: [String] = [firstObject]
+            ]
 
             while index < tokens.count, tokens[index] == "," {
                 _ = takeToken()
-                guard let nextObject = takeToken(), nextObject != ";", nextObject != "," else {
-                    throw SHACLError.invalidStatement(statement)
-                }
-                if nextObject == "(" {
-                    objects.append(
-                        try parseObjectList(
-                            tokens: tokens,
-                            index: &index,
-                            prefixes: prefixes,
-                            triples: &triples,
-                            listCounter: &listCounter,
-                            statement: statement
-                        )
+                objects.append(
+                    try parseTerm(
+                        tokens: tokens,
+                        index: &index,
+                        prefixes: prefixes,
+                        triples: &triples,
+                        listCounter: &listCounter,
+                        blankNodeCounter: &blankNodeCounter,
+                        statement: statement
                     )
-                } else {
-                    objects.append(try resolveTerm(nextObject, prefixes: prefixes))
-                }
+                )
             }
 
             for object in objects {
@@ -2572,6 +2561,7 @@ private struct SHACLTurtleSubsetParser {
         prefixes: [String: String],
         triples: inout [SHACLTriple],
         listCounter: inout Int,
+        blankNodeCounter: inout Int,
         statement: String
     ) throws -> String {
         var values: [String] = []
@@ -2584,11 +2574,20 @@ private struct SHACLTurtleSubsetParser {
                 sawClose = true
                 break
             }
-            if token == "(" || token == ";" || token == "," {
+            if token == ";" || token == "," {
                 throw SHACLError.invalidStatement(statement)
             }
-            values.append(try resolveTerm(token, prefixes: prefixes))
-            index += 1
+            values.append(
+                try parseTerm(
+                    tokens: tokens,
+                    index: &index,
+                    prefixes: prefixes,
+                    triples: &triples,
+                    listCounter: &listCounter,
+                    blankNodeCounter: &blankNodeCounter,
+                    statement: statement
+                )
+            )
         }
 
         if !sawClose {
@@ -2622,6 +2621,127 @@ private struct SHACLTurtleSubsetParser {
         return head
     }
 
+    private func parseBlankNodePropertyList(
+        tokens: [String],
+        index: inout Int,
+        prefixes: [String: String],
+        triples: inout [SHACLTriple],
+        listCounter: inout Int,
+        blankNodeCounter: inout Int,
+        statement: String
+    ) throws -> String {
+        func nextBlankNode() -> String {
+            defer { blankNodeCounter += 1 }
+            return "_:BNode\(blankNodeCounter)"
+        }
+
+        let blankNode = nextBlankNode()
+
+        while index < tokens.count {
+            let token = tokens[index]
+            if token == "]" {
+                index += 1
+                return blankNode
+            }
+            if token == ";" {
+                index += 1
+                continue
+            }
+            if token == "," || token == ")" {
+                throw SHACLError.invalidStatement(statement)
+            }
+
+            let predicateToken = token
+            index += 1
+            let predicate = try resolveTerm(predicateToken, prefixes: prefixes)
+
+            var objects: [String] = [
+                try parseTerm(
+                    tokens: tokens,
+                    index: &index,
+                    prefixes: prefixes,
+                    triples: &triples,
+                    listCounter: &listCounter,
+                    blankNodeCounter: &blankNodeCounter,
+                    statement: statement
+                )
+            ]
+
+            while index < tokens.count, tokens[index] == "," {
+                index += 1
+                objects.append(
+                    try parseTerm(
+                        tokens: tokens,
+                        index: &index,
+                        prefixes: prefixes,
+                        triples: &triples,
+                        listCounter: &listCounter,
+                        blankNodeCounter: &blankNodeCounter,
+                        statement: statement
+                    )
+                )
+            }
+
+            for object in objects {
+                triples.append(SHACLTriple(subject: blankNode, predicate: predicate, object: object))
+            }
+
+            if index < tokens.count, tokens[index] == ";" {
+                index += 1
+            }
+        }
+
+        throw SHACLError.invalidStatement(statement)
+    }
+
+    private func parseTerm(
+        tokens: [String],
+        index: inout Int,
+        prefixes: [String: String],
+        triples: inout [SHACLTriple],
+        listCounter: inout Int,
+        blankNodeCounter: inout Int,
+        statement: String
+    ) throws -> String {
+        guard index < tokens.count else {
+            throw SHACLError.invalidStatement(statement)
+        }
+
+        let token = tokens[index]
+        if token == ";" || token == "," || token == ")" || token == "]" {
+            throw SHACLError.invalidStatement(statement)
+        }
+
+        if token == "(" {
+            index += 1
+            return try parseObjectList(
+                tokens: tokens,
+                index: &index,
+                prefixes: prefixes,
+                triples: &triples,
+                listCounter: &listCounter,
+                blankNodeCounter: &blankNodeCounter,
+                statement: statement
+            )
+        }
+
+        if token == "[" {
+            index += 1
+            return try parseBlankNodePropertyList(
+                tokens: tokens,
+                index: &index,
+                prefixes: prefixes,
+                triples: &triples,
+                listCounter: &listCounter,
+                blankNodeCounter: &blankNodeCounter,
+                statement: statement
+            )
+        }
+
+        index += 1
+        return try resolveTerm(token, prefixes: prefixes)
+    }
+
     private func tokenize(_ statement: String) throws -> [String] {
         var tokens: [String] = []
         var index = statement.startIndex
@@ -2634,7 +2754,7 @@ private struct SHACLTurtleSubsetParser {
                 continue
             }
 
-            if ch == ";" || ch == "," || ch == "(" || ch == ")" {
+            if ch == ";" || ch == "," || ch == "(" || ch == ")" || ch == "[" || ch == "]" {
                 tokens.append(String(ch))
                 index = statement.index(after: index)
                 continue
@@ -2678,7 +2798,9 @@ private struct SHACLTurtleSubsetParser {
                     while langEnd < statement.endIndex,
                           !statement[langEnd].isWhitespace,
                           statement[langEnd] != ";",
-                          statement[langEnd] != "," {
+                          statement[langEnd] != ",",
+                          statement[langEnd] != ")",
+                          statement[langEnd] != "]" {
                         langEnd = statement.index(after: langEnd)
                     }
                     token += String(statement[langStart..<langEnd])
@@ -2693,7 +2815,9 @@ private struct SHACLTurtleSubsetParser {
                     while dtEnd < statement.endIndex,
                           !statement[dtEnd].isWhitespace,
                           statement[dtEnd] != ";",
-                          statement[dtEnd] != "," {
+                          statement[dtEnd] != ",",
+                          statement[dtEnd] != ")",
+                          statement[dtEnd] != "]" {
                         dtEnd = statement.index(after: dtEnd)
                     }
                     token += "^^" + String(statement[probe..<dtEnd])
@@ -2709,7 +2833,11 @@ private struct SHACLTurtleSubsetParser {
             while end < statement.endIndex,
                   !statement[end].isWhitespace,
                   statement[end] != ";",
-                  statement[end] != "," {
+                  statement[end] != ",",
+                  statement[end] != "(",
+                  statement[end] != ")",
+                  statement[end] != "[",
+                  statement[end] != "]" {
                 end = statement.index(after: end)
             }
 
