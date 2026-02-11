@@ -10,7 +10,7 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func shapesLoaderParsesNodeShapeTargets() async throws {
     let loader = SHACLShapesGraphLoader()
-    let graph = try loader.load(from: fixtureData("basic_targets.ttl"))
+    let graph = try loader.load(from: fixtureData("basicTargets.ttl"))
 
     #expect(graph.shapes.count == 1)
     let shape = try #require(graph.shapes.first)
@@ -26,7 +26,7 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func shapesLoaderParsesMultipleShapesAndObjectLists() async throws {
     let loader = SHACLShapesGraphLoader()
-    let graph = try loader.load(from: fixtureData("multi_targets.ttl"))
+    let graph = try loader.load(from: fixtureData("multiTargets.ttl"))
 
     #expect(graph.shapes.count == 2)
 
@@ -48,8 +48,8 @@ private func fixtureData(_ name: String) throws -> Data {
     let dataLoader = SHACLDataGraphLoader()
     let resolver = SHACLFocusNodeResolver()
 
-    let shapes = try shapesLoader.load(from: fixtureData("basic_targets.ttl"))
-    let dataGraph = try dataLoader.load(from: fixtureData("data_graph.ttl"))
+    let shapes = try shapesLoader.load(from: fixtureData("basicTargets.ttl"))
+    let dataGraph = try dataLoader.load(from: fixtureData("dataGraph.ttl"))
     let resolutions = resolver.resolve(dataGraph: dataGraph, shapesGraph: shapes)
 
     #expect(resolutions.count == 1)
@@ -67,8 +67,8 @@ private func fixtureData(_ name: String) throws -> Data {
     let dataLoader = SHACLDataGraphLoader()
     let resolver = SHACLFocusNodeResolver()
 
-    let shapes = try shapesLoader.load(from: fixtureData("multi_targets.ttl"))
-    let dataGraph = try dataLoader.load(from: fixtureData("data_graph.ttl"))
+    let shapes = try shapesLoader.load(from: fixtureData("multiTargets.ttl"))
+    let dataGraph = try dataLoader.load(from: fixtureData("dataGraph.ttl"))
     let resolutions = resolver.resolve(dataGraph: dataGraph, shapesGraph: shapes)
 
     #expect(resolutions.count == 2)
@@ -85,8 +85,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorConformsForMinMaxCountFixture() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("count_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("count_constraints_valid.ttl")
+    let shapes = try fixtureData("countConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("countConstraintsValid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(result.conforms)
@@ -95,8 +95,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorReportsDeterministicCountViolations() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("count_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("count_constraints_invalid.ttl")
+    let shapes = try fixtureData("countConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("countConstraintsInvalid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
 
@@ -112,8 +112,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorConformsForClassConstraintFixture() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("class_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("class_constraints_valid.ttl")
+    let shapes = try fixtureData("classConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("classConstraintsValid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(result.conforms)
@@ -122,8 +122,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorReportsClassConstraintViolation() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("class_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("class_constraints_invalid.ttl")
+    let shapes = try fixtureData("classConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("classConstraintsInvalid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
 
@@ -136,8 +136,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorConformsForNodeKindFixture() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("nodekind_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("nodekind_constraints_valid.ttl")
+    let shapes = try fixtureData("nodeKindConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("nodeKindConstraintsValid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(result.conforms)
@@ -146,8 +146,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorReportsNodeKindViolation() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("nodekind_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("nodekind_constraints_invalid.ttl")
+    let shapes = try fixtureData("nodeKindConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("nodeKindConstraintsInvalid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
 
@@ -160,8 +160,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorConformsForDatatypeFixture() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("datatype_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("datatype_constraints_valid.ttl")
+    let shapes = try fixtureData("datatypeConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("datatypeConstraintsValid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(result.conforms)
@@ -170,8 +170,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorReportsDatatypeViolation() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("datatype_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("datatype_constraints_invalid.ttl")
+    let shapes = try fixtureData("datatypeConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("datatypeConstraintsInvalid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
 
@@ -184,8 +184,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorConformsForBroaderNodeKinds() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("nodekind_broad_shapes.ttl")
-    let dataGraph = try fixtureData("nodekind_broad_valid.ttl")
+    let shapes = try fixtureData("nodeKindBroadShapes.ttl")
+    let dataGraph = try fixtureData("nodeKindBroadValid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(result.conforms)
@@ -194,8 +194,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorReportsBroaderNodeKindViolations() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("nodekind_broad_shapes.ttl")
-    let dataGraph = try fixtureData("nodekind_broad_invalid.ttl")
+    let shapes = try fixtureData("nodeKindBroadShapes.ttl")
+    let dataGraph = try fixtureData("nodeKindBroadInvalid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
 
@@ -208,8 +208,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorConformsForStringFacetFixture() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("string_facets_shapes.ttl")
-    let dataGraph = try fixtureData("string_facets_valid.ttl")
+    let shapes = try fixtureData("stringFacetsShapes.ttl")
+    let dataGraph = try fixtureData("stringFacetsValid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(result.conforms)
@@ -218,8 +218,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorReportsStringFacetViolations() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("string_facets_shapes.ttl")
-    let dataGraph = try fixtureData("string_facets_invalid.ttl")
+    let shapes = try fixtureData("stringFacetsShapes.ttl")
+    let dataGraph = try fixtureData("stringFacetsInvalid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)
@@ -231,8 +231,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorConformsForHasValueFixture() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("hasvalue_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("hasvalue_constraints_valid.ttl")
+    let shapes = try fixtureData("hasValueConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("hasValueConstraintsValid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(result.conforms)
@@ -241,8 +241,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorReportsHasValueViolation() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("hasvalue_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("hasvalue_constraints_invalid.ttl")
+    let shapes = try fixtureData("hasValueConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("hasValueConstraintsInvalid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)
@@ -254,8 +254,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorConformsForInConstraintFixture() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("in_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("in_constraints_valid.ttl")
+    let shapes = try fixtureData("inConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("inConstraintsValid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(result.conforms)
@@ -264,8 +264,8 @@ private func fixtureData(_ name: String) throws -> Data {
 
 @Test func coreValidatorReportsInConstraintViolation() async throws {
     let validator = SHACLCoreValidator()
-    let shapes = try fixtureData("in_constraints_shapes.ttl")
-    let dataGraph = try fixtureData("in_constraints_invalid.ttl")
+    let shapes = try fixtureData("inConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("inConstraintsInvalid.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)
