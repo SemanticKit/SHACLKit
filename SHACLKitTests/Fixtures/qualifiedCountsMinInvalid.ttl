@@ -1,0 +1,3 @@
+@prefix ex: <http://example.com/> .
+
+ex:team1 ex:member ex:a , ex:b .

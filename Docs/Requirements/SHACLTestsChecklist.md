@@ -34,6 +34,7 @@ Legend:
   - Covered subset fixtures for `and`, `or`, `not`, and `xone` with direct shape-IRI object syntax.
 - [~] `TEST-SHACL-025` Shape-reference and qualified shape tests.
   - Covered subset `sh:node` fixture.
+  - Covered subset qualified value shape count fixtures.
 
 ## Phase 2: Node Expressions and Rules
 

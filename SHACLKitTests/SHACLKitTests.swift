@@ -335,6 +335,40 @@ private func fixtureData(_ name: String) throws -> Data {
     #expect(violation.message.contains("minCount violation"))
 }
 
+@Test func coreValidatorConformsForQualifiedCountFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("qualifiedCountsShapes.ttl")
+    let dataGraph = try fixtureData("qualifiedCountsValid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsQualifiedMinCountViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("qualifiedCountsShapes.ttl")
+    let dataGraph = try fixtureData("qualifiedCountsMinInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#qualifiedMinCount")
+    #expect(violation.message.contains("qualifiedMinCount violation"))
+}
+
+@Test func coreValidatorReportsQualifiedMaxCountViolation() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("qualifiedCountsShapes.ttl")
+    let dataGraph = try fixtureData("qualifiedCountsMaxInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#qualifiedMaxCount")
+    #expect(violation.message.contains("qualifiedMaxCount violation"))
+}
+
 @Test func coreValidatorKeepsConformanceTrueForWarningOnlyResults() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("severityWarningShapes.ttl")

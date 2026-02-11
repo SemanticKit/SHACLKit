@@ -49,6 +49,9 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let orShapeIRIs: [String]
     public let xoneShapeIRIs: [String]
     public let notShapeIRI: String?
+    public let qualifiedValueShapeIRI: String?
+    public let qualifiedMinCount: Int?
+    public let qualifiedMaxCount: Int?
     public let minCount: Int?
     public let maxCount: Int?
 
@@ -74,6 +77,9 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         orShapeIRIs: [String] = [],
         xoneShapeIRIs: [String] = [],
         notShapeIRI: String? = nil,
+        qualifiedValueShapeIRI: String? = nil,
+        qualifiedMinCount: Int? = nil,
+        qualifiedMaxCount: Int? = nil,
         minCount: Int? = nil,
         maxCount: Int? = nil
     ) {
@@ -98,6 +104,9 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.orShapeIRIs = orShapeIRIs
         self.xoneShapeIRIs = xoneShapeIRIs
         self.notShapeIRI = notShapeIRI
+        self.qualifiedValueShapeIRI = qualifiedValueShapeIRI
+        self.qualifiedMinCount = qualifiedMinCount
+        self.qualifiedMaxCount = qualifiedMaxCount
         self.minCount = minCount
         self.maxCount = maxCount
     }
@@ -268,6 +277,9 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var orShapeIRIs: Set<String> = []
             var xoneShapeIRIs: Set<String> = []
             var notShapeIRI: String?
+            var qualifiedValueShapeIRI: String?
+            var qualifiedMinCount: Int?
+            var qualifiedMaxCount: Int?
             var minCount: Int?
             var maxCount: Int?
         }
@@ -343,6 +355,18 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.xoneShapeIRIs.insert(object)
             } else if predicate == SHACLIRIs.not {
                 current.notShapeIRI = object
+            } else if predicate == SHACLIRIs.qualifiedValueShape {
+                current.qualifiedValueShapeIRI = object
+            } else if predicate == SHACLIRIs.qualifiedMinCount {
+                guard let count = Int(object) else {
+                    throw SHACLError.invalidIntegerLiteral(object)
+                }
+                current.qualifiedMinCount = count
+            } else if predicate == SHACLIRIs.qualifiedMaxCount {
+                guard let count = Int(object) else {
+                    throw SHACLError.invalidIntegerLiteral(object)
+                }
+                current.qualifiedMaxCount = count
             } else if predicate == SHACLIRIs.minCount {
                 guard let count = Int(object) else {
                     throw SHACLError.invalidIntegerLiteral(object)
@@ -384,6 +408,9 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 orShapeIRIs: partial.orShapeIRIs.sorted(),
                 xoneShapeIRIs: partial.xoneShapeIRIs.sorted(),
                 notShapeIRI: partial.notShapeIRI,
+                qualifiedValueShapeIRI: partial.qualifiedValueShapeIRI,
+                qualifiedMinCount: partial.qualifiedMinCount,
+                qualifiedMaxCount: partial.qualifiedMaxCount,
                 minCount: partial.minCount,
                 maxCount: partial.maxCount
             )
@@ -600,7 +627,7 @@ public struct SHACLCoreValidator: SHACLValidator {
             }
 
             let referencedNodeShapeIRIs =
-                [shape.nodeShapeReferenceIRI, shape.notShapeIRI].compactMap { $0 }
+                [shape.nodeShapeReferenceIRI, shape.notShapeIRI, shape.qualifiedValueShapeIRI].compactMap { $0 }
                 + shape.andShapeIRIs
                 + shape.orShapeIRIs
                 + shape.xoneShapeIRIs
@@ -1011,6 +1038,47 @@ public struct SHACLCoreValidator: SHACLValidator {
                     }
                 }
             }
+
+            if let qualifiedShapeIRI = propertyShape.qualifiedValueShapeIRI {
+                let qualifiedMatchCount = values.reduce(into: 0) { count, valueNode in
+                    if conforms(
+                        valueNode: valueNode,
+                        toNodeShapeIRI: qualifiedShapeIRI,
+                        dataGraph: dataGraph,
+                        shapesByIRI: shapesByIRI,
+                        depth: depth,
+                        visited: &visited
+                    ) {
+                        count += 1
+                    }
+                }
+
+                if let qualifiedMin = propertyShape.qualifiedMinCount, qualifiedMatchCount < qualifiedMin {
+                    violations.append(
+                        SHACLViolation(
+                            severity: severity,
+                            shapeIRI: propertyShape.shapeIRI,
+                            focusNode: focusNode,
+                            pathIRI: pathIRI,
+                            sourceConstraintIRI: SHACLIRIs.qualifiedMinCount,
+                            message: "qualifiedMinCount violation: expected >= \(qualifiedMin), got \(qualifiedMatchCount)"
+                        )
+                    )
+                }
+
+                if let qualifiedMax = propertyShape.qualifiedMaxCount, qualifiedMatchCount > qualifiedMax {
+                    violations.append(
+                        SHACLViolation(
+                            severity: severity,
+                            shapeIRI: propertyShape.shapeIRI,
+                            focusNode: focusNode,
+                            pathIRI: pathIRI,
+                            sourceConstraintIRI: SHACLIRIs.qualifiedMaxCount,
+                            message: "qualifiedMaxCount violation: expected <= \(qualifiedMax), got \(qualifiedMatchCount)"
+                        )
+                    )
+                }
+            }
         }
 
         return violations
@@ -1137,6 +1205,9 @@ private enum SHACLIRIs {
     static let or = "http://www.w3.org/ns/shacl#or"
     static let not = "http://www.w3.org/ns/shacl#not"
     static let xone = "http://www.w3.org/ns/shacl#xone"
+    static let qualifiedValueShape = "http://www.w3.org/ns/shacl#qualifiedValueShape"
+    static let qualifiedMinCount = "http://www.w3.org/ns/shacl#qualifiedMinCount"
+    static let qualifiedMaxCount = "http://www.w3.org/ns/shacl#qualifiedMaxCount"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"

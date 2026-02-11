@@ -39,6 +39,7 @@ Legend:
   - Implemented subset for property-shape values using direct shape-IRI object syntax.
 - [~] `REQ-SHACL-011` Constraint components: shape references (`sh:node`, `sh:property`, qualified value shape family).
   - Implemented subset `sh:node` evaluation for referenced node shapes.
+  - Implemented subset qualified value shape counts (`sh:qualifiedValueShape`, `sh:qualifiedMinCount`, `sh:qualifiedMaxCount`).
 - [x] `REQ-SHACL-012` Enforce recursion/termination safeguards for cyclic shapes.
 - [x] `REQ-SHACL-013` Emit stable machine-readable diagnostics (focus node, path, value, source shape, source constraint).
   - Implemented: `focusNode`, `pathIRI`, `valueNode`, `shapeIRI` (source shape), and `sourceConstraintIRI` on validation results.
