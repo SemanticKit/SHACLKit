@@ -28,6 +28,7 @@ Current local families:
   - Includes nested property-shape `sh:sparql` constraint fixtures.
   - Includes `sh:targetNode` inline `sh:select` target fixtures.
   - Includes directly targeted property-shape SPARQL target fixtures.
+  - Includes directly targeted property-shape `sh:targetNode` inline `sh:select` fixtures.
 - Optional staged W3C conformance corpus sync target (`W3CDataShapes*` from `Knowledge/Inbox/Fixtures` into `SHACLKitTests/Fixtures/W3CDataShapes`)
   - Includes preflight parser/loader coverage across W3C SHACL 1.2 `node-expr/shnex/*.ttl` fixtures.
   - Includes subset `sht:EvalNodeExpr` manifest-result verification for W3C SHACL 1.2 `node-expr/shnex` fixtures.

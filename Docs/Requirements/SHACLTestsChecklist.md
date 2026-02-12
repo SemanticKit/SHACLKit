@@ -102,6 +102,7 @@ Legend:
   - Added first-slice fixture/tests for `sh:target` + `sh:select` focus-node resolution through an injected executor boundary.
   - Added first-slice fixture/tests for `sh:targetNode` + inline `sh:select` focus-node resolution through the same executor boundary.
   - Added first-slice fixture/tests for directly targeted property-shape SPARQL targets.
+  - Added first-slice fixture/tests for directly targeted property-shape `sh:targetNode` inline `sh:select` targets.
 - [~] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.
   - Added default-deny executor behavior test coverage proving SPARQL evaluation requires explicit sandboxed executor injection for both `sh:select` and `sh:ask`.
   - Added guarded-executor policy coverage for keyword blocking, query-length blocking, and allowed-query pass-through behavior.
