@@ -1,4 +1,4 @@
-# case_id	data_graph	shapes_graph	expected_conforms	notes
+# case_id	data_graph	shapes_graph	expected_conforms	notes	conformance_disallows
 core-node-datatype-001	data-shapes-test-suite/tests/core/node/datatype-001.ttl	data-shapes-test-suite/tests/core/node/datatype-001.ttl	false	Datatype constraint over node targets.
 core-node-datatype-002	data-shapes-test-suite/tests/core/node/datatype-002.ttl	data-shapes-test-suite/tests/core/node/datatype-002.ttl	false	Datatype constraint with rdf:langString and mixed literal targets.
 core-node-nodeKind-001	data-shapes-test-suite/tests/core/node/nodeKind-001.ttl	data-shapes-test-suite/tests/core/node/nodeKind-001.ttl	false	Node kind checks for IRI-only shape.
@@ -97,5 +97,7 @@ core-path-unused-001	data-shapes-test-suite/tests/core/path/path-unused-001-data
 core-path-strange-001	data-shapes-test-suite/tests/core/path/path-strange-001.ttl	data-shapes-test-suite/tests/core/path/path-strange-001.ttl	false	Strange path node with extra predicates resolves to sequence path.
 core-path-strange-002	data-shapes-test-suite/tests/core/path/path-strange-002.ttl	data-shapes-test-suite/tests/core/path/path-strange-002.ttl	false	Strange path node with mixed valid/invalid metadata resolves to sequence path.
 core-validation-reports-shared	data-shapes-test-suite/tests/core/validation-reports/shared-data.ttl	data-shapes-test-suite/tests/core/validation-reports/shared-shapes.ttl	false	Shared nested property-shape reporting case.
+core-validation-reports-conformance-disallows-001	shacl12-test-suite/tests/core/validation-reports/conformance-disallows-001.ttl	shacl12-test-suite/tests/core/validation-reports/conformance-disallows-001.ttl	true	Validation report conformance policy allows warnings when only violations are disallowed.	violation
+core-validation-reports-conformance-disallows-002	shacl12-test-suite/tests/core/validation-reports/conformance-disallows-002.ttl	shacl12-test-suite/tests/core/validation-reports/conformance-disallows-002.ttl	false	Validation report conformance policy defaults to disallowing warning severity results.
 core-complex-personexample	data-shapes-test-suite/tests/core/complex/personexample.ttl	data-shapes-test-suite/tests/core/complex/personexample.ttl	false	Complex person example with closed, pattern, and class constraints.
 core-complex-shacl-shacl	data-shapes-test-suite/tests/core/complex/shacl-shacl-data-shapes.ttl	data-shapes-test-suite/tests/core/complex/shacl-shacl-data-shapes.ttl	true	SHACL-for-SHACL frozen dogfood self-validation scenario.

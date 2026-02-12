@@ -16,6 +16,7 @@ Current local families:
 - Shape references (`node`, qualified value shape counts)
 - Node expressions (`union`, `intersection`, `shnex:nodes`, `shnex:exists`, `shnex:count`, `shnex:var`, `shnex:distinct`, `shnex:instancesOf`, `shnex:nodesMatching`, `shnex:matchAll`, `shnex:filterShape`, `shnex:concat`, `shnex:remove`, `shnex:flatMap`, `shnex:limit`, `shnex:offset`, `shnex:findFirst`, `shnex:orderBy`, `shnex:desc`, `shnex:min`, `shnex:max`, `shnex:sum`, `shnex:if`, `shnex:pathValues`)
 - Severity/report diagnostics
+  - Includes W3C validation-report `conformanceDisallows` policy scenarios.
 - Invalid shapes graph diagnostics
 - Regression and smoke scenarios
 - Rules (`sh:TripleRule`) first-slice execution scenarios

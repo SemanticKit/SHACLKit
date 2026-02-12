@@ -114,6 +114,7 @@ private struct W3CCuratedConformanceCase {
     let dataGraphRelativePath: String
     let shapesGraphRelativePath: String
     let expectedConforms: Bool
+    let conformanceDisallowedSeverities: Set<SHACLSeverity>?
 }
 
 private func loadW3CCuratedConformanceCases() throws -> [W3CCuratedConformanceCase] {
@@ -151,12 +152,45 @@ private func loadW3CCuratedConformanceCases() throws -> [W3CCuratedConformanceCa
             )
         }
 
+        var conformanceDisallowedSeverities: Set<SHACLSeverity>? = nil
+        if fields.count >= 6 {
+            let severityField = fields[5]
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            if !severityField.isEmpty {
+                let mapped = severityField
+                    .split(separator: ",")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .compactMap { token -> SHACLSeverity? in
+                        switch token {
+                        case "violation":
+                            return .violation
+                        case "warning":
+                            return .warning
+                        case "info":
+                            return .info
+                        default:
+                            return nil
+                        }
+                    }
+                if mapped.count != severityField.split(separator: ",").count {
+                    throw NSError(
+                        domain: "SHACLKitTests",
+                        code: 4,
+                        userInfo: [NSLocalizedDescriptionKey: "Invalid conformance severities in row: \(line)"]
+                    )
+                }
+                conformanceDisallowedSeverities = Set(mapped)
+            }
+        }
+
         cases.append(
             W3CCuratedConformanceCase(
                 caseID: fields[0],
                 dataGraphRelativePath: fields[1],
                 shapesGraphRelativePath: fields[2],
-                expectedConforms: expectedField == "true"
+                expectedConforms: expectedField == "true",
+                conformanceDisallowedSeverities: conformanceDisallowedSeverities
             )
         )
     }
@@ -415,11 +449,14 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
 }
 
 @Test func w3cCuratedConformanceSubsetMatchesExpectations() async throws {
-    let validator = SHACLCoreValidator()
     let conformanceCases = try loadW3CCuratedConformanceCases()
     #expect(!conformanceCases.isEmpty)
 
     for conformanceCase in conformanceCases {
+        let validator = SHACLCoreValidator(
+            conformanceDisallowedSeverities: conformanceCase.conformanceDisallowedSeverities
+                ?? [.violation, .warning, .info]
+        )
         let dataGraphPayload = try fixtureData("W3CDataShapes/\(conformanceCase.dataGraphRelativePath)")
         let shapesGraphPayload = try fixtureData("W3CDataShapes/\(conformanceCase.shapesGraphRelativePath)")
 
@@ -2539,6 +2576,17 @@ private struct TestShapesSource {
     #expect(first == second)
     #expect(!first.conforms)
     let warning = try #require(first.violations.first)
+    #expect(warning.severity == .warning)
+}
+
+@Test func coreValidatorAllowsWarningOnlyResultsWhenConfigured() async throws {
+    let validator = SHACLCoreValidator(conformanceDisallowedSeverities: [.violation])
+    let shapes = try fixtureData("severityWarningShapes.ttl")
+    let dataGraph = try fixtureData("severityWarningData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    let warning = try #require(result.violations.first)
     #expect(warning.severity == .warning)
 }
 

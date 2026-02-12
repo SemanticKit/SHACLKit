@@ -2640,6 +2640,7 @@ public struct SHACLCoreValidator: SHACLValidator {
     private let dataLoader: any SHACLDataGraphLoading
     private let focusResolver: SHACLFocusNodeResolver
     private let sparqlExecutor: any SHACLSPARQLExecutor
+    private let conformanceDisallowedSeverities: Set<SHACLSeverity>
     private let maxReferenceDepth = 16
     private let maxRuleIterations = 16
 
@@ -2647,12 +2648,14 @@ public struct SHACLCoreValidator: SHACLValidator {
         shapesLoader: any SHACLShapesGraphLoading = SHACLShapesGraphLoader(),
         dataLoader: any SHACLDataGraphLoading = SHACLDataGraphLoader(),
         focusResolver: SHACLFocusNodeResolver = SHACLFocusNodeResolver(),
-        sparqlExecutor: any SHACLSPARQLExecutor = SHACLDeniedSPARQLExecutor()
+        sparqlExecutor: any SHACLSPARQLExecutor = SHACLDeniedSPARQLExecutor(),
+        conformanceDisallowedSeverities: Set<SHACLSeverity> = [.violation, .warning, .info]
     ) {
         self.shapesLoader = shapesLoader
         self.dataLoader = dataLoader
         self.focusResolver = focusResolver
         self.sparqlExecutor = sparqlExecutor
+        self.conformanceDisallowedSeverities = conformanceDisallowedSeverities
     }
 
     public func validate(dataGraph: Data, shapesGraph: Data) throws -> SHACLValidationResult {
@@ -2757,6 +2760,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         let violationCount = sortedViolations.filter { $0.severity == .violation }.count
+        let disallowedResultCount = sortedViolations.filter { conformanceDisallowedSeverities.contains($0.severity) }.count
 
         if sortedViolations.isEmpty {
             return SHACLValidationResult(
@@ -2767,8 +2771,8 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         return SHACLValidationResult(
-            conforms: false,
-            message: "SHACL Core subset validation produced \(sortedViolations.count) result(s), including \(violationCount) violation(s).",
+            conforms: disallowedResultCount == 0,
+            message: "SHACL Core subset validation produced \(sortedViolations.count) result(s), including \(violationCount) violation(s) and \(disallowedResultCount) disallowed severities.",
             violations: sortedViolations
         )
     }

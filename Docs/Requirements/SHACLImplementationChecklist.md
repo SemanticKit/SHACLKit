@@ -30,6 +30,7 @@ Legend:
   - Implemented SHACL Core property path evaluation subset (`predicate`, `inverse`, `sequence`, `alternative`, `zeroOrMore`, `oneOrMore`, `zeroOrOne`).
 - [x] `REQ-SHACL-004` Support SHACL severity levels and result reporting model.
 - [x] `REQ-SHACL-005` Generate deterministic validation reports (conforms + detailed results).
+  - Added configurable conformance severity policy (`conformanceDisallowedSeverities`) to support `sh:conforms` behavior across warning/info-inclusive and violation-only report modes.
 - [x] `REQ-SHACL-006` Constraint components: cardinality (`sh:minCount`, `sh:maxCount`).
 - [x] `REQ-SHACL-007` Constraint components: value type checks (`sh:class`, `sh:datatype`, `sh:nodeKind`).
   - Implemented `sh:class` checks for property values.
