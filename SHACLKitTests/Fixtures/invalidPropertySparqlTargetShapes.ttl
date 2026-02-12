@@ -1,0 +1,10 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:DirectNameShape a sh:PropertyShape ;
+  sh:targetClass ex:Person ;
+  sh:path ex:name ;
+  sh:target ex:BadTarget .
+
+ex:BadTarget
+  sh:ask "ASK WHERE { ?this ?p ?o }" .

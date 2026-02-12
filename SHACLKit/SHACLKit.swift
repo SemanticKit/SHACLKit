@@ -2994,6 +2994,16 @@ public struct SHACLCoreValidator: SHACLValidator {
                     throw SHACLError.invalidShapesGraph("SPARQL constraint \(sparqlIRI) is missing sh:select/sh:ask")
                 }
             }
+            for sparqlTargetIRI in shape.sparqlTargetIRIs {
+                guard let sparql = sparqlByIRI[sparqlTargetIRI] else {
+                    throw SHACLError.invalidShapesGraph(
+                        "Property shape \(shape.shapeIRI) references missing SPARQL target \(sparqlTargetIRI)"
+                    )
+                }
+                if sparql.selectQuery == nil {
+                    throw SHACLError.invalidShapesGraph("SPARQL target \(sparqlTargetIRI) must define sh:select")
+                }
+            }
         }
     }
 

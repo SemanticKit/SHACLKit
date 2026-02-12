@@ -2385,6 +2385,16 @@ private struct TestShapesSource {
     }
 }
 
+@Test func coreValidatorThrowsForPropertyShapeSPARQLTargetMissingSelect() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("invalidPropertySparqlTargetShapes.ttl")
+    let dataGraph = try fixtureData("invalidShapesData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorConformsForRuleEvaluationFixture() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("ruleEvaluationShapes.ttl")
