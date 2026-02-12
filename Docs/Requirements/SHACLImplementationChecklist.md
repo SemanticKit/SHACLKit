@@ -87,6 +87,7 @@ Legend:
   - Added first-slice parsing and execution hooks for `sh:sparql` constraints (`sh:select`/`sh:ask`) through an explicit executor boundary.
   - Added first-slice execution for property-shape `sh:sparql` constraints against resolved property values.
   - Added execution for directly targeted property-shape `sh:sparql` constraints.
+  - Added recursive execution for nested property-shape `sh:sparql` constraints.
 - [~] `REQ-SHACL-301` Implement SHACL SPARQL targets.
   - Added first-slice parsing and focus-node resolution hooks for `sh:target` with `sh:select` through an explicit executor boundary.
   - Added first-slice support for `sh:targetNode` values backed by inline `sh:select` resources.

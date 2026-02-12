@@ -2615,6 +2615,27 @@ private struct TestShapesSource {
     #expect(violation.sourceConstraintIRI == "http://example.com/NonEmptyNameConstraint")
 }
 
+@Test func coreValidatorExecutesNestedPropertyShapeSPARQLConstraintThroughExecutorBoundary() async throws {
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "SELECT ?this WHERE { FILTER(strlen(str(?this)) = 0) }|\"\"": ["\"\""],
+            "SELECT ?this WHERE { FILTER(strlen(str(?this)) = 0) }|\"94107\"": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlNestedPropertyConstraintShapes.ttl")
+    let dataGraph = try fixtureData("sparqlNestedPropertyConstraintData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.shapeIRI == "http://example.com/ZipShape")
+    #expect(violation.focusNode == "http://example.com/alice")
+    #expect(violation.pathIRI == "http://example.com/zip")
+    #expect(violation.sourceConstraintIRI == "http://example.com/ZipConstraint")
+}
+
 @Test func coreValidatorExecutesDirectPropertyShapeSPARQLTargetThroughExecutorBoundary() async throws {
     let executor = TestSPARQLExecutor(
         selectResults: [

@@ -1,0 +1,11 @@
+@prefix ex: <http://example.com/> .
+
+ex:alice a ex:Person ;
+  ex:address ex:addr1 .
+
+ex:addr1 ex:zip "" .
+
+ex:bob a ex:Person ;
+  ex:address ex:addr2 .
+
+ex:addr2 ex:zip "94107" .

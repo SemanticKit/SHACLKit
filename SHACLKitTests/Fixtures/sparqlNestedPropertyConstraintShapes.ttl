@@ -1,0 +1,17 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:PersonShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:property ex:AddressShape .
+
+ex:AddressShape a sh:PropertyShape ;
+  sh:path ex:address ;
+  sh:property ex:ZipShape .
+
+ex:ZipShape a sh:PropertyShape ;
+  sh:path ex:zip ;
+  sh:sparql ex:ZipConstraint .
+
+ex:ZipConstraint
+  sh:select "SELECT ?this WHERE { FILTER(strlen(str(?this)) = 0) }" .
