@@ -70,6 +70,7 @@ Legend:
 - [~] `REQ-SHACL-201` Integrate node expression evaluation into constraints/targets where applicable.
   - Integrated subset into property-shape evaluation via `sh:expression` as a value source.
   - Added shape-graph validation for missing/unknown node-expression references.
+  - Added direct literal acceptance for decimal `sh:expression` terms during shape-graph reference validation.
   - Added `sh:expression` constraint evaluation for node shapes and path-backed property shapes.
   - Added target resolution support for `sh:targetNode` values that reference node-expression definitions.
   - Added first-slice `sh:nodeByExpression` support for node-shape and property-shape conformance checks.

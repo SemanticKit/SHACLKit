@@ -85,6 +85,7 @@ Legend:
   - Added invalid-shapes diagnostic coverage for unknown node-expression references.
   - Added fixtures/tests for `sh:expression` constraints on node shapes and path-backed property shapes.
   - Added fixtures/tests for first-slice `sh:nodeByExpression` behavior on node and property shapes.
+  - Added fixture/test coverage for decimal literal `sh:expression` terms to ensure shape-graph validation treats them as direct literals.
 - [~] `TEST-SHACL-210` Rule evaluation fixtures (order, repeatability, termination).
   - Added `sh:TripleRule` fixtures and tests covering rule parsing, execution, repeatability, and self-loop termination behavior.
   - Added `sh:order` parsing/execution ordering coverage for triple rules.
