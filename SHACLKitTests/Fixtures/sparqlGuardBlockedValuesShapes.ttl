@@ -1,0 +1,9 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:GuardedValuesShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:sparql ex:UnsafeValuesConstraint .
+
+ex:UnsafeValuesConstraint
+  sh:select "SELECT ?this WHERE { VALUES ?this { ex:alice } ?this ex:name ?name }" .

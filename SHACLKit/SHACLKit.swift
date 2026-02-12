@@ -407,7 +407,7 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
 
     public init(
         wrapping wrappedExecutor: any SHACLSPARQLExecutor,
-        disallowedKeywords: [String] = ["SERVICE", "LOAD", "CLEAR", "DROP", "CREATE", "ADD", "MOVE", "COPY", "INSERT", "DELETE", "WITH"],
+        disallowedKeywords: [String] = ["SERVICE", "MINUS", "VALUES", "LOAD", "CLEAR", "DROP", "CREATE", "ADD", "MOVE", "COPY", "INSERT", "DELETE", "WITH"],
         maxQueryLength: Int? = nil
     ) {
         self.wrappedExecutor = wrappedExecutor
