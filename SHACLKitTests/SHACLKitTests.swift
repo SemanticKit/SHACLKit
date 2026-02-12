@@ -2516,6 +2516,24 @@ private struct TestShapesSource {
     #expect(violation.sourceConstraintIRI == "http://example.com/NameConstraint")
 }
 
+@Test func coreValidatorUsesSPARQLMessageForNodeShapeConstraintViolation() async throws {
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/alice": ["http://example.com/alice"],
+            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/bob": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlConstraintMessageShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.message == "Name must not be empty")
+}
+
 @Test func coreValidatorExecutesSPARQLAskConstraintThroughExecutorBoundary() async throws {
     let executor = TestSPARQLExecutor(
         askResults: [
@@ -2592,6 +2610,24 @@ private struct TestShapesSource {
     #expect(violation.focusNode == "http://example.com/alice")
     #expect(violation.pathIRI == "http://example.com/name")
     #expect(violation.sourceConstraintIRI == "http://example.com/NonEmptyNameConstraint")
+}
+
+@Test func coreValidatorUsesSPARQLMessageForPropertyShapeConstraintViolation() async throws {
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "SELECT ?this WHERE { FILTER(strlen(str(?this)) = 0) }|\"\"": ["\"\""],
+            "SELECT ?this WHERE { FILTER(strlen(str(?this)) = 0) }|\"Bob\"": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlPropertyConstraintMessageShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.message == "Property name must not be empty")
 }
 
 @Test func coreValidatorExecutesDirectPropertyShapeSPARQLConstraintThroughExecutorBoundary() async throws {

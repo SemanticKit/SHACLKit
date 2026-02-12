@@ -264,11 +264,18 @@ public struct SHACLSPARQLDefinition: Sendable, Hashable {
     public let sparqlIRI: String
     public let selectQuery: String?
     public let askQuery: String?
+    public let message: String?
 
-    public init(sparqlIRI: String, selectQuery: String? = nil, askQuery: String? = nil) {
+    public init(
+        sparqlIRI: String,
+        selectQuery: String? = nil,
+        askQuery: String? = nil,
+        message: String? = nil
+    ) {
         self.sparqlIRI = sparqlIRI
         self.selectQuery = selectQuery
         self.askQuery = askQuery
+        self.message = message
     }
 }
 
@@ -609,6 +616,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         struct PartialSPARQL {
             var selectQuery: String?
             var askQuery: String?
+            var message: String?
         }
 
         var shapes: [String: PartialShape] = [:]
@@ -776,6 +784,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             } else if predicate == SHACLIRIs.ask {
                 var sparql = sparqlDefinitions[subject] ?? PartialSPARQL()
                 sparql.askQuery = parsedLiteralLexicalForm(object) ?? object
+                sparqlDefinitions[subject] = sparql
+            } else if predicate == SHACLIRIs.message {
+                var sparql = sparqlDefinitions[subject] ?? PartialSPARQL()
+                sparql.message = parsedLiteralLexicalForm(object) ?? object
                 sparqlDefinitions[subject] = sparql
             }
 
@@ -1282,7 +1294,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             return SHACLSPARQLDefinition(
                 sparqlIRI: sparqlIRI,
                 selectQuery: partial.selectQuery,
-                askQuery: partial.askQuery
+                askQuery: partial.askQuery,
+                message: partial.message
             )
         }
 
@@ -3120,7 +3133,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                                         pathIRI: nil,
                                         valueNode: focusNode,
                                         sourceConstraintIRI: sparqlConstraintIRI,
-                                        message: "SPARQL ASK constraint violation for focus node \(focusNode)"
+                                        message: sparql.message ?? "SPARQL ASK constraint violation for focus node \(focusNode)"
                                     )
                                 )
                             }
@@ -3142,7 +3155,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                                         pathIRI: nil,
                                         valueNode: valueNode,
                                         sourceConstraintIRI: sparqlConstraintIRI,
-                                        message: "SPARQL SELECT constraint violation produced value \(valueNode)"
+                                        message: sparql.message ?? "SPARQL SELECT constraint violation produced value \(valueNode)"
                                     )
                                 )
                             }
@@ -3250,7 +3263,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                                 pathIRI: propertyShape.pathIRI,
                                 valueNode: propertyValue,
                                 sourceConstraintIRI: sparqlConstraintIRI,
-                                message: "SPARQL ASK constraint violation for property value \(propertyValue)"
+                                message: sparql.message ?? "SPARQL ASK constraint violation for property value \(propertyValue)"
                             )
                         )
                     }
@@ -3272,7 +3285,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                                 pathIRI: propertyShape.pathIRI,
                                 valueNode: valueNode,
                                 sourceConstraintIRI: sparqlConstraintIRI,
-                                message: "SPARQL SELECT constraint violation produced value \(valueNode) for property value \(propertyValue)"
+                                message: sparql.message ?? "SPARQL SELECT constraint violation produced value \(valueNode) for property value \(propertyValue)"
                             )
                         )
                     }
@@ -5221,6 +5234,7 @@ private enum SHACLIRIs {
     static let sparql = "http://www.w3.org/ns/shacl#sparql"
     static let select = "http://www.w3.org/ns/shacl#select"
     static let ask = "http://www.w3.org/ns/shacl#ask"
+    static let message = "http://www.w3.org/ns/shacl#message"
     static let prefixes = "http://www.w3.org/ns/shacl#prefixes"
     static let target = "http://www.w3.org/ns/shacl#target"
     static let expression = "http://www.w3.org/ns/shacl#expression"
