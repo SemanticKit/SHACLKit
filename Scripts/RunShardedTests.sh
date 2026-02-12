@@ -13,6 +13,25 @@ fi
 BUILD_KEY_BASE="${CONTAINERBUILDKEY:-shard}"
 LOG_DIR="${WORKSPACE_ROOT}/Frameworks/SHACLKit/.build/test-shards"
 mkdir -p "${LOG_DIR}"
+MODE="auto"
+
+for arg in "$@"; do
+  case "${arg}" in
+    --parallel)
+      MODE="parallel"
+      ;;
+    --sequential)
+      MODE="sequential"
+      ;;
+    --auto)
+      MODE="auto"
+      ;;
+    *)
+      echo "Usage: ${0} [--auto|--parallel|--sequential]" >&2
+      exit 1
+      ;;
+  esac
+done
 
 run_shard() {
   local name="$1"
@@ -57,6 +76,21 @@ run_sequential() {
   run_shard expr "${BUILD_KEY_BASE}-expr" nodeExpressionEvaluator shapesLoaderParses focusNodeResolver
   run_shard w3c "${BUILD_KEY_BASE}-w3c" w3c
 }
+
+if [[ "${MODE}" == "parallel" ]]; then
+  if run_parallel; then
+    echo "[sharded] all shards passed in parallel. Logs: ${LOG_DIR}"
+    exit 0
+  fi
+  echo "[sharded] parallel mode failed. Logs: ${LOG_DIR}" >&2
+  exit 1
+fi
+
+if [[ "${MODE}" == "sequential" ]]; then
+  run_sequential
+  echo "[sharded] all shards passed sequentially. Logs: ${LOG_DIR}"
+  exit 0
+fi
 
 if run_parallel; then
   echo "[sharded] all shards passed in parallel. Logs: ${LOG_DIR}"

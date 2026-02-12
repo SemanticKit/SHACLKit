@@ -18,6 +18,8 @@ for arg in "$@"; do
       ;;
     *)
       echo "Usage: ${0} [--full|--sharded]" >&2
+      echo "  --sharded: fast gate + sharded validation (with shard-level fallback)" >&2
+      echo "  --full: fast gate + full legacy suite" >&2
       exit 1
       ;;
   esac
