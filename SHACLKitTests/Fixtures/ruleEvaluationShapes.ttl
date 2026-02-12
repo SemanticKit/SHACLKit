@@ -11,12 +11,14 @@ ex:BadgeRequiredShape a sh:PropertyShape ;
   sh:hasValue "issued" .
 
 ex:PromoteRule a sh:TripleRule ;
+  sh:order 1 ;
   sh:condition ex:AdultConditionShape ;
   sh:subject sh:this ;
   sh:predicate ex:status ;
   sh:object "active" .
 
 ex:IssueBadgeRule a sh:TripleRule ;
+  sh:order 2 ;
   sh:condition ex:ActiveConditionShape ;
   sh:subject sh:this ;
   sh:predicate ex:badge ;

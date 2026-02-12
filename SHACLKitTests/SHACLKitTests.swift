@@ -327,10 +327,13 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(graph.tripleRules.count == 2)
     let byIRI = Dictionary(uniqueKeysWithValues: graph.tripleRules.map { ($0.ruleIRI, $0) })
     let promoteRule = try #require(byIRI["http://example.com/PromoteRule"])
+    let issueBadgeRule = try #require(byIRI["http://example.com/IssueBadgeRule"])
     #expect(promoteRule.subjectTerm == "http://www.w3.org/ns/shacl#this")
     #expect(promoteRule.predicateTerm == "http://example.com/status")
     #expect(promoteRule.objectTerm == "\"active\"")
     #expect(promoteRule.conditionShapeIRIs == ["http://example.com/AdultConditionShape"])
+    #expect(promoteRule.ruleOrder == 1)
+    #expect(issueBadgeRule.ruleOrder == 2)
 }
 
 @Test func shapesLoaderParsesSPARQLDefinitions() async throws {
@@ -2426,6 +2429,27 @@ private struct TestShapesSource {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("ruleMultiConditionShapes.ttl")
     let dataGraph = try fixtureData("ruleMultiConditionInvalidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
+@Test func coreValidatorRuleEvaluationSupportsPropertyShapeCondition() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("rulePropertyConditionShapes.ttl")
+    let dataGraph = try fixtureData("rulePropertyConditionValidData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorRuleEvaluationSkipsPropertyShapeConditionWhenNotSatisfied() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("rulePropertyConditionShapes.ttl")
+    let dataGraph = try fixtureData("rulePropertyConditionInvalidData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)

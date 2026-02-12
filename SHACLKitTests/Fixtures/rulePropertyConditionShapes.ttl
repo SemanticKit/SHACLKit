@@ -1,0 +1,21 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:PersonShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:rule ex:GrantVipBadgeRule ;
+  sh:property ex:BadgeShape .
+
+ex:BadgeShape a sh:PropertyShape ;
+  sh:path ex:badge ;
+  sh:hasValue ex:vip .
+
+ex:GrantVipBadgeRule a sh:TripleRule ;
+  sh:condition ex:PremiumCondition ;
+  sh:subject sh:this ;
+  sh:predicate ex:badge ;
+  sh:object ex:vip .
+
+ex:PremiumCondition a sh:PropertyShape ;
+  sh:path ex:spend ;
+  sh:minInclusive 100 .
