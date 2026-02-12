@@ -89,10 +89,15 @@ core-targets-shacl12-targetSubjectsOf-002	shacl12-test-suite/tests/core/targets/
 core-targets-shacl12-targetObjectsOf-001	shacl12-test-suite/tests/core/targets/targetObjectsOf-001.ttl	shacl12-test-suite/tests/core/targets/targetObjectsOf-001.ttl	false	SHACL 1.2 targetObjectsOf selector checks.
 core-targets-shacl12-multipleTargets-001	shacl12-test-suite/tests/core/targets/multipleTargets-001.ttl	shacl12-test-suite/tests/core/targets/multipleTargets-001.ttl	false	SHACL 1.2 combined target selectors checks.
 core-misc-message-001	data-shapes-test-suite/tests/core/misc/message-001.ttl	data-shapes-test-suite/tests/core/misc/message-001.ttl	false	Custom message metadata with non-conforming datatype check.
+core-misc-message-002	shacl12-test-suite/tests/core/misc/message-002.ttl	shacl12-test-suite/tests/core/misc/message-002.ttl	false	SHACL 1.2 message metadata propagation checks.
 core-misc-severity-001	data-shapes-test-suite/tests/core/misc/severity-001.ttl	data-shapes-test-suite/tests/core/misc/severity-001.ttl	false	Warning severity propagation on datatype violation.
 core-misc-severity-002	data-shapes-test-suite/tests/core/misc/severity-002.ttl	data-shapes-test-suite/tests/core/misc/severity-002.ttl	false	Mixed severity propagation between node and property constraints.
+core-misc-severity-003	shacl12-test-suite/tests/core/misc/severity-003.ttl	shacl12-test-suite/tests/core/misc/severity-003.ttl	false	SHACL 1.2 severity propagation checks (variant 3).
+core-misc-severity-004	shacl12-test-suite/tests/core/misc/severity-004.ttl	shacl12-test-suite/tests/core/misc/severity-004.ttl	false	SHACL 1.2 severity propagation checks (variant 4).
+core-misc-severity-005	shacl12-test-suite/tests/core/misc/severity-005.ttl	shacl12-test-suite/tests/core/misc/severity-005.ttl	false	SHACL 1.2 severity propagation checks (variant 5).
 core-misc-deactivated-001	data-shapes-test-suite/tests/core/misc/deactivated-001.ttl	data-shapes-test-suite/tests/core/misc/deactivated-001.ttl	true	Deactivated node shape should not produce violations.
 core-misc-deactivated-002	data-shapes-test-suite/tests/core/misc/deactivated-002.ttl	data-shapes-test-suite/tests/core/misc/deactivated-002.ttl	false	Non-deactivated node shape should still enforce constraints.
+core-misc-deactivated-003	shacl12-test-suite/tests/core/misc/deactivated-003.ttl	shacl12-test-suite/tests/core/misc/deactivated-003.ttl	true	SHACL 1.2 deactivated behavior checks (variant 3).
 core-path-inverse-001	data-shapes-test-suite/tests/core/path/path-inverse-001.ttl	data-shapes-test-suite/tests/core/path/path-inverse-001.ttl	false	Inverse path evaluation.
 core-path-alternative-001	data-shapes-test-suite/tests/core/path/path-alternative-001.ttl	data-shapes-test-suite/tests/core/path/path-alternative-001.ttl	false	Alternative path evaluation.
 core-path-sequence-001	data-shapes-test-suite/tests/core/path/path-sequence-001.ttl	data-shapes-test-suite/tests/core/path/path-sequence-001.ttl	false	Sequence path evaluation.

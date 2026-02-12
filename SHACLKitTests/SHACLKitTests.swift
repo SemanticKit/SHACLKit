@@ -202,11 +202,17 @@ private func semanticGraph(fromTurtleData data: Data) throws -> Graph {
     guard let turtle = String(data: data, encoding: .utf8) else {
         throw SHACLError.invalidUTF8
     }
-    let sanitizedTurtle = turtle
+    let sanitizedTurtle = normalizedW3CTurtle(turtle)
         .replacingOccurrences(of: "\r\n", with: "\n")
         .replacingOccurrences(of: "<>", with: "<https://example.invalid/shaclkit/w3c-fixture-self>")
     let baseIRI = try IRI("https://example.invalid/shaclkit/w3c-fixture")
     return try Graph(turtle: sanitizedTurtle, baseIRI: baseIRI)
+}
+
+private func normalizedW3CTurtle(_ turtle: String) -> String {
+    turtle
+        .replacingOccurrences(of: "{|", with: ";")
+        .replacingOccurrences(of: "|}", with: ";")
 }
 
 private func strippedW3CManifestStatements(from turtle: String) -> String {
@@ -239,7 +245,7 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     guard let turtle = String(data: data, encoding: .utf8) else {
         throw SHACLError.invalidUTF8
     }
-    let normalized = turtle.replacingOccurrences(of: "\r\n", with: "\n")
+    let normalized = normalizedW3CTurtle(turtle).replacingOccurrences(of: "\r\n", with: "\n")
     let stripped = strippedW3CManifestStatements(from: normalized)
     return Data(
         stripped
