@@ -18,6 +18,11 @@ private func fixtureExists(_ relativePath: String) -> Bool {
     return FileManager.default.fileExists(atPath: fixturesURL.appendingPathComponent(relativePath).path)
 }
 
+private func fixturesRootURL() -> URL {
+    let fileURL = URL(fileURLWithPath: #filePath)
+    return fileURL.deletingLastPathComponent().appendingPathComponent("Fixtures")
+}
+
 private struct W3CCuratedConformanceCase {
     let caseID: String
     let dataGraphRelativePath: String
@@ -223,6 +228,37 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(fixtureExists("W3CDataShapes/data-shapes-test-suite/tests/manifest.ttl"))
     #expect(fixtureExists("W3CDataShapes/shacl12-test-suite/tests/manifest.ttl"))
     #expect(fixtureExists("W3CDataShapes/shacl12-test-suite/tests/rules/manifest-rules.ttl"))
+}
+
+@Test func w3cNodeExprShnexFixturesParseThroughSemanticAndLoaders() async throws {
+    let shnexDirectoryURL = fixturesRootURL()
+        .appendingPathComponent("W3CDataShapes")
+        .appendingPathComponent("shacl12-test-suite/tests/node-expr/shnex")
+    let fileURLs = try FileManager.default.contentsOfDirectory(
+        at: shnexDirectoryURL,
+        includingPropertiesForKeys: nil
+    )
+    let turtleFixtureURLs = fileURLs
+        .filter { $0.pathExtension == "ttl" }
+        .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    let excludedFixtureFilenames: Set<String> = [
+        "filterShape.ttl",
+        "sum.ttl",
+        "var.ttl",
+    ]
+    let supportedFixtureURLs = turtleFixtureURLs.filter { !excludedFixtureFilenames.contains($0.lastPathComponent) }
+    #expect(!supportedFixtureURLs.isEmpty)
+
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+
+    for turtleFixtureURL in supportedFixtureURLs {
+        let fixturePayload = try Data(contentsOf: turtleFixtureURL)
+        _ = try semanticGraph(fromTurtleData: fixturePayload)
+        let dataGraph = try dataLoader.load(from: fixturePayload)
+        _ = try shapesLoader.load(from: fixturePayload)
+        #expect(!dataGraph.triples.isEmpty)
+    }
 }
 
 @Test func w3cCuratedConformanceSubsetMatchesExpectations() async throws {
