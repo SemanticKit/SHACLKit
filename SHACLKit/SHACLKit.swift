@@ -449,11 +449,14 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
             }
         }
 
-        let preboundThisPattern = #"(?i)\bAS\s+\?this\b"#
-        let preboundThisRegex = try NSRegularExpression(pattern: preboundThisPattern)
+        let preboundVariables = ["this", "path", "value"]
         let preboundRange = NSRange(query.startIndex..<query.endIndex, in: query)
-        if preboundThisRegex.firstMatch(in: query, options: [], range: preboundRange) != nil {
-            throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query attempts to rebind pre-bound ?this.")
+        for variable in preboundVariables {
+            let pattern = #"(?i)\bAS\s+\?\#(variable)\b"#
+            let regex = try NSRegularExpression(pattern: pattern)
+            if regex.firstMatch(in: query, options: [], range: preboundRange) != nil {
+                throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query attempts to rebind pre-bound ?\(variable).")
+            }
         }
     }
 }
