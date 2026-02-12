@@ -99,6 +99,7 @@ Legend:
   - Added first-slice fixture/tests for `sh:target` + `sh:select` focus-node resolution through an injected executor boundary.
 - [~] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.
   - Added default-deny executor behavior test coverage proving SPARQL evaluation requires explicit sandboxed executor injection for both `sh:select` and `sh:ask`.
+  - Added guarded-executor policy coverage for keyword blocking, query-length blocking, and allowed-query pass-through behavior.
 
 ## Robustness and Regression
 

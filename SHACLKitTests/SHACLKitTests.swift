@@ -2533,6 +2533,53 @@ private struct TestShapesSource {
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
 }
 
+@Test func coreValidatorBlocksGuardedSPARQLConstraintByKeywordPolicy() async throws {
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardBlockedShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
+@Test func coreValidatorBlocksGuardedSPARQLConstraintByLengthPolicy() async throws {
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(
+        wrapping: TestSPARQLExecutor(),
+        disallowedKeywords: [],
+        maxQueryLength: 16
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlConstraintShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
+@Test func coreValidatorAllowsGuardedSPARQLConstraintWhenPolicyAllowsQuery() async throws {
+    let innerExecutor = TestSPARQLExecutor(
+        selectResults: [
+            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/alice": ["http://example.com/alice"],
+            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/bob": [],
+        ]
+    )
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(
+        wrapping: innerExecutor,
+        disallowedKeywords: ["SERVICE"],
+        maxQueryLength: 512
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlConstraintShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
 @Test func coreValidatorAcceptsNodeExpressionPredicate() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("phaseGatedNodeExpressionsShapes.ttl")

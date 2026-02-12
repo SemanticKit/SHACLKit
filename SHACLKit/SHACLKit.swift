@@ -393,6 +393,57 @@ public struct SHACLDeniedSPARQLExecutor: SHACLSPARQLExecutor {
     }
 }
 
+public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
+    public let wrappedExecutor: any SHACLSPARQLExecutor
+    public let disallowedKeywords: [String]
+    public let maxQueryLength: Int?
+
+    public init(
+        wrapping wrappedExecutor: any SHACLSPARQLExecutor,
+        disallowedKeywords: [String] = ["SERVICE", "LOAD", "CLEAR", "DROP", "CREATE", "ADD", "MOVE", "COPY", "INSERT", "DELETE", "WITH"],
+        maxQueryLength: Int? = nil
+    ) {
+        self.wrappedExecutor = wrappedExecutor
+        self.disallowedKeywords = disallowedKeywords
+        self.maxQueryLength = maxQueryLength
+    }
+
+    public func select(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> [String] {
+        try enforcePolicy(query: query)
+        return try wrappedExecutor.select(query: query, focusNode: focusNode, dataGraph: dataGraph, shapesGraph: shapesGraph)
+    }
+
+    public func ask(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> Bool {
+        try enforcePolicy(query: query)
+        return try wrappedExecutor.ask(query: query, focusNode: focusNode, dataGraph: dataGraph, shapesGraph: shapesGraph)
+    }
+
+    private func enforcePolicy(query: String) throws {
+        if let maxQueryLength, query.count > maxQueryLength {
+            throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query length exceeds \(maxQueryLength) characters.")
+        }
+
+        for keyword in disallowedKeywords where !keyword.isEmpty {
+            let pattern = "\\b\(NSRegularExpression.escapedPattern(for: keyword))\\b"
+            let regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+            let range = NSRange(query.startIndex..<query.endIndex, in: query)
+            if regex.firstMatch(in: query, options: [], range: range) != nil {
+                throw SHACLError.notImplemented("SPARQL query blocked by guard policy: contains disallowed keyword \(keyword).")
+            }
+        }
+    }
+}
+
 public protocol SHACLDataGraphAdapting: Sendable {
     associatedtype Source
     func adapt(_ source: Source) throws -> SHACLDataGraph
