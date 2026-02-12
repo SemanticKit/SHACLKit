@@ -290,6 +290,20 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(Set(shape.targets).contains(.targetNodeExpression("_:expr")))
 }
 
+@Test func shapesLoaderParsesTargetWhereSelectors() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let turtle = try fixtureData("W3CDataShapes/shacl12-test-suite/tests/core/targets/targetWhere-001.ttl")
+    let graph = try loader.load(from: cleanedGraphSectionData(fromTurtleData: turtle))
+    let shape = try #require(graph.shapes.first(where: { $0.shapeIRI == "http://example.com/ns#AdultShape" }))
+    let hasTargetWhere = shape.targets.contains { selector in
+        if case .targetWhere(let shapeIRI) = selector {
+            return shapeIRI.hasPrefix("_:")
+        }
+        return false
+    }
+    #expect(hasTargetWhere)
+}
+
 @Test func shapesLoaderParsesNodeExpressionDefinitions() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionDefinitions.ttl"))
@@ -1529,6 +1543,17 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(!result.conforms)
     let violation = try #require(result.violations.first)
     #expect(violation.sourceConstraintIRI == "http://example.com/NamedNodeShape")
+}
+
+@Test func coreValidatorResolvesTargetWhereFocusNodes() async throws {
+    let validator = SHACLCoreValidator()
+    let turtle = try fixtureData("W3CDataShapes/shacl12-test-suite/tests/core/targets/targetWhere-001.ttl")
+    let fixturePayload = try cleanedGraphSectionData(fromTurtleData: turtle)
+
+    let result = try validator.validate(dataGraph: fixturePayload, shapesGraph: fixturePayload)
+    #expect(!result.conforms)
+    #expect(result.violations.contains { $0.focusNode == "http://example.com/ns#InvalidResource1" })
+    #expect(!result.violations.contains { $0.focusNode == "http://example.com/ns#InvalidResource2" })
 }
 
 @Test func focusNodeResolverResolvesSelectorsAgainstDataGraph() async throws {

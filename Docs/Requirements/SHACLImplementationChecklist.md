@@ -94,6 +94,7 @@ Legend:
 - [~] `REQ-SHACL-301` Implement SHACL SPARQL targets.
   - Added first-slice parsing and focus-node resolution hooks for `sh:target` with `sh:select` through an explicit executor boundary.
   - Added first-slice support for `sh:targetNode` values backed by inline `sh:select` resources.
+  - Added first-slice support for SHACL 1.2 `sh:targetWhere` selectors by resolving all data nodes that conform to the referenced target shape.
   - Added shape-graph validation for property-shape SPARQL targets requiring `sh:select`.
   - Added first-slice execution for directly targeted property-shape SPARQL targets.
   - Added shape-graph validation for `sh:targetNode` SPARQL resources requiring `sh:select`.

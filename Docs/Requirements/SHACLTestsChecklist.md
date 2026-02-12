@@ -27,6 +27,7 @@ Legend:
   - Added coverage for `sh:targetNode` selectors backed by node-expression definitions.
   - Added coverage for `sh:targetNode` selectors backed by `shnex:nodes`.
   - Added coverage for `sh:targetNode` selectors backed by `shnex:pathValues` + explicit `shnex:focusNode`.
+  - Added SHACL 1.2 `sh:targetWhere` fixture coverage to verify target-shape-filtered focus-node resolution.
   - Added regression coverage ensuring empty target outputs are ignored, including empty `shnex:nodes ()`.
   - Added curated W3C core target selector subset coverage (`targetNode`, `targetClass`, implicit `targetClass`, `targetSubjectsOf`, `targetObjectsOf`, `multipleTargets`).
   - Added curated W3C core path conformance subset coverage (inverse/alternative/sequence and cardinality path operators).

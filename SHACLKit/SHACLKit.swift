@@ -17,6 +17,7 @@ public enum SHACLTargetSelector: Sendable, Hashable {
     case targetNodeExpression(String)
     case targetSubjectsOf(String)
     case targetObjectsOf(String)
+    case targetWhere(String)
 }
 
 public enum SHACLNodeKindConstraint: String, Sendable, Codable, Hashable {
@@ -674,6 +675,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.targets.insert(.targetSubjectsOf(object))
             } else if predicate == SHACLIRIs.targetObjectsOf {
                 current.targets.insert(.targetObjectsOf(object))
+            } else if predicate == SHACLIRIs.targetWhere {
+                current.targets.insert(.targetWhere(object))
             } else if predicate == SHACLIRIs.severity {
                 current.severity = parseSeverity(object)
             } else if predicate == SHACLIRIs.deactivated {
@@ -1354,6 +1357,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             return "3:\(iri)"
         case .targetObjectsOf(let iri):
             return "4:\(iri)"
+        case .targetWhere(let iri):
+            return "5:\(iri)"
         }
     }
 
@@ -1761,6 +1766,8 @@ public struct SHACLFocusNodeResolver: Sendable {
             return Set(graph.triples.filter { $0.predicate == predicateIRI }.map(\.subject))
         case .targetObjectsOf(let predicateIRI):
             return Set(graph.triples.filter { $0.predicate == predicateIRI }.map(\.object))
+        case .targetWhere:
+            return []
         }
     }
 }
@@ -3103,9 +3110,34 @@ public struct SHACLCoreValidator: SHACLValidator {
     ) throws -> [SHACLTargetResolution] {
         let baseline = focusResolver.resolve(dataGraph: dataGraph, shapesGraph: shapesGraph)
         let baselineByShapeIRI = Dictionary(uniqueKeysWithValues: baseline.map { ($0.shapeIRI, Set($0.focusNodes)) })
+        let shapesByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.shapes.map { ($0.shapeIRI, $0) })
+        let nodeExpressionsByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.nodeExpressions.map { ($0.expressionIRI, $0) })
+        let candidateTargetWhereNodes = Set(dataGraph.triples.flatMap { [$0.subject, $0.object] }).sorted()
 
         return try shapesGraph.shapes.map { shape in
             var focus = baselineByShapeIRI[shape.shapeIRI] ?? []
+            for target in shape.targets {
+                guard case .targetWhere(let whereShapeIRI) = target else {
+                    continue
+                }
+                guard shapesByIRI[whereShapeIRI] != nil else {
+                    continue
+                }
+                for candidate in candidateTargetWhereNodes {
+                    var visited: Set<String> = []
+                    if conforms(
+                        valueNode: candidate,
+                        toShapeIRI: whereShapeIRI,
+                        dataGraph: dataGraph,
+                        shapesByIRI: shapesByIRI,
+                        nodeExpressionsByIRI: nodeExpressionsByIRI,
+                        depth: 0,
+                        visited: &visited
+                    ) {
+                        focus.insert(candidate)
+                    }
+                }
+            }
             for sparqlTargetIRI in shape.sparqlTargetIRIs.sorted() {
                 guard let sparql = sparqlDefinitionsByIRI[sparqlTargetIRI], let selectQuery = sparql.selectQuery else {
                     continue
@@ -5220,6 +5252,7 @@ private enum SHACLIRIs {
     static let targetNode = "http://www.w3.org/ns/shacl#targetNode"
     static let targetSubjectsOf = "http://www.w3.org/ns/shacl#targetSubjectsOf"
     static let targetObjectsOf = "http://www.w3.org/ns/shacl#targetObjectsOf"
+    static let targetWhere = "http://www.w3.org/ns/shacl#targetWhere"
     static let order = "http://www.w3.org/ns/shacl#order"
     static let deactivated = "http://www.w3.org/ns/shacl#deactivated"
     static let severity = "http://www.w3.org/ns/shacl#severity"
