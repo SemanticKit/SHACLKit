@@ -14,6 +14,8 @@ BUILD_KEY_BASE="${CONTAINERBUILDKEY:-shard}"
 LOG_DIR="${WORKSPACE_ROOT}/Frameworks/SHACLKit/.build/test-shards"
 mkdir -p "${LOG_DIR}"
 MODE="auto"
+PARALLEL_BLOCK_MARKER="${LOG_DIR}/.parallel-bootstrap-unavailable"
+PARALLEL_BLOCK_SECONDS=3600
 
 for arg in "$@"; do
   case "${arg}" in
@@ -40,10 +42,9 @@ run_shard() {
   local filters=("$@")
 
   local cmd=("swift" "test")
-  local filter
-  for filter in "${filters[@]}"; do
-    cmd+=("--filter" "${filter}")
-  done
+  local filter_pattern
+  filter_pattern="$(IFS='|'; echo "${filters[*]}")"
+  cmd+=("--filter" "${filter_pattern}")
 
   printf -v test_command '%q ' "${cmd[@]}"
   echo "[shard:${name}] ${test_command}"
@@ -77,6 +78,25 @@ run_sequential() {
   run_shard w3c "${BUILD_KEY_BASE}-w3c" w3c
 }
 
+marker_is_fresh() {
+  local marker="$1"
+  local now mtime age
+
+  [[ -f "${marker}" ]] || return 1
+  now=$(date +%s)
+
+  if mtime=$(stat -f %m "${marker}" 2>/dev/null); then
+    :
+  elif mtime=$(stat -c %Y "${marker}" 2>/dev/null); then
+    :
+  else
+    return 1
+  fi
+
+  age=$((now - mtime))
+  [[ "${age}" -lt "${PARALLEL_BLOCK_SECONDS}" ]]
+}
+
 if [[ "${MODE}" == "parallel" ]]; then
   if run_parallel; then
     echo "[sharded] all shards passed in parallel. Logs: ${LOG_DIR}"
@@ -92,12 +112,21 @@ if [[ "${MODE}" == "sequential" ]]; then
   exit 0
 fi
 
+if marker_is_fresh "${PARALLEL_BLOCK_MARKER}"; then
+  echo "[sharded] recent parallel bootstrap failure detected; running sequential shards directly."
+  run_sequential
+  echo "[sharded] all shards passed sequentially. Logs: ${LOG_DIR}"
+  exit 0
+fi
+
 if run_parallel; then
+  rm -f "${PARALLEL_BLOCK_MARKER}"
   echo "[sharded] all shards passed in parallel. Logs: ${LOG_DIR}"
   exit 0
 fi
 
 if grep -R -q "failed to bootstrap container" "${LOG_DIR}"; then
+  touch "${PARALLEL_BLOCK_MARKER}"
   echo "[sharded] parallel bootstrap failed on this host, retrying shards sequentially..."
   run_sequential
   echo "[sharded] all shards passed sequentially. Logs: ${LOG_DIR}"

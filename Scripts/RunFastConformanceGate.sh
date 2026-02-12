@@ -20,9 +20,8 @@ FILTERS=(
 )
 
 CMD=("swift" "test")
-for filter in "${FILTERS[@]}"; do
-  CMD+=("--filter" "${filter}")
-done
+FILTER_PATTERN="$(IFS='|'; echo "${FILTERS[*]}")"
+CMD+=("--filter" "${FILTER_PATTERN}")
 
 printf -v TEST_COMMAND '%q ' "${CMD[@]}"
 
