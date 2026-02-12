@@ -2871,6 +2871,17 @@ private struct TestShapesSource {
     #expect(result.conforms)
 }
 
+@Test func coreValidatorAcceptsDecimalLiteralExpressionTerm() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("decimalExpressionLiteralShape.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#expression")
+}
+
 @Test func coreValidatorMatchesResultsAcrossDataAndGraphEntryPoints() async throws {
     let validator = SHACLCoreValidator()
     let shapesData = try fixtureData("logicalOrShapes.ttl")

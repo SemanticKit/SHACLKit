@@ -3060,7 +3060,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         if term.hasPrefix("\"") {
             return true
         }
-        return Int(term) != nil
+        return Int(term) != nil || Double(term) != nil
     }
 
     private func isTrueBooleanTerm(_ term: String) -> Bool {
