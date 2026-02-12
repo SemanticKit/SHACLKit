@@ -1155,12 +1155,33 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 // Untyped shapes without sh:path/sh:expression are treated as node shapes.
                 kind = .nodeShape
             }
-            let normalizedTargets = partial.targets.map { selector -> SHACLTargetSelector in
-                if case .targetNode(let node) = selector, expressionIRIs.contains(node) {
-                    return .targetNodeExpression(node)
+            let resolvedTargetNodes = partial.targets.compactMap { selector -> String? in
+                if case .targetNode(let node) = selector {
+                    return node
+                }
+                return nil
+            }
+            let derivedSPARQLTargetIRIs = Set(
+                resolvedTargetNodes.filter { targetNode in
+                    if let sparql = sparqlDefinitions[targetNode] {
+                        return sparql.selectQuery != nil
+                    }
+                    return false
+                }
+            )
+            let normalizedTargets = partial.targets.compactMap { selector -> SHACLTargetSelector? in
+                if case .targetNode(let node) = selector {
+                    if expressionIRIs.contains(node) {
+                        return .targetNodeExpression(node)
+                    }
+                    if derivedSPARQLTargetIRIs.contains(node) {
+                        return nil
+                    }
                 }
                 return selector
             }
+            let normalizedSPARQLTargetIRIs = resolveShapeReferenceIRIs(partial.sparqlTargetIRIs, triplesBySubject: triplesBySubject)
+                .union(derivedSPARQLTargetIRIs)
             return SHACLShapeDefinition(
                 shapeIRI: shapeIRI,
                 kind: kind,
@@ -1171,7 +1192,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
                 tripleRuleIRIs: resolveShapeReferenceIRIs(partial.ruleIRIs, triplesBySubject: triplesBySubject).sorted(),
                 sparqlConstraintIRIs: resolveShapeReferenceIRIs(partial.sparqlConstraintIRIs, triplesBySubject: triplesBySubject).sorted(),
-                sparqlTargetIRIs: resolveShapeReferenceIRIs(partial.sparqlTargetIRIs, triplesBySubject: triplesBySubject).sorted(),
+                sparqlTargetIRIs: normalizedSPARQLTargetIRIs.sorted(),
                 pathIRI: partial.pathIRI,
                 propertyPath: partial.pathIRI.flatMap { parsePropertyPath($0, triplesBySubject: triplesBySubject) },
                 expressionIRI: partial.expressionIRI,
