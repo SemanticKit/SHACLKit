@@ -2416,6 +2416,9 @@ private func numericSum(from outputNodes: Set<String>) -> String {
     if !sawDecimal && floor(total) == total {
         return String(Int(total))
     }
+    if sawDecimal && floor(total) == total {
+        return "\(Int(total)).0"
+    }
 
     var text = String(total)
     if text.contains(".") {
@@ -2535,6 +2538,17 @@ private func transitiveSubclasses(of classIRI: String, dataGraph: SHACLDataGraph
     }
 
     return descendants
+}
+
+private func nodeSatisfiesClassConstraint(
+    _ node: String,
+    classIRI: String,
+    dataGraph: SHACLDataGraph
+) -> Bool {
+    let acceptedTypes = transitiveSubclasses(of: classIRI, dataGraph: dataGraph).union([classIRI])
+    return dataGraph.triples.contains {
+        $0.subject == node && $0.predicate == SHACLIRIs.rdfType && acceptedTypes.contains($0.object)
+    }
 }
 
 private func nodesMatching(
@@ -3160,9 +3174,11 @@ public struct SHACLCoreValidator: SHACLValidator {
         )
 
         if let classIRI = nodeShape.classIRI {
-            let hasRequiredType = dataGraph.triples.contains {
-                $0.subject == focusNode && $0.predicate == SHACLIRIs.rdfType && $0.object == classIRI
-            }
+            let hasRequiredType = nodeSatisfiesClassConstraint(
+                focusNode,
+                classIRI: classIRI,
+                dataGraph: dataGraph
+            )
             if !hasRequiredType {
                 violations.append(
                     SHACLViolation(
@@ -3786,9 +3802,11 @@ public struct SHACLCoreValidator: SHACLValidator {
 
             if let classIRI = propertyShape.classIRI {
                 for valueNode in values {
-                    let hasRequiredType = dataGraph.triples.contains {
-                        $0.subject == valueNode && $0.predicate == SHACLIRIs.rdfType && $0.object == classIRI
-                    }
+                    let hasRequiredType = nodeSatisfiesClassConstraint(
+                        valueNode,
+                        classIRI: classIRI,
+                        dataGraph: dataGraph
+                    )
                     if !hasRequiredType {
                         violations.append(
                             SHACLViolation(

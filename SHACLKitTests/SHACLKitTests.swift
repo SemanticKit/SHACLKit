@@ -366,10 +366,12 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         "matchAll.ttl",
         "max.ttl",
         "min.ttl",
+        "nodesMatching.ttl",
         "offset.ttl",
         "orderBy.ttl",
         "pathValues.ttl",
         "remove.ttl",
+        "sum.ttl",
         "var.ttl",
     ])
     let selectedURLs = turtleFixtureURLs.filter { supportedManifests.contains($0.lastPathComponent) }
@@ -1005,7 +1007,7 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         focusNode: "http://example.com/focus",
         shapesGraph: graph
     )
-    #expect(sumNodes == Set(["42"]))
+    #expect(sumNodes == Set(["42.0"]))
 }
 
 @Test func coreValidatorConformsForExpressionDerivedPropertyValues() async throws {
