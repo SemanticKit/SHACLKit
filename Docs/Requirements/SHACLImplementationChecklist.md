@@ -85,6 +85,7 @@ Legend:
 
 - [~] `REQ-SHACL-300` Implement SHACL SPARQL-based constraints.
   - Added first-slice parsing and execution hooks for `sh:sparql` constraints (`sh:select`/`sh:ask`) through an explicit executor boundary.
+  - Added first-slice execution for property-shape `sh:sparql` constraints against resolved property values.
 - [~] `REQ-SHACL-301` Implement SHACL SPARQL targets.
   - Added first-slice parsing and focus-node resolution hooks for `sh:target` with `sh:select` through an explicit executor boundary.
 - [~] `REQ-SHACL-302` Sandboxed/controlled query execution boundary for SPARQL extension evaluation.

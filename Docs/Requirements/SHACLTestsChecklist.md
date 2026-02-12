@@ -95,6 +95,7 @@ Legend:
 
 - [~] `TEST-SHACL-300` SPARQL constraint fixtures.
   - Added first-slice fixture/tests for `sh:sparql` + (`sh:select`, `sh:ask`) constraint execution through an injected executor boundary.
+  - Added first-slice fixture/tests for property-shape `sh:sparql` constraint execution through the same executor boundary.
 - [~] `TEST-SHACL-301` SPARQL target fixtures.
   - Added first-slice fixture/tests for `sh:target` + `sh:select` focus-node resolution through an injected executor boundary.
 - [~] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.

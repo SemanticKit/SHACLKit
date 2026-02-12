@@ -23,6 +23,7 @@ Current local families:
   - Includes node-shape/property-shape `sh:condition` gating and `sh:order` fixtures.
 - SPARQL extension first-slice scenarios (`sh:sparql` constraints, `sh:target` selectors, sandbox boundary)
   - Includes guarded-executor policy fixtures for blocked keyword queries.
+  - Includes property-shape `sh:sparql` constraint fixtures.
 - Optional staged W3C conformance corpus sync target (`W3CDataShapes*` from `Knowledge/Inbox/Fixtures` into `SHACLKitTests/Fixtures/W3CDataShapes`)
   - Includes preflight parser/loader coverage across W3C SHACL 1.2 `node-expr/shnex/*.ttl` fixtures.
   - Includes subset `sht:EvalNodeExpr` manifest-result verification for W3C SHACL 1.2 `node-expr/shnex` fixtures.

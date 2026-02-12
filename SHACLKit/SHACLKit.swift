@@ -3015,67 +3015,175 @@ public struct SHACLCoreValidator: SHACLValidator {
         sparqlDefinitionsByIRI: [String: SHACLSPARQLDefinition]
     ) throws -> [SHACLViolation] {
         var violations: [SHACLViolation] = []
+        let expressionGraph = SHACLShapesGraph(
+            shapes: Array(shapesByIRI.values),
+            nodeExpressions: shapesGraph.nodeExpressions
+        )
 
         for resolution in resolutions {
-            guard let shape = shapesByIRI[resolution.shapeIRI], shape.kind == .nodeShape else {
+            guard let shape = shapesByIRI[resolution.shapeIRI] else {
                 continue
             }
-            let severity = shape.severity ?? .violation
+            switch shape.kind {
+            case .nodeShape:
+                let severity = shape.severity ?? .violation
 
-            for focusNode in resolution.focusNodes {
-                for sparqlConstraintIRI in shape.sparqlConstraintIRIs.sorted() {
-                    guard let sparql = sparqlDefinitionsByIRI[sparqlConstraintIRI] else {
-                        continue
-                    }
+                for focusNode in resolution.focusNodes {
+                    for sparqlConstraintIRI in shape.sparqlConstraintIRIs.sorted() {
+                        guard let sparql = sparqlDefinitionsByIRI[sparqlConstraintIRI] else {
+                            continue
+                        }
 
-                    if let askQuery = sparql.askQuery {
-                        let result = try sparqlExecutor.ask(
-                            query: askQuery,
-                            focusNode: focusNode,
-                            dataGraph: dataGraph,
-                            shapesGraph: shapesGraph
-                        )
-                        if !result {
-                            violations.append(
-                                SHACLViolation(
-                                    severity: severity,
-                                    shapeIRI: shape.shapeIRI,
-                                    focusNode: focusNode,
-                                    pathIRI: nil,
-                                    valueNode: focusNode,
-                                    sourceConstraintIRI: sparqlConstraintIRI,
-                                    message: "SPARQL ASK constraint violation for focus node \(focusNode)"
-                                )
+                        if let askQuery = sparql.askQuery {
+                            let result = try sparqlExecutor.ask(
+                                query: askQuery,
+                                focusNode: focusNode,
+                                dataGraph: dataGraph,
+                                shapesGraph: shapesGraph
                             )
+                            if !result {
+                                violations.append(
+                                    SHACLViolation(
+                                        severity: severity,
+                                        shapeIRI: shape.shapeIRI,
+                                        focusNode: focusNode,
+                                        pathIRI: nil,
+                                        valueNode: focusNode,
+                                        sourceConstraintIRI: sparqlConstraintIRI,
+                                        message: "SPARQL ASK constraint violation for focus node \(focusNode)"
+                                    )
+                                )
+                            }
+                        }
+
+                        if let selectQuery = sparql.selectQuery {
+                            let boundNodes = try sparqlExecutor.select(
+                                query: selectQuery,
+                                focusNode: focusNode,
+                                dataGraph: dataGraph,
+                                shapesGraph: shapesGraph
+                            )
+                            for valueNode in boundNodes.filter({ !$0.isEmpty }).sorted() {
+                                violations.append(
+                                    SHACLViolation(
+                                        severity: severity,
+                                        shapeIRI: shape.shapeIRI,
+                                        focusNode: focusNode,
+                                        pathIRI: nil,
+                                        valueNode: valueNode,
+                                        sourceConstraintIRI: sparqlConstraintIRI,
+                                        message: "SPARQL SELECT constraint violation produced value \(valueNode)"
+                                    )
+                                )
+                            }
                         }
                     }
 
-                    if let selectQuery = sparql.selectQuery {
-                        let boundNodes = try sparqlExecutor.select(
-                            query: selectQuery,
+                    for propertyShapeIRI in shape.propertyShapeIRIs.sorted() {
+                        guard let propertyShape = shapesByIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
+                            continue
+                        }
+                        let propertyValues = sparqlPropertyValues(
+                            for: propertyShape,
                             focusNode: focusNode,
                             dataGraph: dataGraph,
-                            shapesGraph: shapesGraph
+                            expressionGraph: expressionGraph
                         )
-                        for valueNode in boundNodes.filter({ !$0.isEmpty }).sorted() {
-                            violations.append(
-                                SHACLViolation(
-                                    severity: severity,
-                                    shapeIRI: shape.shapeIRI,
-                                    focusNode: focusNode,
-                                    pathIRI: nil,
-                                    valueNode: valueNode,
-                                    sourceConstraintIRI: sparqlConstraintIRI,
-                                    message: "SPARQL SELECT constraint violation produced value \(valueNode)"
-                                )
-                            )
+                        if propertyValues.isEmpty {
+                            continue
+                        }
+                        let propertySeverity = propertyShape.severity ?? shape.severity ?? .violation
+
+                        for sparqlConstraintIRI in propertyShape.sparqlConstraintIRIs.sorted() {
+                            guard let sparql = sparqlDefinitionsByIRI[sparqlConstraintIRI] else {
+                                continue
+                            }
+
+                            for propertyValue in propertyValues {
+                                if let askQuery = sparql.askQuery {
+                                    let result = try sparqlExecutor.ask(
+                                        query: askQuery,
+                                        focusNode: propertyValue,
+                                        dataGraph: dataGraph,
+                                        shapesGraph: shapesGraph
+                                    )
+                                    if !result {
+                                        violations.append(
+                                            SHACLViolation(
+                                                severity: propertySeverity,
+                                                shapeIRI: propertyShape.shapeIRI,
+                                                focusNode: focusNode,
+                                                pathIRI: propertyShape.pathIRI,
+                                                valueNode: propertyValue,
+                                                sourceConstraintIRI: sparqlConstraintIRI,
+                                                message: "SPARQL ASK constraint violation for property value \(propertyValue)"
+                                            )
+                                        )
+                                    }
+                                }
+
+                                if let selectQuery = sparql.selectQuery {
+                                    let boundNodes = try sparqlExecutor.select(
+                                        query: selectQuery,
+                                        focusNode: propertyValue,
+                                        dataGraph: dataGraph,
+                                        shapesGraph: shapesGraph
+                                    )
+                                    for valueNode in boundNodes.filter({ !$0.isEmpty }).sorted() {
+                                        violations.append(
+                                            SHACLViolation(
+                                                severity: propertySeverity,
+                                                shapeIRI: propertyShape.shapeIRI,
+                                                focusNode: focusNode,
+                                                pathIRI: propertyShape.pathIRI,
+                                                valueNode: valueNode,
+                                                sourceConstraintIRI: sparqlConstraintIRI,
+                                                message: "SPARQL SELECT constraint violation produced value \(valueNode) for property value \(propertyValue)"
+                                            )
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+            case .propertyShape:
+                continue
             }
         }
 
         return violations
+    }
+
+    private func sparqlPropertyValues(
+        for propertyShape: SHACLShapeDefinition,
+        focusNode: String,
+        dataGraph: SHACLDataGraph,
+        expressionGraph: SHACLShapesGraph
+    ) -> [String] {
+        if let propertyPath = propertyShape.propertyPath {
+            return resolvePropertyPathValues(
+                propertyPath,
+                from: focusNode,
+                dataGraph: dataGraph
+            ).sorted()
+        }
+        if let pathIRI = propertyShape.pathIRI {
+            return dataGraph.triples
+                .filter { $0.subject == focusNode && $0.predicate == pathIRI }
+                .map(\.object)
+        }
+        if let expressionIRI = propertyShape.expressionIRI {
+            return SHACLNodeExpressionEvaluator()
+                .evaluate(
+                    expressionIRI: expressionIRI,
+                    focusNode: focusNode,
+                    shapesGraph: expressionGraph,
+                    dataGraph: dataGraph
+                )
+                .sorted()
+        }
+        return []
     }
 
     private func applyRules(
