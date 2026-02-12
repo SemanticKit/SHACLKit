@@ -20,6 +20,7 @@ Legend:
 - [x] `REQ-SHACL-001` Parse/ingest SHACL shapes graph terms required for Core constraints.
 - [x] `REQ-SHACL-002` Resolve targets (`sh:targetClass`, `sh:targetNode`, `sh:targetSubjectsOf`, `sh:targetObjectsOf`).
   - Added implicit class targeting for node shapes declared as `rdfs:Class`.
+  - Added implicit class targeting for node shapes declared as `sh:ShapeClass`.
   - Added transitive `rdfs:subClassOf` expansion for implicit class targeting.
 - [x] `REQ-SHACL-003` Evaluate node shapes and property shapes against RDF terms/triples.
   - Implemented target-to-focus-node resolution over parsed RDF triples.

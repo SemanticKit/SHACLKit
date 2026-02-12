@@ -661,6 +661,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                     current.kind = .propertyShape
                 } else if object == SHACLIRIs.rdfsClass {
                     current.isRDFSClass = true
+                } else if object == SHACLIRIs.shapeClass {
+                    current.isRDFSClass = true
                 }
                 if object == SHACLIRIs.tripleRule {
                     var rule = rules[subject] ?? PartialRule()
@@ -5248,6 +5250,7 @@ private enum SHACLIRIs {
     static let rdfNil = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"
     static let nodeShape = "http://www.w3.org/ns/shacl#NodeShape"
     static let propertyShape = "http://www.w3.org/ns/shacl#PropertyShape"
+    static let shapeClass = "http://www.w3.org/ns/shacl#ShapeClass"
     static let targetClass = "http://www.w3.org/ns/shacl#targetClass"
     static let targetNode = "http://www.w3.org/ns/shacl#targetNode"
     static let targetSubjectsOf = "http://www.w3.org/ns/shacl#targetSubjectsOf"
