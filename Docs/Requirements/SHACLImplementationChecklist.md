@@ -91,6 +91,7 @@ Legend:
   - Added first-slice parsing and focus-node resolution hooks for `sh:target` with `sh:select` through an explicit executor boundary.
   - Added first-slice support for `sh:targetNode` values backed by inline `sh:select` resources.
   - Added shape-graph validation for property-shape SPARQL targets requiring `sh:select`.
+  - Added first-slice execution for directly targeted property-shape SPARQL targets.
 - [~] `REQ-SHACL-302` Sandboxed/controlled query execution boundary for SPARQL extension evaluation.
   - Added `SHACLSPARQLExecutor` protocol with default-deny executor (`SHACLDeniedSPARQLExecutor`) requiring explicit opt-in for SPARQL evaluation.
   - Added `SHACLGuardedSPARQLExecutor` wrapper with keyword and query-length policy enforcement before delegating to a backing executor.

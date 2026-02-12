@@ -2605,6 +2605,26 @@ private struct TestShapesSource {
     #expect(violation.sourceConstraintIRI == "http://example.com/NonEmptyNameConstraint")
 }
 
+@Test func coreValidatorExecutesDirectPropertyShapeSPARQLTargetThroughExecutorBoundary() async throws {
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "SELECT ?this WHERE { ?this ex:segment ex:vip }|": ["http://example.com/alice"],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlPropertyShapeTargetShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.shapeIRI == "http://example.com/StatusPropertyShape")
+    #expect(violation.focusNode == "http://example.com/alice")
+    #expect(violation.pathIRI == "http://example.com/status")
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
 @Test func coreValidatorBlocksGuardedSPARQLConstraintByKeywordPolicy() async throws {
     let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
     let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
