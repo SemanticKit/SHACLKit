@@ -431,7 +431,7 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
         dataGraph: SHACLDataGraph,
         shapesGraph: SHACLShapesGraph
     ) throws -> Bool {
-        try enforcePolicy(query: query, requirePreboundThisReference: false)
+        try enforcePolicy(query: query, requirePreboundThisReference: true)
         return try wrappedExecutor.ask(query: query, focusNode: focusNode, dataGraph: dataGraph, shapesGraph: shapesGraph)
     }
 

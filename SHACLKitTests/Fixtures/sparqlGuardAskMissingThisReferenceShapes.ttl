@@ -1,0 +1,9 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:GuardedAskMissingThisShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:sparql ex:UnsafeAskConstraint .
+
+ex:UnsafeAskConstraint
+  sh:ask "ASK WHERE { ?focus ex:active true }" .
