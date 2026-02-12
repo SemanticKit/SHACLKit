@@ -16,6 +16,10 @@ Legend:
   - Added curated conformance subset harness with explicit per-case expectations and SemanticKit parser preflight for fixture ingestion.
   - Added W3C-aligned coverage for node-shape datatype/string/range/`hasValue`/`in` cases plus implicit class targeting behavior.
 - [x] `TEST-SHACL-002` Add helper loaders for data graph + shapes graph fixture pairs.
+- [x] `TEST-SHACL-004` Add speed-cycle test runners for fast gate and sharded execution.
+  - Added `Scripts/RunFastConformanceGate.sh` (targeted high-signal conformance checks).
+  - Added `Scripts/RunShardedTests.sh` (parallel `core` / `expr` / `w3c` shards via container commands).
+  - Added `Scripts/RunBatchCycle.sh` to enforce batched workflow (`fast gate` + one final full or sharded pass).
 
 ## Phase 1: Core Behavior Tests
 
