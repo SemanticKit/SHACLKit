@@ -241,18 +241,12 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let turtleFixtureURLs = fileURLs
         .filter { $0.pathExtension == "ttl" }
         .sorted { $0.lastPathComponent < $1.lastPathComponent }
-    let excludedFixtureFilenames: Set<String> = [
-        "filterShape.ttl",
-        "sum.ttl",
-        "var.ttl",
-    ]
-    let supportedFixtureURLs = turtleFixtureURLs.filter { !excludedFixtureFilenames.contains($0.lastPathComponent) }
-    #expect(!supportedFixtureURLs.isEmpty)
+    #expect(!turtleFixtureURLs.isEmpty)
 
     let shapesLoader = SHACLShapesGraphLoader()
     let dataLoader = SHACLDataGraphLoader()
 
-    for turtleFixtureURL in supportedFixtureURLs {
+    for turtleFixtureURL in turtleFixtureURLs {
         let fixturePayload = try Data(contentsOf: turtleFixtureURL)
         _ = try semanticGraph(fromTurtleData: fixturePayload)
         let dataGraph = try dataLoader.load(from: fixturePayload)

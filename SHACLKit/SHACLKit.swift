@@ -4900,17 +4900,28 @@ private struct SHACLTurtleSubsetParser {
         var current = ""
         var inIRI = false
         var inString = false
+        var escaped = false
+        let characters = Array(body)
+        var position = 0
 
-        for ch in body {
+        while position < characters.count {
+            let ch = characters[position]
             if ch == "<" && !inString {
                 inIRI = true
             } else if ch == ">" && inIRI {
                 inIRI = false
-            } else if ch == "\"" {
+            } else if ch == "\"" && !escaped {
                 inString.toggle()
             }
 
             if ch == "." && !inIRI && !inString {
+                let previousIsDigit = position > 0 && characters[position - 1].isNumber
+                let nextIsDigit = position + 1 < characters.count && characters[position + 1].isNumber
+                if previousIsDigit && nextIsDigit {
+                    current.append(ch)
+                    position += 1
+                    continue
+                }
                 let trimmed = current.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
                     statements.append(trimmed)
@@ -4919,6 +4930,13 @@ private struct SHACLTurtleSubsetParser {
             } else {
                 current.append(ch)
             }
+
+            if inString && ch == "\\" && !escaped {
+                escaped = true
+            } else {
+                escaped = false
+            }
+            position += 1
         }
 
         let tail = current.trimmingCharacters(in: .whitespacesAndNewlines)
