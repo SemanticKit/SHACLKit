@@ -1647,6 +1647,27 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
         )
     }
 
+    public func evaluateOrdered(
+        expressionIRI: String,
+        focusNode: String,
+        shapesGraph: SHACLShapesGraph,
+        dataGraph: SHACLDataGraph? = nil,
+        variableBindings: [String: Set<String>] = [:]
+    ) -> [String] {
+        let expressionByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.nodeExpressions.map { ($0.expressionIRI, $0) })
+        var visited: Set<String> = []
+        return evaluateTermOrdered(
+            expressionIRI,
+            focusNode: focusNode,
+            shapesGraph: shapesGraph,
+            expressionsByIRI: expressionByIRI,
+            dataGraph: dataGraph,
+            variableBindings: variableBindings,
+            depth: 0,
+            visited: &visited
+        )
+    }
+
     private func evaluateTerm(
         _ term: String,
         focusNode: String,
@@ -2165,6 +2186,24 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 visited: &visited
             ))
             return input.filter { !removeNodes.contains($0) }
+        case .distinct(let inputTerm, let staticListMembers):
+            let input = staticListMembers ?? evaluateTermOrdered(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                variableBindings: variableBindings,
+                depth: depth + 1,
+                visited: &visited
+            )
+            var seen: Set<String> = []
+            var ordered: [String] = []
+            for node in input where !seen.contains(node) {
+                seen.insert(node)
+                ordered.append(node)
+            }
+            return ordered
         case .flatMap(let inputTerm, let mapTerm, let staticInputListMembers):
             let inputs = staticInputListMembers ?? evaluateTermOrdered(
                 inputTerm,

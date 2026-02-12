@@ -5,6 +5,16 @@ import Testing
 @testable import SHACLKit
 
 private let rdfTypeIRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+private let rdfFirstIRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first"
+private let rdfRestIRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"
+private let rdfNilIRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"
+private let mfActionIRI = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action"
+private let mfResultIRI = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result"
+private let shtEvalNodeExprIRI = "http://www.w3.org/ns/shacl-test#EvalNodeExpr"
+private let shtNodeExprIRI = "http://www.w3.org/ns/shacl-test#nodeExpr"
+private let shtFocusNodeIRI = "http://www.w3.org/ns/shacl-test#focusNode"
+private let shtIgnoreOrderIRI = "http://www.w3.org/ns/shacl-test#ignoreOrder"
+private let shtScopePrefixIRI = "http://www.w3.org/ns/shacl-test#scope-"
 
 private func fixtureData(_ name: String) throws -> Data {
     let fileURL = URL(fileURLWithPath: #filePath)
@@ -21,6 +31,82 @@ private func fixtureExists(_ relativePath: String) -> Bool {
 private func fixturesRootURL() -> URL {
     let fileURL = URL(fileURLWithPath: #filePath)
     return fileURL.deletingLastPathComponent().appendingPathComponent("Fixtures")
+}
+
+private struct W3CNodeExprEvalCase {
+    let caseID: String
+    let expressionTerm: String
+    let focusNode: String?
+    let ignoreOrder: Bool
+    let variableBindings: [String: Set<String>]
+    let expectedOrderedResults: [String]
+}
+
+private func isTrueBooleanLiteral(_ term: String) -> Bool {
+    term == "\"true\"^^http://www.w3.org/2001/XMLSchema#boolean"
+}
+
+private func rdfListMembers(head: String, triples: [SHACLDataTriple]) -> [String] {
+    if head == rdfNilIRI {
+        return []
+    }
+    var members: [String] = []
+    var current = head
+    var visited: Set<String> = []
+    while current != rdfNilIRI && !visited.contains(current) {
+        visited.insert(current)
+        guard let first = triples.first(where: { $0.subject == current && $0.predicate == rdfFirstIRI })?.object,
+              let rest = triples.first(where: { $0.subject == current && $0.predicate == rdfRestIRI })?.object else {
+            break
+        }
+        members.append(first)
+        current = rest
+    }
+    return members
+}
+
+private func multisetCounts(_ values: [String]) -> [String: Int] {
+    values.reduce(into: [:]) { partial, value in
+        partial[value, default: 0] += 1
+    }
+}
+
+private func loadW3CNodeExprEvalCases(from triples: [SHACLDataTriple], manifestID: String) -> [W3CNodeExprEvalCase] {
+    let evalSubjects = triples
+        .filter { $0.predicate == rdfTypeIRI && $0.object == shtEvalNodeExprIRI }
+        .map(\.subject)
+        .sorted()
+
+    var cases: [W3CNodeExprEvalCase] = []
+    for subject in evalSubjects {
+        guard let actionNode = triples.first(where: { $0.subject == subject && $0.predicate == mfActionIRI })?.object,
+              let expressionTerm = triples.first(where: { $0.subject == actionNode && $0.predicate == shtNodeExprIRI })?.object,
+              let resultListHead = triples.first(where: { $0.subject == subject && $0.predicate == mfResultIRI })?.object else {
+            continue
+        }
+
+        let focusNode = triples.first(where: { $0.subject == actionNode && $0.predicate == shtFocusNodeIRI })?.object
+        let ignoreOrder = triples
+            .first(where: { $0.subject == actionNode && $0.predicate == shtIgnoreOrderIRI })
+            .map { isTrueBooleanLiteral($0.object) } ?? false
+        let scopedTriples = triples.filter { $0.subject == actionNode && $0.predicate.hasPrefix(shtScopePrefixIRI) }
+        let bindings = Dictionary(grouping: scopedTriples, by: { String($0.predicate.dropFirst(shtScopePrefixIRI.count)) })
+            .mapValues { Set($0.map(\.object)) }
+        let expectedResults = rdfListMembers(head: resultListHead, triples: triples)
+
+        cases.append(
+            W3CNodeExprEvalCase(
+                caseID: "\(manifestID)#\(subject)",
+                expressionTerm: expressionTerm,
+                focusNode: focusNode,
+                ignoreOrder: ignoreOrder,
+                variableBindings: bindings,
+                expectedOrderedResults: expectedResults
+            )
+        )
+    }
+
+    return cases
 }
 
 private struct W3CCuratedConformanceCase {
@@ -252,6 +338,77 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         let dataGraph = try dataLoader.load(from: fixturePayload)
         _ = try shapesLoader.load(from: fixturePayload)
         #expect(!dataGraph.triples.isEmpty)
+    }
+}
+
+@Test func w3cNodeExprShnexEvalSubsetMatchesManifestResults() async throws {
+    let shnexDirectoryURL = fixturesRootURL()
+        .appendingPathComponent("W3CDataShapes")
+        .appendingPathComponent("shacl12-test-suite/tests/node-expr/shnex")
+    let fileURLs = try FileManager.default.contentsOfDirectory(
+        at: shnexDirectoryURL,
+        includingPropertiesForKeys: nil
+    )
+    let turtleFixtureURLs = fileURLs
+        .filter { $0.pathExtension == "ttl" }
+        .sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+    let supportedManifests = Set([
+        "concat.ttl",
+        "count.ttl",
+        "distinct.ttl",
+        "exists.ttl",
+        "findFirst.ttl",
+        "flatMap.ttl",
+        "if.ttl",
+        "instancesOf.ttl",
+        "limit.ttl",
+        "matchAll.ttl",
+        "max.ttl",
+        "min.ttl",
+        "offset.ttl",
+        "orderBy.ttl",
+        "pathValues.ttl",
+        "remove.ttl",
+        "var.ttl",
+    ])
+    let selectedURLs = turtleFixtureURLs.filter { supportedManifests.contains($0.lastPathComponent) }
+    #expect(!selectedURLs.isEmpty)
+
+    let evaluator = SHACLNodeExpressionEvaluator()
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+
+    for turtleFixtureURL in selectedURLs {
+        let fixturePayload = try Data(contentsOf: turtleFixtureURL)
+        let shapesGraph = try shapesLoader.load(from: fixturePayload)
+        let dataGraph = try dataLoader.load(from: fixturePayload)
+        let evalCases = loadW3CNodeExprEvalCases(
+            from: dataGraph.triples,
+            manifestID: turtleFixtureURL.lastPathComponent
+        )
+
+        for evalCase in evalCases {
+            let actual = evaluator.evaluateOrdered(
+                expressionIRI: evalCase.expressionTerm,
+                focusNode: evalCase.focusNode ?? "",
+                shapesGraph: shapesGraph,
+                dataGraph: dataGraph,
+                variableBindings: evalCase.variableBindings
+            )
+
+            if evalCase.ignoreOrder {
+                #expect(
+                    multisetCounts(actual) == multisetCounts(evalCase.expectedOrderedResults),
+                    "W3C node-expr case \(evalCase.caseID) multiset mismatch"
+                )
+            } else {
+                #expect(
+                    actual == evalCase.expectedOrderedResults,
+                    "W3C node-expr case \(evalCase.caseID) ordered mismatch"
+                )
+            }
+        }
     }
 }
 
