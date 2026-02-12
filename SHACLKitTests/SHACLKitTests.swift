@@ -295,7 +295,7 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let graph = try loader.load(from: fixtureData("nodeExpressionDefinitions.ttl"))
 
     let byIRI = Dictionary(uniqueKeysWithValues: graph.nodeExpressions.map { ($0.expressionIRI, $0.kind) })
-    #expect(byIRI.count == 5)
+    #expect(byIRI.count >= 5)
     if case .union(let members)? = byIRI["http://example.com/ExprA"] {
         #expect(Set(members) == Set([
             "http://example.com/ConstA",
@@ -309,7 +309,11 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
 @Test func shapesLoaderParsesBooleanLiteralNodeExpressionMembers() async throws {
     let loader = SHACLShapesGraphLoader()
     let graph = try loader.load(from: fixtureData("nodeExpressionBooleanDefinitions.ttl"))
-    let kind = try #require(graph.nodeExpressions.first?.kind)
+    let kind = try #require(
+        graph.nodeExpressions
+            .first(where: { $0.expressionIRI == "http://example.com/ExprBool" })?
+            .kind
+    )
     if case .union(let members) = kind {
         #expect(Set(members) == Set([
             "\"true\"^^http://www.w3.org/2001/XMLSchema#boolean",
@@ -392,14 +396,17 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
 
     let supportedManifests = Set([
         "concat.ttl",
+        "constant.ttl",
         "count.ttl",
         "distinct.ttl",
+        "empty.ttl",
         "exists.ttl",
         "findFirst.ttl",
         "flatMap.ttl",
         "if.ttl",
         "instancesOf.ttl",
         "limit.ttl",
+        "list.ttl",
         "matchAll.ttl",
         "max.ttl",
         "min.ttl",

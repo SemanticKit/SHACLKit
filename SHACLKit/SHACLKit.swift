@@ -916,7 +916,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
 
         let triplesBySubject = Dictionary(grouping: triples, by: \.subject)
 
-        let expressionDefinitions = nodeExpressions.compactMap { expressionIRI, partial -> SHACLNodeExpressionDefinition? in
+        var expressionDefinitions = nodeExpressions.compactMap { expressionIRI, partial -> SHACLNodeExpressionDefinition? in
             let unionMembers = resolveShapeReferenceIRIs(partial.unionMemberObjects, triplesBySubject: triplesBySubject).sorted()
             if !unionMembers.isEmpty {
                 return SHACLNodeExpressionDefinition(
@@ -1163,7 +1163,24 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
 
             return nil
         }
-        .sorted(by: { $0.expressionIRI < $1.expressionIRI })
+
+        let definedExpressionIRIs = Set(expressionDefinitions.map(\.expressionIRI))
+        let rdfListHeadIRIs = Set(
+            triplesBySubject.compactMap { subject, subjectTriples in
+                subjectTriples.contains(where: { $0.predicate == SHACLIRIs.rdfFirst }) ? subject : nil
+            }
+        )
+        let synthesizedListExpressions = rdfListHeadIRIs
+            .subtracting(definedExpressionIRIs)
+            .sorted()
+            .map { listHeadIRI in
+                SHACLNodeExpressionDefinition(
+                    expressionIRI: listHeadIRI,
+                    kind: .nodes(resolveRDFListOrDirectValueOrdered(listHeadIRI, triplesBySubject: triplesBySubject))
+                )
+            }
+        expressionDefinitions.append(contentsOf: synthesizedListExpressions)
+        expressionDefinitions.sort(by: { $0.expressionIRI < $1.expressionIRI })
         let expressionIRIs = Set(expressionDefinitions.map(\.expressionIRI))
 
         let definitions = shapes.compactMap { shapeIRI, partial -> SHACLShapeDefinition? in

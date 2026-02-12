@@ -77,6 +77,7 @@ Legend:
   - Added fixture coverage for bare Turtle boolean literals in node-expression members.
   - Added W3C SHACL 1.2 `node-expr/shnex` fixture preflight coverage through SemanticKit Turtle parsing and SHACLKit data/shapes graph loaders.
   - Added W3C SHACL 1.2 `sht:EvalNodeExpr` manifest-evaluation subset harness (ordered and multiset comparison modes).
+  - Expanded W3C manifest-evaluation subset to include `constant.ttl`, `empty.ttl`, and `list.ttl`.
   - Added fixture/test coverage for evaluator-scoped `shnex:var` bindings (`focusNode`, bound variable, and unbound variable behavior).
   - Added fixtures/tests for `shnex:nodes`, `shnex:exists`, `shnex:count`, `shnex:var`, `shnex:distinct`, `shnex:instancesOf`, `shnex:nodesMatching`, `shnex:matchAll`, `shnex:filterShape`, `shnex:concat`, `shnex:remove`, `shnex:flatMap`, `shnex:limit`, `shnex:offset`, `shnex:findFirst`, `shnex:orderBy` (with `shnex:desc`), `shnex:min`, `shnex:max`, and `shnex:sum`.
   - Added fixtures/tests for `shnex:if` / `shnex:then` / `shnex:else`.
