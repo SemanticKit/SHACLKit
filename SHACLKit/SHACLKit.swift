@@ -421,7 +421,7 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
         dataGraph: SHACLDataGraph,
         shapesGraph: SHACLShapesGraph
     ) throws -> [String] {
-        try enforcePolicy(query: query)
+        try enforcePolicy(query: query, requirePreboundThisReference: true)
         return try wrappedExecutor.select(query: query, focusNode: focusNode, dataGraph: dataGraph, shapesGraph: shapesGraph)
     }
 
@@ -431,11 +431,11 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
         dataGraph: SHACLDataGraph,
         shapesGraph: SHACLShapesGraph
     ) throws -> Bool {
-        try enforcePolicy(query: query)
+        try enforcePolicy(query: query, requirePreboundThisReference: false)
         return try wrappedExecutor.ask(query: query, focusNode: focusNode, dataGraph: dataGraph, shapesGraph: shapesGraph)
     }
 
-    private func enforcePolicy(query: String) throws {
+    private func enforcePolicy(query: String, requirePreboundThisReference: Bool) throws {
         if let maxQueryLength, query.count > maxQueryLength {
             throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query length exceeds \(maxQueryLength) characters.")
         }
@@ -456,6 +456,14 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
             let regex = try NSRegularExpression(pattern: pattern)
             if regex.firstMatch(in: query, options: [], range: preboundRange) != nil {
                 throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query attempts to rebind pre-bound ?\(variable).")
+            }
+        }
+
+        if requirePreboundThisReference {
+            let thisReferencePattern = #"(?i)\?this\b"#
+            let thisReferenceRegex = try NSRegularExpression(pattern: thisReferencePattern)
+            if thisReferenceRegex.firstMatch(in: query, options: [], range: preboundRange) == nil {
+                throw SHACLError.notImplemented("SPARQL query blocked by guard policy: SELECT query does not reference pre-bound ?this.")
             }
         }
     }

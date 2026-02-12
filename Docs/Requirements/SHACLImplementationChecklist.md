@@ -102,6 +102,7 @@ Legend:
   - Added `SHACLSPARQLExecutor` protocol with default-deny executor (`SHACLDeniedSPARQLExecutor`) requiring explicit opt-in for SPARQL evaluation.
   - Added `SHACLGuardedSPARQLExecutor` wrapper with keyword and query-length policy enforcement before delegating to a backing executor.
   - Expanded default guarded policy coverage to block `MINUS`, `VALUES`, and rebinding of pre-bound SHACL variables (`?this`, `?path`, `?value`).
+  - Added guarded policy enforcement requiring `SELECT` queries to reference pre-bound `?this`.
 
 ## Integration Boundaries
 
