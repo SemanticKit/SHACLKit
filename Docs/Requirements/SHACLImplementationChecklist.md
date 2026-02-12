@@ -95,6 +95,7 @@ Legend:
   - Added shape-graph validation for property-shape SPARQL targets requiring `sh:select`.
   - Added first-slice execution for directly targeted property-shape SPARQL targets.
   - Added shape-graph validation for `sh:targetNode` SPARQL resources requiring `sh:select`.
+  - Removed loader gating for `sh:prefixes` so SPARQL shape definitions with prefix declarations load through validation paths.
 - [~] `REQ-SHACL-302` Sandboxed/controlled query execution boundary for SPARQL extension evaluation.
   - Added `SHACLSPARQLExecutor` protocol with default-deny executor (`SHACLDeniedSPARQLExecutor`) requiring explicit opt-in for SPARQL evaluation.
   - Added `SHACLGuardedSPARQLExecutor` wrapper with keyword and query-length policy enforcement before delegating to a backing executor.
