@@ -3091,6 +3091,9 @@ public struct SHACLCoreValidator: SHACLValidator {
             guard let shape = shapesByIRI[resolution.shapeIRI] else {
                 continue
             }
+            if shape.isDeactivated {
+                continue
+            }
             switch shape.kind {
             case .nodeShape:
                 let severity = shape.severity ?? .violation
@@ -3203,6 +3206,9 @@ public struct SHACLCoreValidator: SHACLValidator {
         expressionGraph: SHACLShapesGraph,
         visited: inout Set<String>
     ) throws -> [SHACLViolation] {
+        if propertyShape.isDeactivated {
+            return []
+        }
         let visitKey = "\(propertyShape.shapeIRI)|\(currentNode)"
         if visited.contains(visitKey) {
             return []

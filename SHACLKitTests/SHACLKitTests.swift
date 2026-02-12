@@ -2676,6 +2676,38 @@ private struct TestShapesSource {
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
 }
 
+@Test func coreValidatorSkipsSPARQLConstraintsForDeactivatedNodeShape() async throws {
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/alice": ["http://example.com/alice"],
+            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/bob": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlDeactivatedNodeShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorSkipsSPARQLConstraintsForDeactivatedPropertyShape() async throws {
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "SELECT ?this WHERE { FILTER(strlen(str(?this)) = 0) }|\"\"": ["\"\""],
+            "SELECT ?this WHERE { FILTER(strlen(str(?this)) = 0) }|\"Bob\"": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlDeactivatedPropertyShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
 @Test func coreValidatorBlocksGuardedSPARQLConstraintByKeywordPolicy() async throws {
     let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
     let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
