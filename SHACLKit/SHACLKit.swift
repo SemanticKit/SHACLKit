@@ -2677,6 +2677,171 @@ private func evaluatePropertyPathValues(
     }
 }
 
+private func evaluatePropertyPairComparisonValues(
+    propertyPathTerm: String,
+    focusNode: String,
+    dataGraph: SHACLDataGraph
+) -> [String] {
+    let triplesBySubject = Dictionary(grouping: dataGraph.triples, by: \.subject)
+    if let propertyPath = parsePropertyPathInDataGraph(propertyPathTerm, triplesBySubject: triplesBySubject) {
+        return Array(evaluatePropertyPathValues(propertyPath, from: focusNode, dataGraph: dataGraph))
+    }
+    return dataGraph.triples
+        .filter { $0.subject == focusNode && $0.predicate == propertyPathTerm }
+        .map(\.object)
+}
+
+private func parsePropertyPathInDataGraph(
+    _ term: String,
+    triplesBySubject: [String: [SHACLDataTriple]]
+) -> SHACLPropertyPath? {
+    var visited: Set<String> = []
+    return parsePropertyPathInDataGraph(term, triplesBySubject: triplesBySubject, visited: &visited)
+}
+
+private func parsePropertyPathInDataGraph(
+    _ term: String,
+    triplesBySubject: [String: [SHACLDataTriple]],
+    visited: inout Set<String>
+) -> SHACLPropertyPath? {
+    if visited.contains(term) {
+        return nil
+    }
+    visited.insert(term)
+    defer { visited.remove(term) }
+
+    if hasRDFListStructureInDataGraph(term, triplesBySubject: triplesBySubject) {
+        let members = resolveRDFListTermsOrderedInDataGraph(term, triplesBySubject: triplesBySubject)
+        let parsedMembers = members.compactMap { member in
+            parsePropertyPathInDataGraph(
+                member,
+                triplesBySubject: triplesBySubject,
+                visited: &visited
+            )
+        }
+        guard !parsedMembers.isEmpty, parsedMembers.count == members.count else {
+            return nil
+        }
+        if parsedMembers.count == 1 {
+            return parsedMembers[0]
+        }
+        return .sequence(parsedMembers)
+    }
+
+    if let triples = triplesBySubject[term] {
+        if let inverseObject = triples.first(where: { $0.predicate == SHACLIRIs.inversePath })?.object,
+           let nested = parsePropertyPathInDataGraph(
+               inverseObject,
+               triplesBySubject: triplesBySubject,
+               visited: &visited
+           ) {
+            return .inverse(nested)
+        }
+
+        if let alternativeList = triples.first(where: { $0.predicate == SHACLIRIs.alternativePath })?.object {
+            let members = resolveRDFListTermsOrderedInDataGraph(alternativeList, triplesBySubject: triplesBySubject)
+            let parsedMembers = members.compactMap { member in
+                parsePropertyPathInDataGraph(
+                    member,
+                    triplesBySubject: triplesBySubject,
+                    visited: &visited
+                )
+            }
+            guard !parsedMembers.isEmpty, parsedMembers.count == members.count else {
+                return nil
+            }
+            return .alternative(parsedMembers)
+        }
+
+        if let zeroOrMoreObject = triples.first(where: { $0.predicate == SHACLIRIs.zeroOrMorePath })?.object,
+           let nested = parsePropertyPathInDataGraph(
+               zeroOrMoreObject,
+               triplesBySubject: triplesBySubject,
+               visited: &visited
+           ) {
+            return .zeroOrMore(nested)
+        }
+
+        if let oneOrMoreObject = triples.first(where: { $0.predicate == SHACLIRIs.oneOrMorePath })?.object,
+           let nested = parsePropertyPathInDataGraph(
+               oneOrMoreObject,
+               triplesBySubject: triplesBySubject,
+               visited: &visited
+           ) {
+            return .oneOrMore(nested)
+        }
+
+        if let zeroOrOneObject = triples.first(where: { $0.predicate == SHACLIRIs.zeroOrOnePath })?.object,
+           let nested = parsePropertyPathInDataGraph(
+               zeroOrOneObject,
+               triplesBySubject: triplesBySubject,
+               visited: &visited
+           ) {
+            return .zeroOrOne(nested)
+        }
+    }
+
+    if isIRIReferenceTermInDataGraph(term) {
+        return .predicate(term)
+    }
+
+    return nil
+}
+
+private func hasRDFListStructureInDataGraph(
+    _ term: String,
+    triplesBySubject: [String: [SHACLDataTriple]]
+) -> Bool {
+    guard let triples = triplesBySubject[term] else {
+        return false
+    }
+    return triples.contains(where: { $0.predicate == SHACLIRIs.rdfFirst })
+}
+
+private func resolveRDFListTermsOrderedInDataGraph(
+    _ headOrValue: String,
+    triplesBySubject: [String: [SHACLDataTriple]]
+) -> [String] {
+    if headOrValue == SHACLIRIs.rdfNil {
+        return []
+    }
+
+    guard let firstRestTriples = triplesBySubject[headOrValue],
+          firstRestTriples.contains(where: { $0.predicate == SHACLIRIs.rdfFirst }) else {
+        return [headOrValue]
+    }
+
+    var terms: [String] = []
+    var current = headOrValue
+    var visited: Set<String> = []
+
+    while current != SHACLIRIs.rdfNil && !visited.contains(current) {
+        visited.insert(current)
+        guard let triples = triplesBySubject[current],
+              let first = triples.first(where: { $0.predicate == SHACLIRIs.rdfFirst }),
+              let rest = triples.first(where: { $0.predicate == SHACLIRIs.rdfRest }) else {
+            break
+        }
+        terms.append(first.object)
+        current = rest.object
+    }
+
+    return terms
+}
+
+private func isIRIReferenceTermInDataGraph(_ term: String) -> Bool {
+    if term.hasPrefix("_:") || term.hasPrefix("\"") {
+        return false
+    }
+    if Double(term) != nil {
+        return false
+    }
+    if term == "true" || term == "false" {
+        return false
+    }
+    return term.contains(":")
+}
+
 private func transitiveSubclasses(of classIRI: String, dataGraph: SHACLDataGraph) -> Set<String> {
     var descendants: Set<String> = []
     var frontier: Set<String> = [classIRI]
@@ -4554,9 +4719,11 @@ public struct SHACLCoreValidator: SHACLValidator {
             }
 
             if let lessThanIRI = propertyShape.lessThanIRI {
-                let comparisonValues = dataGraph.triples
-                    .filter { $0.subject == focusNode && $0.predicate == lessThanIRI }
-                    .map(\.object)
+                let comparisonValues = evaluatePropertyPairComparisonValues(
+                    propertyPathTerm: lessThanIRI,
+                    focusNode: focusNode,
+                    dataGraph: dataGraph
+                )
                 for valueNode in values {
                     for comparisonValue in comparisonValues {
                         guard let comparison = compareRangeValueTerm(valueNode, toBoundTerm: comparisonValue),
@@ -4579,9 +4746,11 @@ public struct SHACLCoreValidator: SHACLValidator {
             }
 
             if let lessThanOrEqualsIRI = propertyShape.lessThanOrEqualsIRI {
-                let comparisonValues = dataGraph.triples
-                    .filter { $0.subject == focusNode && $0.predicate == lessThanOrEqualsIRI }
-                    .map(\.object)
+                let comparisonValues = evaluatePropertyPairComparisonValues(
+                    propertyPathTerm: lessThanOrEqualsIRI,
+                    focusNode: focusNode,
+                    dataGraph: dataGraph
+                )
                 for valueNode in values {
                     for comparisonValue in comparisonValues {
                         guard let comparison = compareRangeValueTerm(valueNode, toBoundTerm: comparisonValue),
@@ -4605,9 +4774,11 @@ public struct SHACLCoreValidator: SHACLValidator {
 
             if let equalsIRI = propertyShape.equalsIRI {
                 let relatedValues = Set(
-                    dataGraph.triples
-                        .filter { $0.subject == focusNode && $0.predicate == equalsIRI }
-                        .map(\.object)
+                    evaluatePropertyPairComparisonValues(
+                        propertyPathTerm: equalsIRI,
+                        focusNode: focusNode,
+                        dataGraph: dataGraph
+                    )
                 )
                 let expectedValues = Set(values)
                 let mismatchValues = expectedValues.symmetricDifference(relatedValues).sorted()
@@ -4628,9 +4799,11 @@ public struct SHACLCoreValidator: SHACLValidator {
 
             if let disjointIRI = propertyShape.disjointIRI {
                 let relatedValues = Set(
-                    dataGraph.triples
-                        .filter { $0.subject == focusNode && $0.predicate == disjointIRI }
-                        .map(\.object)
+                    evaluatePropertyPairComparisonValues(
+                        propertyPathTerm: disjointIRI,
+                        focusNode: focusNode,
+                        dataGraph: dataGraph
+                    )
                 )
                 for valueNode in values where relatedValues.contains(valueNode) {
                     violations.append(
