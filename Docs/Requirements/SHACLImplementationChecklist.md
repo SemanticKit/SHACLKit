@@ -88,6 +88,7 @@ Legend:
   - Added first-slice execution for property-shape `sh:sparql` constraints against resolved property values.
   - Added execution for directly targeted property-shape `sh:sparql` constraints.
   - Added recursive execution for nested property-shape `sh:sparql` constraints.
+  - Added `sh:message` parsing/propagation for SPARQL constraint violations on node and property shapes.
 - [~] `REQ-SHACL-301` Implement SHACL SPARQL targets.
   - Added first-slice parsing and focus-node resolution hooks for `sh:target` with `sh:select` through an explicit executor boundary.
   - Added first-slice support for `sh:targetNode` values backed by inline `sh:select` resources.
@@ -97,6 +98,7 @@ Legend:
 - [~] `REQ-SHACL-302` Sandboxed/controlled query execution boundary for SPARQL extension evaluation.
   - Added `SHACLSPARQLExecutor` protocol with default-deny executor (`SHACLDeniedSPARQLExecutor`) requiring explicit opt-in for SPARQL evaluation.
   - Added `SHACLGuardedSPARQLExecutor` wrapper with keyword and query-length policy enforcement before delegating to a backing executor.
+  - Expanded default guarded policy coverage to block `MINUS`, `VALUES`, and rebinding of pre-bound SHACL variables (`?this`, `?path`, `?value`).
 
 ## Integration Boundaries
 
