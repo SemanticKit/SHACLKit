@@ -1,0 +1,9 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:GuardedPreboundShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:sparql ex:UnsafePreboundConstraint .
+
+ex:UnsafePreboundConstraint
+  sh:select "SELECT ?this WHERE { ?this ex:name ?name . BIND(str(?name) AS ?this) }" .

@@ -2777,6 +2777,17 @@ private struct TestShapesSource {
     }
 }
 
+@Test func coreValidatorBlocksGuardedSPARQLConstraintByPreboundThisPolicy() async throws {
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardBlockedPreboundThisShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorBlocksGuardedSPARQLConstraintByLengthPolicy() async throws {
     let guardedExecutor = SHACLGuardedSPARQLExecutor(
         wrapping: TestSPARQLExecutor(),

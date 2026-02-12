@@ -448,6 +448,13 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
                 throw SHACLError.notImplemented("SPARQL query blocked by guard policy: contains disallowed keyword \(keyword).")
             }
         }
+
+        let preboundThisPattern = #"(?i)\bAS\s+\?this\b"#
+        let preboundThisRegex = try NSRegularExpression(pattern: preboundThisPattern)
+        let preboundRange = NSRange(query.startIndex..<query.endIndex, in: query)
+        if preboundThisRegex.firstMatch(in: query, options: [], range: preboundRange) != nil {
+            throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query attempts to rebind pre-bound ?this.")
+        }
     }
 }
 
