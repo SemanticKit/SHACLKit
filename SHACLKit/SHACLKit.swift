@@ -1742,6 +1742,11 @@ public struct SHACLFocusNodeResolver: Sendable {
                         .map(\.subject)
                 )
             }
+            nodes.formUnion(
+                dataGraph.triples
+                    .filter { $0.predicate == SHACLIRIs.shape && $0.object == shape.shapeIRI }
+                    .map(\.subject)
+            )
             return SHACLTargetResolution(shapeIRI: shape.shapeIRI, focusNodes: nodes.sorted())
         }
     }
@@ -5256,6 +5261,7 @@ private enum SHACLIRIs {
     static let targetSubjectsOf = "http://www.w3.org/ns/shacl#targetSubjectsOf"
     static let targetObjectsOf = "http://www.w3.org/ns/shacl#targetObjectsOf"
     static let targetWhere = "http://www.w3.org/ns/shacl#targetWhere"
+    static let shape = "http://www.w3.org/ns/shacl#shape"
     static let order = "http://www.w3.org/ns/shacl#order"
     static let deactivated = "http://www.w3.org/ns/shacl#deactivated"
     static let severity = "http://www.w3.org/ns/shacl#severity"

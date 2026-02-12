@@ -1566,6 +1566,20 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(result.violations.contains { $0.focusNode == "http://example.com/ns#InvalidInstance" })
 }
 
+@Test func coreValidatorResolvesShapeSelectorTargets() async throws {
+    let validator = SHACLCoreValidator()
+    let shapesTurtle = try fixtureData("W3CDataShapes/shacl12-test-suite/tests/core/targets/shape-001.ttl")
+    let dataTurtle = try fixtureData("W3CDataShapes/shacl12-test-suite/tests/core/targets/shape-001-data.ttl")
+
+    let shapesPayload = try cleanedGraphSectionData(fromTurtleData: shapesTurtle)
+    let dataPayload = try cleanedGraphSectionData(fromTurtleData: dataTurtle)
+    let result = try validator.validate(dataGraph: dataPayload, shapesGraph: shapesPayload)
+
+    #expect(!result.conforms)
+    #expect(result.violations.contains { $0.focusNode == "http://example.com/ns#InvalidResource1" })
+    #expect(!result.violations.contains { $0.focusNode == "http://example.com/ns#ValidResource1" })
+}
+
 @Test func focusNodeResolverResolvesSelectorsAgainstDataGraph() async throws {
     let shapesLoader = SHACLShapesGraphLoader()
     let dataLoader = SHACLDataGraphLoader()
