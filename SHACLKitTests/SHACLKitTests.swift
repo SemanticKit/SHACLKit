@@ -468,6 +468,14 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     )
     #expect(varFocusNode == Set(["http://example.com/Aldi"]))
 
+    let varBound = evaluator.evaluate(
+        expressionIRI: "http://example.com/VarBound",
+        focusNode: "http://example.com/Aldi",
+        shapesGraph: graph,
+        variableBindings: ["bound": Set(["4.2"])]
+    )
+    #expect(varBound == Set(["4.2"]))
+
     let varUnbound = evaluator.evaluate(
         expressionIRI: "http://example.com/VarUnbound",
         focusNode: "http://example.com/Aldi",

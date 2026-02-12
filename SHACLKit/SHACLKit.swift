@@ -1630,7 +1630,8 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
         expressionIRI: String,
         focusNode: String,
         shapesGraph: SHACLShapesGraph,
-        dataGraph: SHACLDataGraph? = nil
+        dataGraph: SHACLDataGraph? = nil,
+        variableBindings: [String: Set<String>] = [:]
     ) -> Set<String> {
         let expressionByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.nodeExpressions.map { ($0.expressionIRI, $0) })
         var visited: Set<String> = []
@@ -1640,6 +1641,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
             shapesGraph: shapesGraph,
             expressionsByIRI: expressionByIRI,
             dataGraph: dataGraph,
+            variableBindings: variableBindings,
             depth: 0,
             visited: &visited
         )
@@ -1651,6 +1653,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
         shapesGraph: SHACLShapesGraph,
         expressionsByIRI: [String: SHACLNodeExpressionDefinition],
         dataGraph: SHACLDataGraph?,
+        variableBindings: [String: Set<String>],
         depth: Int,
         visited: inout Set<String>
     ) -> Set<String> {
@@ -1683,6 +1686,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                         shapesGraph: shapesGraph,
                         expressionsByIRI: expressionsByIRI,
                         dataGraph: dataGraph,
+                        variableBindings: variableBindings,
                         depth: depth + 1,
                         visited: &visited
                     )
@@ -1698,6 +1702,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1709,6 +1714,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                         shapesGraph: shapesGraph,
                         expressionsByIRI: expressionsByIRI,
                         dataGraph: dataGraph,
+                        variableBindings: variableBindings,
                         depth: depth + 1,
                         visited: &visited
                     )
@@ -1723,6 +1729,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                         shapesGraph: shapesGraph,
                         expressionsByIRI: expressionsByIRI,
                         dataGraph: dataGraph,
+                        variableBindings: variableBindings,
                         depth: depth + 1,
                         visited: &visited
                     )
@@ -1735,6 +1742,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1751,11 +1759,15 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
             return ["\(output.count)"]
         case .variable(let variableName):
+            if let binding = variableBindings[variableName] {
+                return binding
+            }
             if variableName == "focusNode" {
                 return [focusNode]
             }
@@ -1767,6 +1779,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1777,6 +1790,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1802,6 +1816,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1838,6 +1853,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1852,6 +1868,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1866,6 +1883,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1877,6 +1895,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1887,6 +1906,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     shapesGraph: shapesGraph,
                     expressionsByIRI: expressionsByIRI,
                     dataGraph: dataGraph,
+                    variableBindings: variableBindings,
                     depth: depth + 1,
                     visited: &visited
                 )
@@ -1900,6 +1920,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1915,6 +1936,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     shapesGraph: shapesGraph,
                     expressionsByIRI: expressionsByIRI,
                     dataGraph: dataGraph,
+                    variableBindings: variableBindings,
                     depth: depth + 1,
                     visited: &visited
                 )
@@ -1934,6 +1956,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                         shapesGraph: shapesGraph,
                         expressionsByIRI: expressionsByIRI,
                         dataGraph: dataGraph,
+                        variableBindings: variableBindings,
                         depth: depth + 1,
                         visited: &visited
                     )
@@ -1946,6 +1969,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1955,6 +1979,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1966,6 +1991,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -1977,6 +2003,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                         shapesGraph: shapesGraph,
                         expressionsByIRI: expressionsByIRI,
                         dataGraph: dataGraph,
+                        variableBindings: variableBindings,
                         depth: depth + 1,
                         visited: &visited
                     )
@@ -1989,6 +2016,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2000,6 +2028,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2011,6 +2040,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2035,6 +2065,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2049,6 +2080,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2062,6 +2094,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
         shapesGraph: SHACLShapesGraph,
         expressionsByIRI: [String: SHACLNodeExpressionDefinition],
         dataGraph: SHACLDataGraph?,
+        variableBindings: [String: Set<String>],
         depth: Int,
         visited: inout Set<String>
     ) -> [String] {
@@ -2072,6 +2105,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth,
                 visited: &visited
             ).sorted()
@@ -2087,6 +2121,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     shapesGraph: shapesGraph,
                     expressionsByIRI: expressionsByIRI,
                     dataGraph: dataGraph,
+                    variableBindings: variableBindings,
                     depth: depth + 1,
                     visited: &visited
                 ))
@@ -2102,6 +2137,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     shapesGraph: shapesGraph,
                     expressionsByIRI: expressionsByIRI,
                     dataGraph: dataGraph,
+                    variableBindings: variableBindings,
                     depth: depth + 1,
                     visited: &visited
                 ))
@@ -2114,6 +2150,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2123,6 +2160,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             ))
@@ -2134,6 +2172,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2145,6 +2184,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                     shapesGraph: shapesGraph,
                     expressionsByIRI: expressionsByIRI,
                     dataGraph: dataGraph,
+                    variableBindings: variableBindings,
                     depth: depth + 1,
                     visited: &visited
                 ))
@@ -2157,6 +2197,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2168,6 +2209,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2179,6 +2221,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2203,6 +2246,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2214,6 +2258,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth + 1,
                 visited: &visited
             )
@@ -2224,6 +2269,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth,
                 visited: &visited
             ).sorted()
@@ -2238,6 +2284,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
         shapesGraph: SHACLShapesGraph,
         expressionsByIRI: [String: SHACLNodeExpressionDefinition],
         dataGraph: SHACLDataGraph?,
+        variableBindings: [String: Set<String>],
         depth: Int,
         visited: inout Set<String>
     ) -> [String] {
@@ -2248,6 +2295,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth,
                 visited: &visited
             ).sorted()
@@ -2257,6 +2305,7 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 shapesGraph: shapesGraph,
                 expressionsByIRI: expressionsByIRI,
                 dataGraph: dataGraph,
+                variableBindings: variableBindings,
                 depth: depth,
                 visited: &visited
             ).sorted()

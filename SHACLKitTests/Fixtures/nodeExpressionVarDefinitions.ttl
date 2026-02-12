@@ -4,6 +4,9 @@
 ex:VarFocusNode
     shnex:var "focusNode" .
 
+ex:VarBound
+    shnex:var "bound" .
+
 ex:VarUnbound
     shnex:var "unbound" .
 
