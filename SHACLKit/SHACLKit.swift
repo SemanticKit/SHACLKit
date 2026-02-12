@@ -5294,9 +5294,7 @@ private enum SHACLIRIs {
     static let xsdDateTime = "http://www.w3.org/2001/XMLSchema#dateTime"
     static let xsdByte = "http://www.w3.org/2001/XMLSchema#byte"
     static let rdfLangString = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
-    static let phaseGatedPredicates: Set<String> = [
-        prefixes,
-    ]
+    static let phaseGatedPredicates: Set<String> = []
 }
 
 private struct SHACLTriple {

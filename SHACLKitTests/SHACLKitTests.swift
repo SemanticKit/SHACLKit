@@ -2516,6 +2516,22 @@ private struct TestShapesSource {
     #expect(violation.sourceConstraintIRI == "http://example.com/NameConstraint")
 }
 
+@Test func coreValidatorAcceptsSPARQLConstraintWithPrefixesDeclaration() async throws {
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/alice": ["http://example.com/alice"],
+            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/bob": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlConstraintWithPrefixesShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
 @Test func coreValidatorUsesSPARQLMessageForNodeShapeConstraintViolation() async throws {
     let executor = TestSPARQLExecutor(
         selectResults: [
