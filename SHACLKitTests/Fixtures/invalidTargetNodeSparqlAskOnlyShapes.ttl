@@ -1,0 +1,13 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:VIPShape a sh:NodeShape ;
+  sh:targetNode ex:AskOnlyTarget ;
+  sh:property ex:StatusShape .
+
+ex:StatusShape a sh:PropertyShape ;
+  sh:path ex:status ;
+  sh:hasValue "approved" .
+
+ex:AskOnlyTarget
+  sh:ask "ASK WHERE { ?this ex:segment ex:vip }" .

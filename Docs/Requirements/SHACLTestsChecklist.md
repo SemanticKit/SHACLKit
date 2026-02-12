@@ -112,6 +112,7 @@ Legend:
   - Covered missing `sh:path`, missing referenced property shape, missing referenced node shape, missing referenced node expression, and missing `sh:nodeByExpression` reference failures.
   - Added coverage for missing `sh:node` references on node shapes.
   - Added coverage for property-shape SPARQL targets missing required `sh:select`.
+  - Added coverage for `sh:targetNode` resources that resolve to SPARQL targets missing required `sh:select`.
 - [x] `TEST-SHACL-032` Large graph smoke test for baseline performance.
 - [x] `TEST-SHACL-033` Regression suite for previously fixed defects.
   - Added deterministic regression coverage for prior cycle/severity behavior.

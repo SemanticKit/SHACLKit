@@ -1259,7 +1259,19 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             )
         }
 
-        let referencedSPARQLIRIs = Set(definitions.flatMap(\.sparqlConstraintIRIs) + definitions.flatMap(\.sparqlTargetIRIs))
+        let targetNodeReferencedSPARQLIRIs = Set(
+            definitions.flatMap(\.targets).compactMap { target -> String? in
+                if case .targetNode(let iri) = target, sparqlDefinitions[iri] != nil {
+                    return iri
+                }
+                return nil
+            }
+        )
+        let referencedSPARQLIRIs = Set(
+            definitions.flatMap(\.sparqlConstraintIRIs)
+                + definitions.flatMap(\.sparqlTargetIRIs)
+                + Array(targetNodeReferencedSPARQLIRIs)
+        )
         let parsedSPARQLDefinitions = try referencedSPARQLIRIs.sorted().map { sparqlIRI in
             guard let partial = sparqlDefinitions[sparqlIRI] else {
                 throw SHACLError.invalidShapesGraph("Shape references missing SPARQL definition \(sparqlIRI)")
@@ -2880,6 +2892,13 @@ public struct SHACLCoreValidator: SHACLValidator {
         let sparqlByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.sparqlDefinitions.map { ($0.sparqlIRI, $0) })
 
         for shape in shapesGraph.shapes where shape.kind == .nodeShape {
+            for target in shape.targets {
+                if case .targetNode(let targetNodeIRI) = target,
+                   let sparql = sparqlByIRI[targetNodeIRI],
+                   sparql.selectQuery == nil {
+                    throw SHACLError.invalidShapesGraph("SPARQL target \(targetNodeIRI) must define sh:select")
+                }
+            }
             if let expressionIRI = shape.expressionIRI,
                expressionByIRI[expressionIRI] == nil,
                expressionIRI != SHACLIRIs.shThis,
@@ -2952,6 +2971,13 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         for shape in shapesGraph.shapes where shape.kind == .propertyShape {
+            for target in shape.targets {
+                if case .targetNode(let targetNodeIRI) = target,
+                   let sparql = sparqlByIRI[targetNodeIRI],
+                   sparql.selectQuery == nil {
+                    throw SHACLError.invalidShapesGraph("SPARQL target \(targetNodeIRI) must define sh:select")
+                }
+            }
             if shape.pathIRI == nil && shape.expressionIRI == nil {
                 throw SHACLError.invalidShapesGraph("Property shape \(shape.shapeIRI) is missing both sh:path and sh:expression")
             }
