@@ -4141,74 +4141,11 @@ public struct SHACLCoreValidator: SHACLValidator {
             }
         }
 
-        if !nodeShape.andShapeIRIs.isEmpty {
-            var matchesAll = true
-            for shapeIRI in nodeShape.andShapeIRIs {
-                if !conforms(
-                    valueNode: focusNode,
-                    toNodeShapeIRI: shapeIRI,
-                    dataGraph: dataGraph,
-                    shapesByIRI: shapesByIRI,
-                    expressionGraph: expressionGraph,
-                    nodeExpressionsByIRI: nodeExpressionsByIRI,
-                    depth: depth,
-                    visited: &visited
-                ) {
-                    matchesAll = false
-                    break
-                }
-            }
-            if !matchesAll {
-                violations.append(
-                    SHACLViolation(
-                        severity: nodeSeverity,
-                        shapeIRI: nodeShape.shapeIRI,
-                        focusNode: focusNode,
-                        pathIRI: nil,
-                        valueNode: focusNode,
-                        sourceConstraintIRI: SHACLIRIs.and,
-                        message: "and violation: value \(focusNode) does not satisfy all referenced shapes"
-                    )
-                )
-            }
-        }
-
-        if !nodeShape.orShapeIRIs.isEmpty {
-            var matchesAny = false
-            for shapeIRI in nodeShape.orShapeIRIs {
-                if conforms(
-                    valueNode: focusNode,
-                    toNodeShapeIRI: shapeIRI,
-                    dataGraph: dataGraph,
-                    shapesByIRI: shapesByIRI,
-                    expressionGraph: expressionGraph,
-                    nodeExpressionsByIRI: nodeExpressionsByIRI,
-                    depth: depth,
-                    visited: &visited
-                ) {
-                    matchesAny = true
-                    break
-                }
-            }
-            if !matchesAny {
-                violations.append(
-                    SHACLViolation(
-                        severity: nodeSeverity,
-                        shapeIRI: nodeShape.shapeIRI,
-                        focusNode: focusNode,
-                        pathIRI: nil,
-                        valueNode: focusNode,
-                        sourceConstraintIRI: SHACLIRIs.or,
-                        message: "or violation: value \(focusNode) does not satisfy any referenced shape"
-                    )
-                )
-            }
-        }
-
-        if let forbiddenShapeIRI = nodeShape.notShapeIRI {
-            let matchesForbidden = conforms(
-                valueNode: focusNode,
-                toNodeShapeIRI: forbiddenShapeIRI,
+        violations.append(
+            contentsOf: evaluateNodeLogicalConstraints(
+                nodeShape: nodeShape,
+                focusNode: focusNode,
+                severity: nodeSeverity,
                 dataGraph: dataGraph,
                 shapesByIRI: shapesByIRI,
                 expressionGraph: expressionGraph,
@@ -4216,52 +4153,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                 depth: depth,
                 visited: &visited
             )
-            if matchesForbidden {
-                violations.append(
-                    SHACLViolation(
-                        severity: nodeSeverity,
-                        shapeIRI: nodeShape.shapeIRI,
-                        focusNode: focusNode,
-                        pathIRI: nil,
-                        valueNode: focusNode,
-                        sourceConstraintIRI: SHACLIRIs.not,
-                        message: "not violation: value \(focusNode) conforms to forbidden shape"
-                    )
-                )
-            }
-        }
-
-        if !nodeShape.xoneShapeIRIs.isEmpty {
-            var matchCount = 0
-            for shapeIRI in nodeShape.xoneShapeIRIs {
-                if conforms(
-                    valueNode: focusNode,
-                    toNodeShapeIRI: shapeIRI,
-                    dataGraph: dataGraph,
-                    shapesByIRI: shapesByIRI,
-                    expressionGraph: expressionGraph,
-                    nodeExpressionsByIRI: nodeExpressionsByIRI,
-                    depth: depth,
-                    visited: &visited
-                ) {
-                    matchCount += 1
-                }
-            }
-
-            if matchCount != 1 {
-                violations.append(
-                    SHACLViolation(
-                        severity: nodeSeverity,
-                        shapeIRI: nodeShape.shapeIRI,
-                        focusNode: focusNode,
-                        pathIRI: nil,
-                        valueNode: focusNode,
-                        sourceConstraintIRI: SHACLIRIs.xone,
-                        message: "xone violation: value \(focusNode) matched \(matchCount) referenced shapes"
-                    )
-                )
-            }
-        }
+        )
 
         if let expressionIRI = nodeShape.expressionIRI {
             let outputNodes = SHACLNodeExpressionEvaluator().evaluate(
@@ -5115,90 +5007,267 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
 
-            if let qualifiedShapeIRI = propertyShape.qualifiedValueShapeIRI {
-                let siblingQualifiedShapeIRIs: [String]
-                if propertyShape.qualifiedValueShapesDisjoint {
-                    siblingQualifiedShapeIRIs = nodeShape.propertyShapeIRIs.compactMap { siblingIRI in
-                        guard siblingIRI != propertyShapeIRI,
-                              let siblingShape = shapesByIRI[siblingIRI],
-                              siblingShape.kind == .propertyShape,
-                              siblingShape.pathIRI == propertyShape.pathIRI,
-                              let siblingQualifiedShapeIRI = siblingShape.qualifiedValueShapeIRI else {
-                            return nil
-                        }
-                        return siblingQualifiedShapeIRI
-                    }
-                } else {
-                    siblingQualifiedShapeIRIs = []
-                }
+            violations.append(
+                contentsOf: evaluateQualifiedValueConstraints(
+                    nodeShape: nodeShape,
+                    propertyShape: propertyShape,
+                    propertyShapeIRI: propertyShapeIRI,
+                    focusNode: focusNode,
+                    pathIRI: pathIRI,
+                    values: values,
+                    severity: severity,
+                    dataGraph: dataGraph,
+                    shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
+                    nodeExpressionsByIRI: nodeExpressionsByIRI,
+                    depth: depth,
+                    visited: &visited
+                )
+            )
+        }
 
-                var qualifiedMatchCount = 0
-                for valueNode in values {
-                    let matchesQualifiedShape = conforms(
+        return violations
+    }
+
+    private func evaluateNodeLogicalConstraints(
+        nodeShape: SHACLShapeDefinition,
+        focusNode: String,
+        severity: SHACLSeverity,
+        dataGraph: SHACLDataGraph,
+        shapesByIRI: [String: SHACLShapeDefinition],
+        expressionGraph: SHACLShapesGraph,
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition],
+        depth: Int,
+        visited: inout Set<String>
+    ) -> [SHACLViolation] {
+        var violations: [SHACLViolation] = []
+
+        if !nodeShape.andShapeIRIs.isEmpty {
+            var matchesAll = true
+            for shapeIRI in nodeShape.andShapeIRIs {
+                if !conforms(
+                    valueNode: focusNode,
+                    toNodeShapeIRI: shapeIRI,
+                    dataGraph: dataGraph,
+                    shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
+                    nodeExpressionsByIRI: nodeExpressionsByIRI,
+                    depth: depth,
+                    visited: &visited
+                ) {
+                    matchesAll = false
+                    break
+                }
+            }
+            if !matchesAll {
+                violations.append(
+                    SHACLViolation(
+                        severity: severity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.and,
+                        message: "and violation: value \(focusNode) does not satisfy all referenced shapes"
+                    )
+                )
+            }
+        }
+
+        if !nodeShape.orShapeIRIs.isEmpty {
+            var matchesAny = false
+            for shapeIRI in nodeShape.orShapeIRIs {
+                if conforms(
+                    valueNode: focusNode,
+                    toNodeShapeIRI: shapeIRI,
+                    dataGraph: dataGraph,
+                    shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
+                    nodeExpressionsByIRI: nodeExpressionsByIRI,
+                    depth: depth,
+                    visited: &visited
+                ) {
+                    matchesAny = true
+                    break
+                }
+            }
+            if !matchesAny {
+                violations.append(
+                    SHACLViolation(
+                        severity: severity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.or,
+                        message: "or violation: value \(focusNode) does not satisfy any referenced shape"
+                    )
+                )
+            }
+        }
+
+        if let forbiddenShapeIRI = nodeShape.notShapeIRI {
+            let matchesForbidden = conforms(
+                valueNode: focusNode,
+                toNodeShapeIRI: forbiddenShapeIRI,
+                dataGraph: dataGraph,
+                shapesByIRI: shapesByIRI,
+                expressionGraph: expressionGraph,
+                nodeExpressionsByIRI: nodeExpressionsByIRI,
+                depth: depth,
+                visited: &visited
+            )
+            if matchesForbidden {
+                violations.append(
+                    SHACLViolation(
+                        severity: severity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.not,
+                        message: "not violation: value \(focusNode) conforms to forbidden shape"
+                    )
+                )
+            }
+        }
+
+        if !nodeShape.xoneShapeIRIs.isEmpty {
+            var matchCount = 0
+            for shapeIRI in nodeShape.xoneShapeIRIs {
+                if conforms(
+                    valueNode: focusNode,
+                    toNodeShapeIRI: shapeIRI,
+                    dataGraph: dataGraph,
+                    shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
+                    nodeExpressionsByIRI: nodeExpressionsByIRI,
+                    depth: depth,
+                    visited: &visited
+                ) {
+                    matchCount += 1
+                }
+            }
+
+            if matchCount != 1 {
+                violations.append(
+                    SHACLViolation(
+                        severity: severity,
+                        shapeIRI: nodeShape.shapeIRI,
+                        focusNode: focusNode,
+                        pathIRI: nil,
+                        valueNode: focusNode,
+                        sourceConstraintIRI: SHACLIRIs.xone,
+                        message: "xone violation: value \(focusNode) matched \(matchCount) referenced shapes"
+                    )
+                )
+            }
+        }
+
+        return violations
+    }
+
+    private func evaluateQualifiedValueConstraints(
+        nodeShape: SHACLShapeDefinition,
+        propertyShape: SHACLShapeDefinition,
+        propertyShapeIRI: String,
+        focusNode: String,
+        pathIRI: String?,
+        values: [String],
+        severity: SHACLSeverity,
+        dataGraph: SHACLDataGraph,
+        shapesByIRI: [String: SHACLShapeDefinition],
+        expressionGraph: SHACLShapesGraph,
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition],
+        depth: Int,
+        visited: inout Set<String>
+    ) -> [SHACLViolation] {
+        guard let qualifiedShapeIRI = propertyShape.qualifiedValueShapeIRI else {
+            return []
+        }
+
+        let siblingQualifiedShapeIRIs: [String]
+        if propertyShape.qualifiedValueShapesDisjoint {
+            siblingQualifiedShapeIRIs = nodeShape.propertyShapeIRIs.compactMap { siblingIRI in
+                guard siblingIRI != propertyShapeIRI,
+                      let siblingShape = shapesByIRI[siblingIRI],
+                      siblingShape.kind == .propertyShape,
+                      siblingShape.pathIRI == propertyShape.pathIRI,
+                      let siblingQualifiedShapeIRI = siblingShape.qualifiedValueShapeIRI else {
+                    return nil
+                }
+                return siblingQualifiedShapeIRI
+            }
+        } else {
+            siblingQualifiedShapeIRIs = []
+        }
+
+        var qualifiedMatchCount = 0
+        for valueNode in values {
+            let matchesQualifiedShape = conforms(
+                valueNode: valueNode,
+                toNodeShapeIRI: qualifiedShapeIRI,
+                dataGraph: dataGraph,
+                shapesByIRI: shapesByIRI,
+                expressionGraph: expressionGraph,
+                nodeExpressionsByIRI: nodeExpressionsByIRI,
+                depth: depth,
+                visited: &visited
+            )
+            guard matchesQualifiedShape else {
+                continue
+            }
+
+            if propertyShape.qualifiedValueShapesDisjoint {
+                var matchesSiblingQualifiedShape = false
+                for siblingShapeIRI in siblingQualifiedShapeIRIs {
+                    if conforms(
                         valueNode: valueNode,
-                        toNodeShapeIRI: qualifiedShapeIRI,
+                        toNodeShapeIRI: siblingShapeIRI,
                         dataGraph: dataGraph,
                         shapesByIRI: shapesByIRI,
                         expressionGraph: expressionGraph,
                         nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: depth,
                         visited: &visited
-                    )
-                    guard matchesQualifiedShape else {
-                        continue
+                    ) {
+                        matchesSiblingQualifiedShape = true
+                        break
                     }
-
-                    if propertyShape.qualifiedValueShapesDisjoint {
-                        var matchesSiblingQualifiedShape = false
-                        for siblingShapeIRI in siblingQualifiedShapeIRIs {
-                            if conforms(
-                                valueNode: valueNode,
-                                toNodeShapeIRI: siblingShapeIRI,
-                                dataGraph: dataGraph,
-                                shapesByIRI: shapesByIRI,
-                                expressionGraph: expressionGraph,
-                                nodeExpressionsByIRI: nodeExpressionsByIRI,
-                                depth: depth,
-                                visited: &visited
-                            ) {
-                                matchesSiblingQualifiedShape = true
-                                break
-                            }
-                        }
-                        if matchesSiblingQualifiedShape {
-                            continue
-                        }
-                    }
-
-                    qualifiedMatchCount += 1
                 }
-
-                if let qualifiedMin = propertyShape.qualifiedMinCount, qualifiedMatchCount < qualifiedMin {
-                    violations.append(
-                        SHACLViolation(
-                            severity: severity,
-                            shapeIRI: propertyShape.shapeIRI,
-                            focusNode: focusNode,
-                            pathIRI: pathIRI,
-                            sourceConstraintIRI: SHACLIRIs.qualifiedMinCount,
-                            message: "qualifiedMinCount violation: expected >= \(qualifiedMin), got \(qualifiedMatchCount)"
-                        )
-                    )
-                }
-
-                if let qualifiedMax = propertyShape.qualifiedMaxCount, qualifiedMatchCount > qualifiedMax {
-                    violations.append(
-                        SHACLViolation(
-                            severity: severity,
-                            shapeIRI: propertyShape.shapeIRI,
-                            focusNode: focusNode,
-                            pathIRI: pathIRI,
-                            sourceConstraintIRI: SHACLIRIs.qualifiedMaxCount,
-                            message: "qualifiedMaxCount violation: expected <= \(qualifiedMax), got \(qualifiedMatchCount)"
-                        )
-                    )
+                if matchesSiblingQualifiedShape {
+                    continue
                 }
             }
+
+            qualifiedMatchCount += 1
+        }
+
+        var violations: [SHACLViolation] = []
+        if let qualifiedMin = propertyShape.qualifiedMinCount, qualifiedMatchCount < qualifiedMin {
+            violations.append(
+                SHACLViolation(
+                    severity: severity,
+                    shapeIRI: propertyShape.shapeIRI,
+                    focusNode: focusNode,
+                    pathIRI: pathIRI,
+                    sourceConstraintIRI: SHACLIRIs.qualifiedMinCount,
+                    message: "qualifiedMinCount violation: expected >= \(qualifiedMin), got \(qualifiedMatchCount)"
+                )
+            )
+        }
+
+        if let qualifiedMax = propertyShape.qualifiedMaxCount, qualifiedMatchCount > qualifiedMax {
+            violations.append(
+                SHACLViolation(
+                    severity: severity,
+                    shapeIRI: propertyShape.shapeIRI,
+                    focusNode: focusNode,
+                    pathIRI: pathIRI,
+                    sourceConstraintIRI: SHACLIRIs.qualifiedMaxCount,
+                    message: "qualifiedMaxCount violation: expected <= \(qualifiedMax), got \(qualifiedMatchCount)"
+                )
+            )
         }
 
         return violations
