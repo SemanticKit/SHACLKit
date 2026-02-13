@@ -37,6 +37,7 @@ Current local families:
   - Includes guarded-policy literal-safety regressions (`MINUS` keyword inside string literal and `'?this'` literal-only reference case).
   - Includes guarded-policy comment-safety regressions (`MINUS` keyword and `?this` markers inside line comments).
   - Includes guarded-policy comment-safety regressions for `AS ?path` and `AS ?value` markers inside line comments.
+  - Includes guarded-policy comment-safety regressions for `AS $path` and `AS $value` markers inside line comments.
   - Includes guarded-policy parity fixtures for `$this` pre-bound variable handling.
   - Includes guarded-policy parity fixtures for `$path` and `$value` pre-bound variable rebinding blocks.
 - Optional staged W3C conformance corpus sync target (`W3CDataShapes*` from `Knowledge/Inbox/Fixtures` into `SHACLKitTests/Fixtures/W3CDataShapes`)

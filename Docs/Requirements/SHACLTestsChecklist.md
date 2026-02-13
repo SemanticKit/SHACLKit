@@ -161,6 +161,7 @@ Legend:
   - Added guarded-policy regression coverage proving line-comment `?this` text does not satisfy required pre-bound `?this` reference checks.
   - Added guarded-policy regression coverage proving string-literal `'?path'` and `'?value'` text does not trigger pre-bound rebind blocking.
   - Added guarded-policy regression coverage proving line-comment `AS ?path` and `AS ?value` text does not trigger pre-bound rebind blocking.
+  - Added guarded-policy regression coverage proving line-comment `AS $path` and `AS $value` text does not trigger pre-bound rebind blocking.
   - Added guarded-policy coverage for `$this` pre-bound variable parity (`$this` accepted as required pre-bound reference, and `AS $this` blocked as rebinding).
   - Added guarded-policy coverage for `AS $path` and `AS $value` rebinding blocks alongside existing `?path`/`?value` coverage.
 
