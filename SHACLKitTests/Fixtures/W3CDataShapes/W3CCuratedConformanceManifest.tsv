@@ -103,6 +103,9 @@ core-node-shacl12-nodeKind-002	shacl12-test-suite/tests/core/node/nodeKind-002.t
 core-node-shacl12-hasValue-001	shacl12-test-suite/tests/core/node/hasValue-001.ttl	shacl12-test-suite/tests/core/node/hasValue-001.ttl	false	SHACL 1.2 node hasValue checks.
 core-node-shacl12-in-001	shacl12-test-suite/tests/core/node/in-001.ttl	shacl12-test-suite/tests/core/node/in-001.ttl	false	SHACL 1.2 node in-list checks.
 core-node-shacl12-languageIn-001	shacl12-test-suite/tests/core/node/languageIn-001.ttl	shacl12-test-suite/tests/core/node/languageIn-001.ttl	false	SHACL 1.2 node languageIn checks.
+core-node-shacl12-equals-001	shacl12-test-suite/tests/core/node/equals-001.ttl	shacl12-test-suite/tests/core/node/equals-001.ttl	false	SHACL 1.2 node equals checks.
+core-node-shacl12-disjoint-001	shacl12-test-suite/tests/core/node/disjoint-001.ttl	shacl12-test-suite/tests/core/node/disjoint-001.ttl	false	SHACL 1.2 node disjoint checks.
+core-node-shacl12-nodeByExpression-001	shacl12-test-suite/tests/core/node/nodeByExpression-001.ttl	shacl12-test-suite/tests/core/node/nodeByExpression-001.ttl	false	SHACL 1.2 node nodeByExpression checks.
 core-node-shacl12-and-001	shacl12-test-suite/tests/core/node/and-001.ttl	shacl12-test-suite/tests/core/node/and-001.ttl	false	SHACL 1.2 node logical and checks.
 core-node-shacl12-and-002	shacl12-test-suite/tests/core/node/and-002.ttl	shacl12-test-suite/tests/core/node/and-002.ttl	false	SHACL 1.2 node logical and checks (variant 2).
 core-node-shacl12-or-001	shacl12-test-suite/tests/core/node/or-001.ttl	shacl12-test-suite/tests/core/node/or-001.ttl	false	SHACL 1.2 node logical or checks.
