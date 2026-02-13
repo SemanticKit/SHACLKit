@@ -120,6 +120,7 @@ Legend:
   - Added `SHACLGuardedSPARQLExecutor` wrapper with keyword and query-length policy enforcement before delegating to a backing executor.
   - Expanded default guarded policy coverage to block `MINUS`, `VALUES`, and rebinding of pre-bound SHACL variables (`?this`, `?path`, `?value`).
   - Added guarded policy enforcement requiring `SELECT` queries to reference pre-bound `?this`.
+  - Hardened guarded-policy scanning to ignore string-literal content when evaluating disallowed keywords, pre-bound rebind patterns, and pre-bound `?this` reference checks.
 
 ## Integration Boundaries
 

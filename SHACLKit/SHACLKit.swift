@@ -465,21 +465,23 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
             throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query length exceeds \(maxQueryLength) characters.")
         }
 
+        let policyQuery = queryWithoutStringLiterals(query)
+
         for keyword in disallowedKeywords where !keyword.isEmpty {
             let pattern = "\\b\(NSRegularExpression.escapedPattern(for: keyword))\\b"
             let regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
-            let range = NSRange(query.startIndex..<query.endIndex, in: query)
-            if regex.firstMatch(in: query, options: [], range: range) != nil {
+            let range = NSRange(policyQuery.startIndex..<policyQuery.endIndex, in: policyQuery)
+            if regex.firstMatch(in: policyQuery, options: [], range: range) != nil {
                 throw SHACLError.notImplemented("SPARQL query blocked by guard policy: contains disallowed keyword \(keyword).")
             }
         }
 
         let preboundVariables = ["this", "path", "value"]
-        let preboundRange = NSRange(query.startIndex..<query.endIndex, in: query)
+        let preboundRange = NSRange(policyQuery.startIndex..<policyQuery.endIndex, in: policyQuery)
         for variable in preboundVariables {
             let pattern = #"(?i)\bAS\s+\?\#(variable)\b"#
             let regex = try NSRegularExpression(pattern: pattern)
-            if regex.firstMatch(in: query, options: [], range: preboundRange) != nil {
+            if regex.firstMatch(in: policyQuery, options: [], range: preboundRange) != nil {
                 throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query attempts to rebind pre-bound ?\(variable).")
             }
         }
@@ -487,10 +489,63 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
         if requirePreboundThisReference {
             let thisReferencePattern = #"(?i)\?this\b"#
             let thisReferenceRegex = try NSRegularExpression(pattern: thisReferencePattern)
-            if thisReferenceRegex.firstMatch(in: query, options: [], range: preboundRange) == nil {
+            if thisReferenceRegex.firstMatch(in: policyQuery, options: [], range: preboundRange) == nil {
                 throw SHACLError.notImplemented("SPARQL query blocked by guard policy: SELECT query does not reference pre-bound ?this.")
             }
         }
+    }
+
+    private func queryWithoutStringLiterals(_ query: String) -> String {
+        var output = ""
+        output.reserveCapacity(query.count)
+        var index = query.startIndex
+
+        while index < query.endIndex {
+            let ch = query[index]
+            if ch == "\"" || ch == "'" {
+                let delimiter = ch
+                let next = query.index(after: index)
+                let next2 = next < query.endIndex ? query.index(after: next) : query.endIndex
+                let isTriple = next2 < query.endIndex
+                    && query[next] == delimiter
+                    && query[next2] == delimiter
+
+                output.append(" ")
+                index = isTriple ? query.index(index, offsetBy: 3) : next
+
+                while index < query.endIndex {
+                    let current = query[index]
+                    if current == "\\" {
+                        let escaped = query.index(after: index)
+                        index = escaped < query.endIndex ? query.index(after: escaped) : escaped
+                        continue
+                    }
+                    if current == delimiter {
+                        if isTriple {
+                            let after = query.index(after: index)
+                            let after2 = after < query.endIndex ? query.index(after: after) : query.endIndex
+                            if after2 < query.endIndex
+                                && query[after] == delimiter
+                                && query[after2] == delimiter {
+                                index = query.index(index, offsetBy: 3)
+                                break
+                            }
+                            index = query.index(after: index)
+                            continue
+                        }
+                        index = query.index(after: index)
+                        break
+                    }
+                    index = query.index(after: index)
+                }
+                continue
+            }
+
+            output.append(ch)
+            index = query.index(after: index)
+        }
+
+        return output
     }
 }
 

@@ -3725,6 +3725,29 @@ private struct TestShapesSource {
     #expect(result.violations.count == 1)
 }
 
+@Test func coreValidatorAllowsGuardedSPARQLConstraintWhenKeywordOnlyAppearsInStringLiteral() async throws {
+    let innerExecutor = GuardLiteralKeywordSPARQLExecutor()
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: innerExecutor)
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardAllowsKeywordLiteralShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
+@Test func coreValidatorBlocksGuardedSPARQLConstraintWhenThisAppearsOnlyInStringLiteral() async throws {
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardLiteralThisOnlyShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorAcceptsNodeExpressionPredicate() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("phaseGatedNodeExpressionsShapes.ttl")
@@ -3880,6 +3903,33 @@ private struct PrefixMarkerLiteralSPARQLExecutor: SHACLSPARQLExecutor {
         let containsMarkerLiteral = query.contains("BIND('prefix ex:' AS ?marker)")
         let containsNamePattern = query.contains("?this ex:name ?name")
         guard containsInjectedPrefix && containsMarkerLiteral && containsNamePattern else {
+            return []
+        }
+        if focusNode == "http://example.com/alice" {
+            return ["http://example.com/alice"]
+        }
+        return []
+    }
+
+    func ask(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> Bool {
+        false
+    }
+}
+
+private struct GuardLiteralKeywordSPARQLExecutor: SHACLSPARQLExecutor {
+    func select(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> [String] {
+        let uppercased = query.uppercased()
+        guard uppercased.contains("MINUS"), uppercased.contains("?THIS") else {
             return []
         }
         if focusNode == "http://example.com/alice" {

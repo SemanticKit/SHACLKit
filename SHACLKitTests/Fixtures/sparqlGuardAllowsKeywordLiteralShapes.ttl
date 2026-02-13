@@ -1,0 +1,9 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:PersonShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:sparql ex:NameConstraint .
+
+ex:NameConstraint
+  sh:select "SELECT ?this WHERE { ?this ex:name ?name . BIND('MINUS' AS ?marker) FILTER(strlen(str(?name)) = 0) }" .
