@@ -543,6 +543,35 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     }
 }
 
+@Test func w3cRulesSyntaxAndWellformedManifestsReferenceExistingRulesetArtifacts() async throws {
+    let rulesDirectoryURL = fixturesRootURL()
+        .appendingPathComponent("W3CDataShapes")
+        .appendingPathComponent("shacl12-test-suite/tests/rules")
+    let manifestPaths = [
+        "syntax/manifest.ttl",
+        "wellformed/manifest.ttl",
+        "stratification/manifest.ttl",
+    ]
+
+    for manifestPath in manifestPaths {
+        let manifestURL = rulesDirectoryURL.appendingPathComponent(manifestPath)
+        let manifestData = try Data(contentsOf: manifestURL)
+        let graph = try SHACLDataGraphLoader().load(from: manifestData)
+        let actionPaths = Set(
+            graph.triples
+                .filter { $0.predicate == mfActionIRI }
+                .map(\.object)
+                .filter { $0.hasSuffix(".srl") }
+        )
+
+        #expect(!actionPaths.isEmpty)
+        let manifestDirectoryURL = manifestURL.deletingLastPathComponent()
+        for actionPath in actionPaths {
+            #expect(FileManager.default.fileExists(atPath: manifestDirectoryURL.appendingPathComponent(actionPath).path))
+        }
+    }
+}
+
 @Test func w3cNodeExprShnexEvalSubsetMatchesManifestResults() async throws {
     let shnexDirectoryURL = fixturesRootURL()
         .appendingPathComponent("W3CDataShapes")
