@@ -88,6 +88,10 @@ core-targets-shacl12-targetSubjectsOf-001	shacl12-test-suite/tests/core/targets/
 core-targets-shacl12-targetSubjectsOf-002	shacl12-test-suite/tests/core/targets/targetSubjectsOf-002.ttl	shacl12-test-suite/tests/core/targets/targetSubjectsOf-002.ttl	false	SHACL 1.2 targetSubjectsOf selector checks (variant).
 core-targets-shacl12-targetObjectsOf-001	shacl12-test-suite/tests/core/targets/targetObjectsOf-001.ttl	shacl12-test-suite/tests/core/targets/targetObjectsOf-001.ttl	false	SHACL 1.2 targetObjectsOf selector checks.
 core-targets-shacl12-multipleTargets-001	shacl12-test-suite/tests/core/targets/multipleTargets-001.ttl	shacl12-test-suite/tests/core/targets/multipleTargets-001.ttl	false	SHACL 1.2 combined target selectors checks.
+core-node-shacl12-memberShape-001	shacl12-test-suite/tests/core/node/memberShape-001.ttl	shacl12-test-suite/tests/core/node/memberShape-001.ttl	false	SHACL 1.2 node memberShape checks.
+core-node-shacl12-uniqueMembers-001	shacl12-test-suite/tests/core/node/uniqueMembers-001.ttl	shacl12-test-suite/tests/core/node/uniqueMembers-001.ttl	false	SHACL 1.2 node uniqueMembers checks.
+core-node-shacl12-minListLength-001	shacl12-test-suite/tests/core/node/minListLength-001.ttl	shacl12-test-suite/tests/core/node/minListLength-001.ttl	false	SHACL 1.2 node minListLength checks.
+core-node-shacl12-maxListLength-001	shacl12-test-suite/tests/core/node/maxListLength-001.ttl	shacl12-test-suite/tests/core/node/maxListLength-001.ttl	false	SHACL 1.2 node maxListLength checks.
 core-property-shacl12-minCount-001	shacl12-test-suite/tests/core/property/minCount-001.ttl	shacl12-test-suite/tests/core/property/minCount-001.ttl	false	SHACL 1.2 property minCount violation checks.
 core-property-shacl12-minCount-002	shacl12-test-suite/tests/core/property/minCount-002.ttl	shacl12-test-suite/tests/core/property/minCount-002.ttl	true	SHACL 1.2 property minCount conformance checks.
 core-property-shacl12-maxCount-001	shacl12-test-suite/tests/core/property/maxCount-001.ttl	shacl12-test-suite/tests/core/property/maxCount-001.ttl	false	SHACL 1.2 property maxCount violation checks.
