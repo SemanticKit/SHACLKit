@@ -473,6 +473,7 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
 
     for turtleFixtureURL in turtleFixtureURLs {
         let fixturePayload = try Data(contentsOf: turtleFixtureURL)
+        _ = try semanticGraph(fromTurtleData: fixturePayload)
         _ = try dataLoader.load(from: fixturePayload)
         _ = try shapesLoader.load(from: fixturePayload)
     }
@@ -493,6 +494,7 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
 
     for relativePath in manifestPaths {
         let payload = try Data(contentsOf: fixturesRoot.appendingPathComponent(relativePath))
+        _ = try semanticGraph(fromTurtleData: payload)
         _ = try dataLoader.load(from: payload)
         _ = try shapesLoader.load(from: payload)
     }
