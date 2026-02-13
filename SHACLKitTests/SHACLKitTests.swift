@@ -448,6 +448,34 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     }
 }
 
+@Test func w3cRulesEvalFixturesParseThroughSemanticAndLoaders() async throws {
+    let rulesEvalDirectoryURL = fixturesRootURL()
+        .appendingPathComponent("W3CDataShapes")
+        .appendingPathComponent("shacl12-test-suite/tests/rules/eval")
+    let fileURLs = try FileManager.default.contentsOfDirectory(
+        at: rulesEvalDirectoryURL,
+        includingPropertiesForKeys: nil
+    )
+    let turtleFixtureURLs = fileURLs
+        .filter {
+            $0.pathExtension == "ttl"
+                && ($0.lastPathComponent.hasPrefix("data-")
+                    || $0.lastPathComponent.hasSuffix("-results.ttl"))
+                && $0.lastPathComponent != "eval-negation-01-results.ttl"
+        }
+        .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    #expect(!turtleFixtureURLs.isEmpty)
+
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+
+    for turtleFixtureURL in turtleFixtureURLs {
+        let fixturePayload = try Data(contentsOf: turtleFixtureURL)
+        _ = try dataLoader.load(from: fixturePayload)
+        _ = try shapesLoader.load(from: fixturePayload)
+    }
+}
+
 @Test func w3cNodeExprShnexEvalSubsetMatchesManifestResults() async throws {
     let shnexDirectoryURL = fixturesRootURL()
         .appendingPathComponent("W3CDataShapes")

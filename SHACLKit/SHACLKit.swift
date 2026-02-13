@@ -6427,26 +6427,68 @@ private struct SHACLTurtleSubsetParser {
                 continue
             }
 
-            if line.hasPrefix("@prefix") {
-                let pattern = #"^@prefix\s+([A-Za-z][A-Za-z0-9_-]*):\s*<([^>]+)>\s*\.\s*$"#
-                guard let regex = try? NSRegularExpression(pattern: pattern) else {
-                    throw SHACLError.invalidPrefixDeclaration(line)
-                }
-                let range = NSRange(line.startIndex..<line.endIndex, in: line)
-                guard let match = regex.firstMatch(in: line, options: [], range: range),
-                      let prefixRange = Range(match.range(at: 1), in: line),
-                      let iriRange = Range(match.range(at: 2), in: line) else {
-                    throw SHACLError.invalidPrefixDeclaration(line)
-                }
-                let prefix = String(line[prefixRange])
-                let iri = String(line[iriRange])
-                prefixes[prefix] = iri
+            if line.hasPrefix("@prefix") || line.hasPrefix("PREFIX ") || line.hasPrefix("prefix ") {
+                let parsed = try parsePrefixDeclaration(line)
+                prefixes[parsed.prefix] = parsed.iri
             } else {
                 bodyLines.append(String(rawLine))
             }
         }
 
         return (prefixes, bodyLines.joined(separator: "\n"))
+    }
+
+    private func parsePrefixDeclaration(_ line: String) throws -> (prefix: String, iri: String) {
+        let remainder: String
+        let requireTrailingDot: Bool
+
+        if line.hasPrefix("@prefix") {
+            remainder = String(line.dropFirst("@prefix".count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            requireTrailingDot = true
+        } else if line.hasPrefix("PREFIX ") {
+            remainder = String(line.dropFirst("PREFIX".count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            requireTrailingDot = false
+        } else if line.hasPrefix("prefix ") {
+            remainder = String(line.dropFirst("prefix".count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            requireTrailingDot = false
+        } else {
+            throw SHACLError.invalidPrefixDeclaration(line)
+        }
+
+        guard let spaceIndex = remainder.firstIndex(where: { $0.isWhitespace }) else {
+            throw SHACLError.invalidPrefixDeclaration(line)
+        }
+
+        let rawPrefixToken = String(remainder[..<spaceIndex]).trimmingCharacters(in: .whitespacesAndNewlines)
+        var trailing = String(remainder[spaceIndex...]).trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if requireTrailingDot {
+            guard trailing.hasSuffix(".") else {
+                throw SHACLError.invalidPrefixDeclaration(line)
+            }
+            trailing = String(trailing.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        guard rawPrefixToken.hasSuffix(":") else {
+            throw SHACLError.invalidPrefixDeclaration(line)
+        }
+        let prefixValue = String(rawPrefixToken.dropLast())
+        if !prefixValue.isEmpty {
+            let validPrefix = prefixValue.range(of: #"^[A-Za-z][A-Za-z0-9_-]*$"#, options: .regularExpression) != nil
+            guard validPrefix else {
+                throw SHACLError.invalidPrefixDeclaration(line)
+            }
+        }
+
+        guard trailing.hasPrefix("<"), trailing.hasSuffix(">") else {
+            throw SHACLError.invalidPrefixDeclaration(line)
+        }
+        let iri = String(trailing.dropFirst().dropLast())
+        guard !iri.isEmpty else {
+            throw SHACLError.invalidPrefixDeclaration(line)
+        }
+
+        return (prefixValue, iri)
     }
 
     private func stripComments(from line: String) -> String {

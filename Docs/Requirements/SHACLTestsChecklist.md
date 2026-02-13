@@ -120,6 +120,7 @@ Legend:
   - Added `sh:order` parsing/execution ordering coverage for triple rules.
   - Added fixtures/tests proving all `sh:condition` entries must conform before triple-rule emission.
   - Added fixtures/tests for property-shape `sh:condition` gating behavior.
+  - Added SHACL 1.2 rules `eval` data/result TTL preflight coverage through SHACLKit graph loaders (excluding `eval-negation-01-results.ttl` until single-quoted literal support lands).
 
 ## Phase 3: SHACL SPARQL Extensions
 
