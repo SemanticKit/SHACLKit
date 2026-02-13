@@ -1955,6 +1955,29 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(messages.contains("pattern violation"))
 }
 
+@Test func coreValidatorConformsForSingleLineConstraintFixture() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("singleLineConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("singleLineConstraintsValid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(result.conforms)
+    #expect(result.violations.isEmpty)
+}
+
+@Test func coreValidatorReportsSingleLineConstraintViolations() async throws {
+    let validator = SHACLCoreValidator()
+    let shapes = try fixtureData("singleLineConstraintsShapes.ttl")
+    let dataGraph = try fixtureData("singleLineConstraintsInvalid.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#singleLine")
+    #expect(violation.message.contains("singleLine violation"))
+}
+
 @Test func coreValidatorConformsForRangeFacetFixture() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("rangeFacetsShapes.ttl")

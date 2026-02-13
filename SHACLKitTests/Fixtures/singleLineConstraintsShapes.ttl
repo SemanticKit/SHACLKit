@@ -1,0 +1,16 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ex:SingleLineShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:property ex:SingleLineLabelShape ;
+  sh:property ex:MultiLineCommentShape .
+
+ex:SingleLineLabelShape a sh:PropertyShape ;
+  sh:path rdfs:label ;
+  sh:singleLine true .
+
+ex:MultiLineCommentShape a sh:PropertyShape ;
+  sh:path rdfs:comment ;
+  sh:singleLine false .

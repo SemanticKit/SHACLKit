@@ -58,6 +58,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let datatypeIRI: String?
     public let minLength: Int?
     public let maxLength: Int?
+    public let singleLine: Bool
     public let minInclusive: String?
     public let maxInclusive: String?
     public let minExclusive: String?
@@ -105,6 +106,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         datatypeIRI: String? = nil,
         minLength: Int? = nil,
         maxLength: Int? = nil,
+        singleLine: Bool = false,
         minInclusive: String? = nil,
         maxInclusive: String? = nil,
         minExclusive: String? = nil,
@@ -151,6 +153,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.datatypeIRI = datatypeIRI
         self.minLength = minLength
         self.maxLength = maxLength
+        self.singleLine = singleLine
         self.minInclusive = minInclusive
         self.maxInclusive = maxInclusive
         self.minExclusive = minExclusive
@@ -564,6 +567,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var datatypeIRI: String?
             var minLength: Int?
             var maxLength: Int?
+            var singleLine = false
             var minInclusive: String?
             var maxInclusive: String?
             var minExclusive: String?
@@ -711,6 +715,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                     throw SHACLError.invalidIntegerLiteral(object)
                 }
                 current.maxLength = length
+            } else if predicate == SHACLIRIs.singleLine {
+                current.singleLine = isStrictTrueBooleanTerm(object)
             } else if predicate == SHACLIRIs.minInclusive {
                 current.minInclusive = object
             } else if predicate == SHACLIRIs.maxInclusive {
@@ -1253,6 +1259,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 datatypeIRI: partial.datatypeIRI,
                 minLength: partial.minLength,
                 maxLength: partial.maxLength,
+                singleLine: partial.singleLine,
                 minInclusive: partial.minInclusive,
                 maxInclusive: partial.maxInclusive,
                 minExclusive: partial.minExclusive,
@@ -4511,6 +4518,39 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
 
+            if propertyShape.singleLine {
+                for valueNode in values {
+                    guard let lexical = extractLiteralLexicalForm(valueNode) else {
+                        violations.append(
+                            SHACLViolation(
+                                severity: severity,
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.singleLine,
+                                message: "singleLine violation: value \(valueNode) is not a literal"
+                            )
+                        )
+                        continue
+                    }
+
+                    if containsSingleLineDisallowedBreak(lexical) {
+                        violations.append(
+                            SHACLViolation(
+                                severity: severity,
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: focusNode,
+                                pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.singleLine,
+                                message: "singleLine violation: value \(valueNode) contains line breaks"
+                            )
+                        )
+                    }
+                }
+            }
+
             if propertyShape.minInclusive != nil
                 || propertyShape.maxInclusive != nil
                 || propertyShape.minExclusive != nil
@@ -5255,6 +5295,24 @@ public struct SHACLCoreValidator: SHACLValidator {
         return languageTag.isEmpty ? nil : languageTag
     }
 
+    private func containsSingleLineDisallowedBreak(_ lexical: String) -> Bool {
+        if lexical.contains("\n")
+            || lexical.contains("\r")
+            || lexical.contains("\u{000B}")
+            || lexical.contains("\u{000C}") {
+            return true
+        }
+
+        let escapedControlSequences = [
+            "\\n", "\\r", "\\f",
+            "\\u000A", "\\u000a",
+            "\\u000B", "\\u000b",
+            "\\u000C", "\\u000c",
+            "\\u000D", "\\u000d"
+        ]
+        return escapedControlSequences.contains { sequence in lexical.contains(sequence) }
+    }
+
     private func matchesLanguageIn(languageTag: String?, ranges: [String]) -> Bool {
         guard let languageTag else {
             return false
@@ -5450,6 +5508,7 @@ private enum SHACLIRIs {
     static let datatype = "http://www.w3.org/ns/shacl#datatype"
     static let minLength = "http://www.w3.org/ns/shacl#minLength"
     static let maxLength = "http://www.w3.org/ns/shacl#maxLength"
+    static let singleLine = "http://www.w3.org/ns/shacl#singleLine"
     static let minInclusive = "http://www.w3.org/ns/shacl#minInclusive"
     static let maxInclusive = "http://www.w3.org/ns/shacl#maxInclusive"
     static let minExclusive = "http://www.w3.org/ns/shacl#minExclusive"
