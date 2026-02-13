@@ -461,7 +461,6 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
             $0.pathExtension == "ttl"
                 && ($0.lastPathComponent.hasPrefix("data-")
                     || $0.lastPathComponent.hasSuffix("-results.ttl"))
-                && $0.lastPathComponent != "eval-negation-01-results.ttl"
         }
         .sorted { $0.lastPathComponent < $1.lastPathComponent }
     #expect(!turtleFixtureURLs.isEmpty)

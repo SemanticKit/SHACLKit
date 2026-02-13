@@ -7047,6 +7047,73 @@ private struct SHACLTurtleSubsetParser {
                 continue
             }
 
+            if ch == "'" {
+                var end = statement.index(after: index)
+                var escaped = false
+                while end < statement.endIndex {
+                    let c = statement[end]
+                    if c == "\\" && !escaped {
+                        escaped = true
+                        end = statement.index(after: end)
+                        continue
+                    }
+                    if c == "'" && !escaped {
+                        break
+                    }
+                    escaped = false
+                    end = statement.index(after: end)
+                }
+
+                guard end < statement.endIndex else {
+                    throw SHACLError.invalidStatement(statement)
+                }
+
+                let rawLexical = String(statement[statement.index(after: index)..<end])
+                let unescapedLexical = rawLexical
+                    .replacingOccurrences(of: "\\'", with: "'")
+                    .replacingOccurrences(of: "\\\\", with: "\\")
+                let escapedLexical = unescapedLexical.replacingOccurrences(of: "\"", with: "\\\"")
+                var token = "\"\(escapedLexical)\""
+                var probe = statement.index(after: end)
+
+                if probe < statement.endIndex, statement[probe] == "@" {
+                    let langStart = probe
+                    probe = statement.index(after: probe)
+                    var langEnd = probe
+                    while langEnd < statement.endIndex,
+                          !statement[langEnd].isWhitespace,
+                          statement[langEnd] != ";",
+                          statement[langEnd] != ",",
+                          statement[langEnd] != ")",
+                          statement[langEnd] != "]" {
+                        langEnd = statement.index(after: langEnd)
+                    }
+                    token += String(statement[langStart..<langEnd])
+                    probe = langEnd
+                } else if probe < statement.endIndex, statement[probe] == "^" {
+                    let typedNext = statement.index(after: probe)
+                    guard typedNext < statement.endIndex, statement[typedNext] == "^" else {
+                        throw SHACLError.invalidStatement(statement)
+                    }
+                    probe = statement.index(after: typedNext)
+                    var dtEnd = probe
+                    while dtEnd < statement.endIndex,
+                          !statement[dtEnd].isWhitespace,
+                          statement[dtEnd] != ";",
+                          statement[dtEnd] != ",",
+                          statement[dtEnd] != ")",
+                          statement[dtEnd] != "]" {
+                        dtEnd = statement.index(after: dtEnd)
+                    }
+                    token += "^^" + String(statement[probe..<dtEnd])
+                    probe = dtEnd
+                }
+
+                tokens.append(token)
+                index = probe
+                continue
+            }
+
             var end = index
             while end < statement.endIndex,
                   !statement[end].isWhitespace,

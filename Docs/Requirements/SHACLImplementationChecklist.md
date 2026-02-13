@@ -19,6 +19,7 @@ Legend:
 - [x] `REQ-SHACL-000` Create standalone Swift package library (`SHACLKit`) with source/tests/docs scaffolding.
 - [x] `REQ-SHACL-001` Parse/ingest SHACL shapes graph terms required for Core constraints.
   - Extended Turtle subset parser to support triple-quoted string literals used by SHACL 1.2 fixtures.
+  - Extended Turtle subset parser to accept SPARQL-style `PREFIX` declarations (including default-prefix `:`) and single-quoted literals used by SHACL 1.2 rules fixtures.
 - [x] `REQ-SHACL-002` Resolve targets (`sh:targetClass`, `sh:targetNode`, `sh:targetSubjectsOf`, `sh:targetObjectsOf`).
   - Added implicit class targeting for node shapes declared as `rdfs:Class`.
   - Added implicit class targeting for node shapes declared as `sh:ShapeClass`.
