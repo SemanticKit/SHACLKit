@@ -256,6 +256,14 @@ private func semanticGraph(fromTurtleData data: Data) throws -> Graph {
     return try Graph(turtle: sanitizedTurtle, baseIRI: baseIRI)
 }
 
+private func supportsStandardTurtleSemanticPreflight(_ data: Data) -> Bool {
+    guard let turtle = String(data: data, encoding: .utf8) else {
+        return false
+    }
+    // SHACL test fixtures may include annotation shorthand (`{| ... |}`), which is non-standard Turtle.
+    return !turtle.contains("{|") && !turtle.contains("|}")
+}
+
 private func normalizedW3CTurtle(_ turtle: String) -> String {
     turtle
         .replacingOccurrences(of: "{|", with: ";")
@@ -628,18 +636,22 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         )
         let dataGraphPayload = try fixtureData("W3CDataShapes/\(resolvedPaths.data)")
         let shapesGraphPayload = try fixtureData("W3CDataShapes/\(resolvedPaths.shapes)")
+        let dataSupportsSemanticPreflight = supportsStandardTurtleSemanticPreflight(dataGraphPayload)
+        let shapesSupportsSemanticPreflight = supportsStandardTurtleSemanticPreflight(shapesGraphPayload)
+        let cleanedDataGraphPayload = try cleanedGraphSectionData(fromTurtleData: dataGraphPayload)
+        let cleanedShapesGraphPayload = try cleanedGraphSectionData(fromTurtleData: shapesGraphPayload)
 
         let parsedDataGraph: SHACLDataGraph
         let parsedShapesGraph: SHACLShapesGraph
         do {
-            _ = try? semanticGraph(fromTurtleData: dataGraphPayload)
-            parsedDataGraph = try SHACLDataGraphLoader().load(
-                from: cleanedGraphSectionData(fromTurtleData: dataGraphPayload)
-            )
-            _ = try? semanticGraph(fromTurtleData: shapesGraphPayload)
-            parsedShapesGraph = try SHACLShapesGraphLoader().load(
-                from: cleanedGraphSectionData(fromTurtleData: shapesGraphPayload)
-            )
+            if dataSupportsSemanticPreflight {
+                _ = try semanticGraph(fromTurtleData: cleanedDataGraphPayload)
+            }
+            parsedDataGraph = try SHACLDataGraphLoader().load(from: cleanedDataGraphPayload)
+            if shapesSupportsSemanticPreflight {
+                _ = try semanticGraph(fromTurtleData: cleanedShapesGraphPayload)
+            }
+            parsedShapesGraph = try SHACLShapesGraphLoader().load(from: cleanedShapesGraphPayload)
         } catch {
             Issue.record("W3C curated case \(conformanceCase.caseID) failed preflight parse/load: \(error)")
             continue
