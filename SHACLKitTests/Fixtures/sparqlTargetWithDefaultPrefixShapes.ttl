@@ -1,0 +1,20 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:VIPShape a sh:NodeShape ;
+  sh:target ex:VIPTarget ;
+  sh:property ex:StatusShape .
+
+ex:VIPTarget
+  sh:prefixes ex:PrefixConfig ;
+  sh:select "SELECT ?this WHERE { ?this :segment :vip }" .
+
+ex:PrefixConfig
+  sh:declare [
+    sh:prefix "" ;
+    sh:namespace "http://example.com/"
+  ] .
+
+ex:StatusShape a sh:PropertyShape ;
+  sh:path ex:status ;
+  sh:hasValue "approved" .

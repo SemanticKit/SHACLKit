@@ -1528,7 +1528,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 }
                 let prefix = parsedLiteralLexicalForm(prefixTerm) ?? prefixTerm
                 let namespace = parsedLiteralLexicalForm(namespaceTerm) ?? namespaceTerm
-                if !prefix.isEmpty && !namespace.isEmpty {
+                if !namespace.isEmpty {
                     resolved[prefix] = namespace
                 }
             }

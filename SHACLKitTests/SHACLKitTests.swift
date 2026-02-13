@@ -800,6 +800,16 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(definition.prefixes["ex"] == "http://example.com/")
 }
 
+@Test func shapesLoaderParsesSPARQLDefaultPrefixDeclarations() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("sparqlConstraintWithDefaultPrefixShapes.ttl"))
+
+    #expect(graph.sparqlDefinitions.count == 1)
+    let definition = try #require(graph.sparqlDefinitions.first)
+    #expect(definition.sparqlIRI == "http://example.com/NameConstraint")
+    #expect(definition.prefixes[""] == "http://example.com/")
+}
+
 @Test func w3cCuratedFixturePackIsSyncedIntoTestResources() async throws {
     #expect(fixtureExists("W3CDataShapes/SourceInventory.md"))
     #expect(fixtureExists("W3CDataShapes/data-shapes-test-suite/tests/manifest.ttl"))
@@ -3264,6 +3274,48 @@ private struct TestShapesSource {
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
     #expect(!result.conforms)
     #expect(result.violations.count == 1)
+}
+
+@Test func coreValidatorAppliesDefaultSPARQLPrefixForConstraintQueries() async throws {
+    let prefixedQuery = """
+    PREFIX : <http://example.com/>
+    SELECT ?this WHERE { ?this :name ?name . FILTER(strlen(str(?name)) = 0) }
+    """
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "\(prefixedQuery)|http://example.com/alice": ["http://example.com/alice"],
+            "\(prefixedQuery)|http://example.com/bob": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlConstraintWithDefaultPrefixShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
+@Test func coreValidatorAppliesDefaultSPARQLPrefixForTargetQueries() async throws {
+    let prefixedQuery = """
+    PREFIX : <http://example.com/>
+    SELECT ?this WHERE { ?this :segment :vip }
+    """
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "\(prefixedQuery)|": ["http://example.com/alice"],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlTargetWithDefaultPrefixShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.focusNode == "http://example.com/alice")
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
 }
 
 @Test func coreValidatorUsesSPARQLMessageForNodeShapeConstraintViolation() async throws {

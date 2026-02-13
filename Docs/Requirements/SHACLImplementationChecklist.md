@@ -105,6 +105,7 @@ Legend:
   - Added `sh:message` parsing/propagation for SPARQL constraint violations on node and property shapes.
   - Added `sh:prefixes` + `sh:declare`/`sh:prefix`/`sh:namespace` parsing and runtime query-prefix injection before SPARQL executor calls.
   - Hardened runtime prefix deduplication to recognize declared `PREFIX` directives structurally (not substring-based), avoiding false negatives when `prefix` markers appear inside query string literals.
+  - Added default-prefix (`sh:prefix ""`) support so runtime injection can emit `PREFIX : <...>` for SPARQL constraints.
 - [~] `REQ-SHACL-301` Implement SHACL SPARQL targets.
   - Added first-slice parsing and focus-node resolution hooks for `sh:target` with `sh:select` through an explicit executor boundary.
   - Added first-slice support for `sh:targetNode` values backed by inline `sh:select` resources.
@@ -113,6 +114,7 @@ Legend:
   - Added first-slice execution for directly targeted property-shape SPARQL targets.
   - Added shape-graph validation for `sh:targetNode` SPARQL resources requiring `sh:select`.
   - Removed loader gating for `sh:prefixes` so SPARQL shape definitions with prefix declarations load through validation paths.
+  - Added default-prefix (`sh:prefix ""`) support for target-query runtime injection (`PREFIX : <...>`).
 - [~] `REQ-SHACL-302` Sandboxed/controlled query execution boundary for SPARQL extension evaluation.
   - Added `SHACLSPARQLExecutor` protocol with default-deny executor (`SHACLDeniedSPARQLExecutor`) requiring explicit opt-in for SPARQL evaluation.
   - Added `SHACLGuardedSPARQLExecutor` wrapper with keyword and query-length policy enforcement before delegating to a backing executor.
