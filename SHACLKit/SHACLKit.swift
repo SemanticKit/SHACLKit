@@ -4142,8 +4142,9 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         if !nodeShape.andShapeIRIs.isEmpty {
-            let matchesAll = nodeShape.andShapeIRIs.allSatisfy { shapeIRI in
-                conforms(
+            var matchesAll = true
+            for shapeIRI in nodeShape.andShapeIRIs {
+                if !conforms(
                     valueNode: focusNode,
                     toNodeShapeIRI: shapeIRI,
                     dataGraph: dataGraph,
@@ -4152,7 +4153,10 @@ public struct SHACLCoreValidator: SHACLValidator {
                     nodeExpressionsByIRI: nodeExpressionsByIRI,
                     depth: depth,
                     visited: &visited
-                )
+                ) {
+                    matchesAll = false
+                    break
+                }
             }
             if !matchesAll {
                 violations.append(
@@ -4170,8 +4174,9 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         if !nodeShape.orShapeIRIs.isEmpty {
-            let matchesAny = nodeShape.orShapeIRIs.contains { shapeIRI in
-                conforms(
+            var matchesAny = false
+            for shapeIRI in nodeShape.orShapeIRIs {
+                if conforms(
                     valueNode: focusNode,
                     toNodeShapeIRI: shapeIRI,
                     dataGraph: dataGraph,
@@ -4180,7 +4185,10 @@ public struct SHACLCoreValidator: SHACLValidator {
                     nodeExpressionsByIRI: nodeExpressionsByIRI,
                     depth: depth,
                     visited: &visited
-                )
+                ) {
+                    matchesAny = true
+                    break
+                }
             }
             if !matchesAny {
                 violations.append(
@@ -4224,7 +4232,8 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         if !nodeShape.xoneShapeIRIs.isEmpty {
-            let matchCount = nodeShape.xoneShapeIRIs.reduce(into: 0) { count, shapeIRI in
+            var matchCount = 0
+            for shapeIRI in nodeShape.xoneShapeIRIs {
                 if conforms(
                     valueNode: focusNode,
                     toNodeShapeIRI: shapeIRI,
@@ -4235,7 +4244,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                     depth: depth,
                     visited: &visited
                 ) {
-                    count += 1
+                    matchCount += 1
                 }
             }
 
@@ -4978,8 +4987,9 @@ public struct SHACLCoreValidator: SHACLValidator {
 
             if !propertyShape.andShapeIRIs.isEmpty {
                 for valueNode in values {
-                    let matchesAll = propertyShape.andShapeIRIs.allSatisfy { shapeIRI in
-                        conforms(
+                    var matchesAll = true
+                    for shapeIRI in propertyShape.andShapeIRIs {
+                        if !conforms(
                             valueNode: valueNode,
                             toNodeShapeIRI: shapeIRI,
                             dataGraph: dataGraph,
@@ -4988,7 +4998,10 @@ public struct SHACLCoreValidator: SHACLValidator {
                             nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: depth,
                             visited: &visited
-                        )
+                        ) {
+                            matchesAll = false
+                            break
+                        }
                     }
                     if !matchesAll {
                         violations.append(
@@ -5008,8 +5021,9 @@ public struct SHACLCoreValidator: SHACLValidator {
 
             if !propertyShape.orShapeIRIs.isEmpty {
                 for valueNode in values {
-                    let matchesAny = propertyShape.orShapeIRIs.contains { shapeIRI in
-                        conforms(
+                    var matchesAny = false
+                    for shapeIRI in propertyShape.orShapeIRIs {
+                        if conforms(
                             valueNode: valueNode,
                             toNodeShapeIRI: shapeIRI,
                             dataGraph: dataGraph,
@@ -5018,7 +5032,10 @@ public struct SHACLCoreValidator: SHACLValidator {
                             nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: depth,
                             visited: &visited
-                        )
+                        ) {
+                            matchesAny = true
+                            break
+                        }
                     }
                     if !matchesAny {
                         violations.append(
@@ -5066,7 +5083,8 @@ public struct SHACLCoreValidator: SHACLValidator {
 
             if !propertyShape.xoneShapeIRIs.isEmpty {
                 for valueNode in values {
-                    let matchCount = propertyShape.xoneShapeIRIs.reduce(into: 0) { count, shapeIRI in
+                    var matchCount = 0
+                    for shapeIRI in propertyShape.xoneShapeIRIs {
                         if conforms(
                             valueNode: valueNode,
                             toNodeShapeIRI: shapeIRI,
@@ -5077,7 +5095,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             depth: depth,
                             visited: &visited
                         ) {
-                            count += 1
+                            matchCount += 1
                         }
                     }
 
@@ -5114,7 +5132,8 @@ public struct SHACLCoreValidator: SHACLValidator {
                     siblingQualifiedShapeIRIs = []
                 }
 
-                let qualifiedMatchCount = values.reduce(into: 0) { count, valueNode in
+                var qualifiedMatchCount = 0
+                for valueNode in values {
                     let matchesQualifiedShape = conforms(
                         valueNode: valueNode,
                         toNodeShapeIRI: qualifiedShapeIRI,
@@ -5126,12 +5145,13 @@ public struct SHACLCoreValidator: SHACLValidator {
                         visited: &visited
                     )
                     guard matchesQualifiedShape else {
-                        return
+                        continue
                     }
 
                     if propertyShape.qualifiedValueShapesDisjoint {
-                        let matchesSiblingQualifiedShape = siblingQualifiedShapeIRIs.contains { siblingShapeIRI in
-                            conforms(
+                        var matchesSiblingQualifiedShape = false
+                        for siblingShapeIRI in siblingQualifiedShapeIRIs {
+                            if conforms(
                                 valueNode: valueNode,
                                 toNodeShapeIRI: siblingShapeIRI,
                                 dataGraph: dataGraph,
@@ -5140,14 +5160,17 @@ public struct SHACLCoreValidator: SHACLValidator {
                                 nodeExpressionsByIRI: nodeExpressionsByIRI,
                                 depth: depth,
                                 visited: &visited
-                            )
+                            ) {
+                                matchesSiblingQualifiedShape = true
+                                break
+                            }
                         }
                         if matchesSiblingQualifiedShape {
-                            return
+                            continue
                         }
                     }
 
-                    count += 1
+                    qualifiedMatchCount += 1
                 }
 
                 if let qualifiedMin = propertyShape.qualifiedMinCount, qualifiedMatchCount < qualifiedMin {
