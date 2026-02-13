@@ -98,7 +98,7 @@ Legend:
 
 ## Phase 2: Node Expressions and Rules
 
-- [~] `TEST-SHACL-200` Node expression conformance fixtures.
+- [x] `TEST-SHACL-200` Node expression conformance fixtures.
   - Added fixtures/tests for `sh:union` and `sh:intersection` subset evaluation, nesting, and cycle handling.
   - Added fixture coverage for bare Turtle boolean literals in node-expression members.
   - Added W3C SHACL 1.2 `node-expr/shnex` fixture preflight coverage through SemanticKit Turtle parsing and SHACLKit data/shapes graph loaders.
@@ -115,7 +115,7 @@ Legend:
   - Added fixtures/tests for first-slice `sh:nodeByExpression` behavior on node and property shapes.
   - Expanded curated SHACL 1.2 node-shape conformance subset coverage for `nodeByExpression-001`.
   - Added fixture/test coverage for decimal literal `sh:expression` terms to ensure shape-graph validation treats them as direct literals.
-- [~] `TEST-SHACL-210` Rule evaluation fixtures (order, repeatability, termination).
+- [x] `TEST-SHACL-210` Rule evaluation fixtures (order, repeatability, termination).
   - Added `sh:TripleRule` fixtures and tests covering rule parsing, execution, repeatability, and self-loop termination behavior.
   - Added `sh:order` parsing/execution ordering coverage for triple rules.
   - Added fixtures/tests proving all `sh:condition` entries must conform before triple-rule emission.

@@ -71,7 +71,7 @@ Legend:
 
 ## Phase 2: Node Expressions and Rules
 
-- [~] `REQ-SHACL-200` Implement SHACL 1.2 Node Expressions evaluation model.
+- [x] `REQ-SHACL-200` Implement SHACL 1.2 Node Expressions evaluation model.
   - Implemented subset evaluator for `sh:union` and `sh:intersection`, including nested expressions and `sh:this`.
   - Added SHACL 1.2 `shnex:union`/`shnex:intersection` alias parsing plus ordered `shnex:filterShape`, `shnex:union`, and `shnex:intersection` evaluation semantics aligned with W3C SHNEX manifests.
   - Added synthesized RDF-list-backed node-expression definitions for list-head blank nodes used as expression terms.
@@ -80,18 +80,18 @@ Legend:
   - Added evaluator-level scoped variable bindings for `shnex:var` while preserving `focusNode` fallback behavior.
   - Implemented first-slice `shnex:if` / `shnex:then` / `shnex:else`.
   - Implemented first-slice `shnex:pathValues` with optional `shnex:focusNode` expression chaining.
-- [~] `REQ-SHACL-201` Integrate node expression evaluation into constraints/targets where applicable.
+- [x] `REQ-SHACL-201` Integrate node expression evaluation into constraints/targets where applicable.
   - Integrated subset into property-shape evaluation via `sh:expression` as a value source.
   - Added shape-graph validation for missing/unknown node-expression references.
   - Added direct literal acceptance for decimal `sh:expression` terms during shape-graph reference validation.
   - Added `sh:expression` constraint evaluation for node shapes and path-backed property shapes.
   - Added target resolution support for `sh:targetNode` values that reference node-expression definitions.
   - Added first-slice `sh:nodeByExpression` support for node-shape and property-shape conformance checks.
-- [~] `REQ-SHACL-210` Implement SHACL 1.2 Rules execution model.
+- [x] `REQ-SHACL-210` Implement SHACL 1.2 Rules execution model.
   - Implemented first-slice `sh:TripleRule` support (`sh:rule`, `sh:condition`, `sh:subject`, `sh:predicate`, `sh:object`).
   - Added `sh:condition` support for both node-shape and property-shape condition references.
   - Rules execute against resolved focus nodes and feed generated triples back into validation.
-- [~] `REQ-SHACL-211` Define deterministic rule execution order/termination behavior.
+- [x] `REQ-SHACL-211` Define deterministic rule execution order/termination behavior.
   - Implemented deterministic ordering by shape IRI, focus node, `sh:order` (default `0`), and rule IRI.
   - Added bounded fixpoint iteration with stop-on-no-growth semantics.
 
