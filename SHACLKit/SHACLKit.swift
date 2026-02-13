@@ -45,6 +45,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let isRDFSClass: Bool
     public let isDeactivated: Bool
     public let severity: SHACLSeverity?
+    public let message: String?
     public let targets: [SHACLTargetSelector]
     public let propertyShapeIRIs: [String]
     public let tripleRuleIRIs: [String]
@@ -99,6 +100,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         isRDFSClass: Bool = false,
         isDeactivated: Bool = false,
         severity: SHACLSeverity? = nil,
+        message: String? = nil,
         targets: [SHACLTargetSelector],
         propertyShapeIRIs: [String] = [],
         tripleRuleIRIs: [String] = [],
@@ -152,6 +154,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.isRDFSClass = isRDFSClass
         self.isDeactivated = isDeactivated
         self.severity = severity
+        self.message = message
         self.targets = targets
         self.propertyShapeIRIs = propertyShapeIRIs
         self.tripleRuleIRIs = tripleRuleIRIs
@@ -639,6 +642,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var isRDFSClass = false
             var isDeactivated = false
             var severity: SHACLSeverity?
+            var message: String?
             var targets: Set<SHACLTargetSelector> = []
             var propertyShapeIRIs: Set<String> = []
             var ruleIRIs: Set<String> = []
@@ -777,6 +781,12 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.targets.insert(.targetWhere(object))
             } else if predicate == SHACLIRIs.severity {
                 current.severity = parseSeverity(object)
+            } else if predicate == SHACLIRIs.message {
+                let parsedMessage = parsedLiteralLexicalForm(object) ?? object
+                current.message = parsedMessage
+                var sparql = sparqlDefinitions[subject] ?? PartialSPARQL()
+                sparql.message = parsedMessage
+                sparqlDefinitions[subject] = sparql
             } else if predicate == SHACLIRIs.deactivated {
                 current.isDeactivated = isTrueBooleanTerm(object)
             } else if predicate == SHACLIRIs.property {
@@ -931,10 +941,6 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             } else if predicate == SHACLIRIs.ask {
                 var sparql = sparqlDefinitions[subject] ?? PartialSPARQL()
                 sparql.askQuery = parsedLiteralLexicalForm(object) ?? object
-                sparqlDefinitions[subject] = sparql
-            } else if predicate == SHACLIRIs.message {
-                var sparql = sparqlDefinitions[subject] ?? PartialSPARQL()
-                sparql.message = parsedLiteralLexicalForm(object) ?? object
                 sparqlDefinitions[subject] = sparql
             } else if predicate == SHACLIRIs.prefixes {
                 var sparql = sparqlDefinitions[subject] ?? PartialSPARQL()
@@ -1371,6 +1377,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 isRDFSClass: partial.isRDFSClass,
                 isDeactivated: partial.isDeactivated,
                 severity: partial.severity,
+                message: partial.message,
                 targets: normalizedTargets.sorted(by: { targetSortKey($0) < targetSortKey($1) }),
                 propertyShapeIRIs: partial.propertyShapeIRIs.sorted(),
                 tripleRuleIRIs: resolveShapeReferenceIRIs(partial.ruleIRIs, triplesBySubject: triplesBySubject).sorted(),
@@ -3387,7 +3394,30 @@ public struct SHACLCoreValidator: SHACLValidator {
             )
         )
 
-        let sortedViolations = violations.sorted { lhs, rhs in
+        let customMessagesByShapeIRI = Dictionary(
+            uniqueKeysWithValues: parsedShapes.shapes.compactMap { shape -> (String, String)? in
+                guard let message = shape.message else {
+                    return nil
+                }
+                return (shape.shapeIRI, message)
+            }
+        )
+        let messageAlignedViolations = violations.map { violation -> SHACLViolation in
+            guard let customMessage = customMessagesByShapeIRI[violation.shapeIRI] else {
+                return violation
+            }
+            return SHACLViolation(
+                severity: violation.severity,
+                shapeIRI: violation.shapeIRI,
+                focusNode: violation.focusNode,
+                pathIRI: violation.pathIRI,
+                valueNode: violation.valueNode,
+                sourceConstraintIRI: violation.sourceConstraintIRI,
+                message: customMessage
+            )
+        }
+
+        let sortedViolations = messageAlignedViolations.sorted { lhs, rhs in
             (
                 lhs.shapeIRI,
                 lhs.focusNode,

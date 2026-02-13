@@ -26,6 +26,16 @@ private let shtIgnoreOrderIRI = "http://www.w3.org/ns/shacl-test#ignoreOrder"
 private let shtScopePrefixIRI = "http://www.w3.org/ns/shacl-test#scope-"
 private let shtDataGraphIRI = "http://www.w3.org/ns/shacl-test#dataGraph"
 private let shtShapesGraphIRI = "http://www.w3.org/ns/shacl-test#shapesGraph"
+private let shtValidateIRI = "http://www.w3.org/ns/shacl-test#Validate"
+private let shConformsIRI = "http://www.w3.org/ns/shacl#conforms"
+private let shResultIRI = "http://www.w3.org/ns/shacl#result"
+private let shFocusNodeIRI = "http://www.w3.org/ns/shacl#focusNode"
+private let shResultPathIRI = "http://www.w3.org/ns/shacl#resultPath"
+private let shResultMessageIRI = "http://www.w3.org/ns/shacl#resultMessage"
+private let shResultSeverityIRI = "http://www.w3.org/ns/shacl#resultSeverity"
+private let shSourceShapeIRI = "http://www.w3.org/ns/shacl#sourceShape"
+private let shSourceConstraintComponentIRI = "http://www.w3.org/ns/shacl#sourceConstraintComponent"
+private let shValueIRI = "http://www.w3.org/ns/shacl#value"
 
 private func fixtureData(_ name: String) throws -> Data {
     let fileURL = URL(fileURLWithPath: #filePath)
@@ -483,6 +493,191 @@ private struct W3CCuratedConformanceCase {
     let shapesGraphRelativePath: String
     let expectedConforms: Bool
     let conformanceDisallowedSeverities: Set<SHACLSeverity>?
+}
+
+private struct W3CManifestResultSignature: Hashable {
+    let focusNode: String
+    let valueNode: String?
+    let resultPath: String?
+    let sourceShape: String?
+    let sourceConstraintComponent: String?
+    let severity: SHACLSeverity?
+    let message: String?
+}
+
+private func loadW3CManifestResultSignatures(fromFixtureData fixturePayload: Data) throws -> [W3CManifestResultSignature] {
+    guard let source = String(data: fixturePayload, encoding: .utf8) else {
+        return []
+    }
+    let normalized = Data(
+        normalizedW3CTurtle(source)
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "<>", with: "<https://example.invalid/shaclkit/w3c-fixture-self>")
+            .utf8
+    )
+    let manifestGraph = try SHACLDataGraphLoader().load(from: normalized)
+    let triples = manifestGraph.triples
+
+    let validateSubjects = triples
+        .filter { $0.predicate == rdfTypeIRI && $0.object == shtValidateIRI }
+        .map(\.subject)
+        .sorted()
+
+    guard let validateSubject = validateSubjects.first,
+          let reportNode = triples.first(where: { $0.subject == validateSubject && $0.predicate == mfResultIRI })?.object else {
+        return []
+    }
+
+    let reportedConforms = triples.first(where: { $0.subject == reportNode && $0.predicate == shConformsIRI })
+        .map { isTrueBooleanLiteral($0.object) } ?? true
+    if reportedConforms {
+        return []
+    }
+
+    let resultNodes = triples
+        .filter { $0.subject == reportNode && $0.predicate == shResultIRI }
+        .map(\.object)
+
+    var signatures: [W3CManifestResultSignature] = []
+    for resultNode in resultNodes {
+        guard let focusNode = triples.first(where: { $0.subject == resultNode && $0.predicate == shFocusNodeIRI })?.object else {
+            continue
+        }
+        let valueNode = triples.first(where: { $0.subject == resultNode && $0.predicate == shValueIRI })?.object
+        let resultPath = triples.first(where: { $0.subject == resultNode && $0.predicate == shResultPathIRI })?.object
+        let sourceShape = triples.first(where: { $0.subject == resultNode && $0.predicate == shSourceShapeIRI })?.object
+        let sourceConstraintComponent = triples
+            .first(where: { $0.subject == resultNode && $0.predicate == shSourceConstraintComponentIRI })?
+            .object
+        let severity = triples
+            .first(where: { $0.subject == resultNode && $0.predicate == shResultSeverityIRI })
+            .flatMap { severityFromManifestIRI($0.object) }
+        let rawMessage = triples.first(where: { $0.subject == resultNode && $0.predicate == shResultMessageIRI })?.object
+        let message = rawMessage.flatMap(literalLexicalForm)
+
+        signatures.append(
+            W3CManifestResultSignature(
+            focusNode: focusNode,
+            valueNode: valueNode,
+            resultPath: resultPath,
+            sourceShape: sourceShape,
+            sourceConstraintComponent: sourceConstraintComponent,
+            severity: severity,
+            message: message
+        )
+        )
+    }
+    return signatures
+}
+
+private func severityFromManifestIRI(_ iri: String) -> SHACLSeverity? {
+    switch iri {
+    case "http://www.w3.org/ns/shacl#Violation":
+        return .violation
+    case "http://www.w3.org/ns/shacl#Warning":
+        return .warning
+    case "http://www.w3.org/ns/shacl#Info":
+        return .info
+    default:
+        return nil
+    }
+}
+
+private func literalLexicalForm(_ term: String) -> String? {
+    guard term.hasPrefix("\""), term.count >= 2 else {
+        return nil
+    }
+    var escaped = false
+    var index = term.index(after: term.startIndex)
+    while index < term.endIndex {
+        let character = term[index]
+        if escaped {
+            escaped = false
+        } else if character == "\\" {
+            escaped = true
+        } else if character == "\"" {
+            let lexical = term[term.index(after: term.startIndex)..<index]
+            return String(lexical)
+        }
+        index = term.index(after: index)
+    }
+    return nil
+}
+
+private func constraintComponentIRI(for violationConstraintIRI: String?) -> String? {
+    guard let violationConstraintIRI else {
+        return nil
+    }
+    switch violationConstraintIRI {
+    case "http://www.w3.org/ns/shacl#class":
+        return "http://www.w3.org/ns/shacl#ClassConstraintComponent"
+    case "http://www.w3.org/ns/shacl#datatype":
+        return "http://www.w3.org/ns/shacl#DatatypeConstraintComponent"
+    case "http://www.w3.org/ns/shacl#nodeKind":
+        return "http://www.w3.org/ns/shacl#NodeKindConstraintComponent"
+    case "http://www.w3.org/ns/shacl#minCount":
+        return "http://www.w3.org/ns/shacl#MinCountConstraintComponent"
+    case "http://www.w3.org/ns/shacl#maxCount":
+        return "http://www.w3.org/ns/shacl#MaxCountConstraintComponent"
+    case "http://www.w3.org/ns/shacl#minLength":
+        return "http://www.w3.org/ns/shacl#MinLengthConstraintComponent"
+    case "http://www.w3.org/ns/shacl#maxLength":
+        return "http://www.w3.org/ns/shacl#MaxLengthConstraintComponent"
+    case "http://www.w3.org/ns/shacl#pattern":
+        return "http://www.w3.org/ns/shacl#PatternConstraintComponent"
+    case "http://www.w3.org/ns/shacl#minInclusive":
+        return "http://www.w3.org/ns/shacl#MinInclusiveConstraintComponent"
+    case "http://www.w3.org/ns/shacl#maxInclusive":
+        return "http://www.w3.org/ns/shacl#MaxInclusiveConstraintComponent"
+    case "http://www.w3.org/ns/shacl#minExclusive":
+        return "http://www.w3.org/ns/shacl#MinExclusiveConstraintComponent"
+    case "http://www.w3.org/ns/shacl#maxExclusive":
+        return "http://www.w3.org/ns/shacl#MaxExclusiveConstraintComponent"
+    case "http://www.w3.org/ns/shacl#hasValue":
+        return "http://www.w3.org/ns/shacl#HasValueConstraintComponent"
+    case "http://www.w3.org/ns/shacl#in":
+        return "http://www.w3.org/ns/shacl#InConstraintComponent"
+    case "http://www.w3.org/ns/shacl#languageIn":
+        return "http://www.w3.org/ns/shacl#LanguageInConstraintComponent"
+    case "http://www.w3.org/ns/shacl#uniqueLang":
+        return "http://www.w3.org/ns/shacl#UniqueLangConstraintComponent"
+    case "http://www.w3.org/ns/shacl#equals":
+        return "http://www.w3.org/ns/shacl#EqualsConstraintComponent"
+    case "http://www.w3.org/ns/shacl#disjoint":
+        return "http://www.w3.org/ns/shacl#DisjointConstraintComponent"
+    case "http://www.w3.org/ns/shacl#lessThan":
+        return "http://www.w3.org/ns/shacl#LessThanConstraintComponent"
+    case "http://www.w3.org/ns/shacl#lessThanOrEquals":
+        return "http://www.w3.org/ns/shacl#LessThanOrEqualsConstraintComponent"
+    case "http://www.w3.org/ns/shacl#node":
+        return "http://www.w3.org/ns/shacl#NodeConstraintComponent"
+    case "http://www.w3.org/ns/shacl#property":
+        return "http://www.w3.org/ns/shacl#PropertyConstraintComponent"
+    case "http://www.w3.org/ns/shacl#qualifiedMinCount":
+        return "http://www.w3.org/ns/shacl#QualifiedMinCountConstraintComponent"
+    case "http://www.w3.org/ns/shacl#qualifiedMaxCount":
+        return "http://www.w3.org/ns/shacl#QualifiedMaxCountConstraintComponent"
+    case "http://www.w3.org/ns/shacl#closed":
+        return "http://www.w3.org/ns/shacl#ClosedConstraintComponent"
+    case "http://www.w3.org/ns/shacl#and":
+        return "http://www.w3.org/ns/shacl#AndConstraintComponent"
+    case "http://www.w3.org/ns/shacl#or":
+        return "http://www.w3.org/ns/shacl#OrConstraintComponent"
+    case "http://www.w3.org/ns/shacl#not":
+        return "http://www.w3.org/ns/shacl#NotConstraintComponent"
+    case "http://www.w3.org/ns/shacl#xone":
+        return "http://www.w3.org/ns/shacl#XoneConstraintComponent"
+    case "http://www.w3.org/ns/shacl#expression":
+        return "http://www.w3.org/ns/shacl#ExpressionConstraintComponent"
+    default:
+        return nil
+    }
+}
+
+private func multisetCounts<T: Hashable>(_ values: [T]) -> [T: Int] {
+    values.reduce(into: [:]) { partial, value in
+        partial[value, default: 0] += 1
+    }
 }
 
 private func resolvedW3CManifestGraphPaths(
@@ -1260,6 +1455,11 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
 @Test func w3cCuratedConformanceSubsetMatchesExpectations() async throws {
     let conformanceCases = try loadW3CCuratedConformanceCases()
     #expect(!conformanceCases.isEmpty)
+    let metadataParityCaseIDs: Set<String> = [
+        "core-misc-message-001",
+        "core-misc-message-002",
+        "core-misc-shacl12-message-001",
+    ]
 
     for conformanceCase in conformanceCases {
         let validator = SHACLCoreValidator(
@@ -1272,6 +1472,7 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         )
         let dataGraphPayload = try fixtureData("W3CDataShapes/\(resolvedPaths.data)")
         let shapesGraphPayload = try fixtureData("W3CDataShapes/\(resolvedPaths.shapes)")
+        let manifestFixturePayload = try fixtureData("W3CDataShapes/\(conformanceCase.dataGraphRelativePath)")
         let dataSupportsSemanticPreflight = supportsStandardTurtleSemanticPreflight(dataGraphPayload)
         let shapesSupportsSemanticPreflight = supportsStandardTurtleSemanticPreflight(shapesGraphPayload)
         let cleanedDataGraphPayload = try cleanedGraphSectionData(fromTurtleData: dataGraphPayload)
@@ -1307,6 +1508,25 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
                 W3C curated case \(conformanceCase.caseID) expectation mismatch: \
                 expected conforms=\(conformanceCase.expectedConforms), got \(result.conforms).
                 """
+            )
+        }
+
+        if metadataParityCaseIDs.contains(conformanceCase.caseID) {
+            let expectedSignatures = try loadW3CManifestResultSignatures(fromFixtureData: manifestFixturePayload)
+            let actualSignatures = result.violations.map { violation in
+                W3CManifestResultSignature(
+                    focusNode: violation.focusNode,
+                    valueNode: violation.valueNode,
+                    resultPath: violation.pathIRI,
+                    sourceShape: violation.shapeIRI,
+                    sourceConstraintComponent: constraintComponentIRI(for: violation.sourceConstraintIRI),
+                    severity: violation.severity,
+                    message: violation.message
+                )
+            }
+            #expect(
+                multisetCounts(actualSignatures) == multisetCounts(expectedSignatures),
+                "W3C metadata parity mismatch for \(conformanceCase.caseID)"
             )
         }
     }
