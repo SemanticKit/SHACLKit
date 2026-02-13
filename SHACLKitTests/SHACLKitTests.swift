@@ -1039,6 +1039,16 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
             expectedViolations: 3
         ),
         .init(
+            fixturePath: "W3CDataShapes/shacl12-test-suite/tests/sparql/node/sparql-002.ttl",
+            expectedConforms: false,
+            expectedViolations: 1
+        ),
+        .init(
+            fixturePath: "W3CDataShapes/shacl12-test-suite/tests/sparql/property/sparql-001.ttl",
+            expectedConforms: false,
+            expectedViolations: 1
+        ),
+        .init(
             fixturePath: "W3CDataShapes/shacl12-test-suite/tests/sparql/pre-binding/pre-binding-001.ttl",
             expectedConforms: false,
             expectedViolations: 1
@@ -4329,6 +4339,27 @@ private struct W3CSPARQLFixtureSubsetExecutor: SHACLSPARQLExecutor {
            let focusNode,
            focusNode == "http://example.com/ns#InvalidResource" {
             return [focusNode]
+        }
+
+        let nodeLanguageConstraintPattern = normalizedQuery.contains("$this ex:germanlabel ?value")
+            && normalizedQuery.contains("langmatches(lang(?value)")
+        if nodeLanguageConstraintPattern, let focusNode {
+            return dataGraph.triples
+                .filter {
+                    $0.subject == focusNode
+                        && $0.predicate == "http://example.com/ns#germanLabel"
+                        && !$0.object.contains("@de")
+                }
+                .map(\.object)
+        }
+
+        let propertyLanguageConstraintPattern = normalizedQuery.contains("$this $path ?value")
+            || normalizedQuery.contains("?this $path ?value")
+        if propertyLanguageConstraintPattern, let focusNode {
+            if focusNode.contains("@en") {
+                return [focusNode]
+            }
+            return []
         }
 
         if normalizedQuery.contains("select ?person"),
