@@ -21,3 +21,7 @@ Tracking documents:
 
 - `Docs/Requirements/SHACLImplementationChecklist.md`
 - `Docs/Requirements/SHACLTestsChecklist.md`
+
+## Milestone Snapshots
+
+- `shacl12-phase1-20260212`: Phase 1 completion baseline for SHACLKit (tagged on `main` and `codex/shacl-phase1-target-resolution` at commit `041e035`).
