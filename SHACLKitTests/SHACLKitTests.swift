@@ -3855,11 +3855,35 @@ private struct TestShapesSource {
     #expect(result.violations.count == 1)
 }
 
+@Test func coreValidatorAllowsGuardedSPARQLConstraintWhenPathRebindOnlyAppearsInComment() async throws {
+    let innerExecutor = GuardLiteralKeywordSPARQLExecutor()
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: innerExecutor)
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardAllowsPathCommentShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
 @Test func coreValidatorAllowsGuardedSPARQLConstraintWhenValueOnlyAppearsInStringLiteral() async throws {
     let innerExecutor = GuardLiteralKeywordSPARQLExecutor()
     let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: innerExecutor)
     let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
     let shapes = try fixtureData("sparqlGuardAllowsValueLiteralShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
+@Test func coreValidatorAllowsGuardedSPARQLConstraintWhenValueRebindOnlyAppearsInComment() async throws {
+    let innerExecutor = GuardLiteralKeywordSPARQLExecutor()
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: innerExecutor)
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardAllowsValueCommentShapes.ttl")
     let dataGraph = try fixtureData("sparqlData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
