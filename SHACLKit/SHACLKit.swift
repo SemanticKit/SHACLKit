@@ -873,7 +873,9 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
 
             shapes[subject] = current
 
-            if predicate == SHACLIRIs.union || predicate == SHACLIRIs.intersection {
+            if predicate == SHACLIRIs.union
+                || predicate == SHACLIRIs.intersection
+                || predicate == SHACLIRIs.shnexIntersection {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
                 if predicate == SHACLIRIs.union {
                     expression.unionMemberObjects.insert(object)
@@ -2561,6 +2563,68 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 depth: depth + 1,
                 visited: &visited
             )
+        case .intersection(let members):
+            guard let first = members.first else {
+                return []
+            }
+            let firstOrdered = evaluateTermOrdered(
+                first,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                variableBindings: variableBindings,
+                depth: depth + 1,
+                visited: &visited
+            )
+            let remainingSets = members.dropFirst().map { member in
+                Set(evaluateTerm(
+                    member,
+                    focusNode: focusNode,
+                    shapesGraph: shapesGraph,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    variableBindings: variableBindings,
+                    depth: depth + 1,
+                    visited: &visited
+                ))
+            }
+            var seen: Set<String> = []
+            var ordered: [String] = []
+            for node in firstOrdered where !seen.contains(node) {
+                if remainingSets.allSatisfy({ $0.contains(node) }) {
+                    seen.insert(node)
+                    ordered.append(node)
+                }
+            }
+            return ordered
+        case .filterShape(let inputTerm, let shapeTerm, let staticListMembers):
+            let input = staticListMembers ?? evaluateTermOrdered(
+                inputTerm,
+                focusNode: focusNode,
+                shapesGraph: shapesGraph,
+                expressionsByIRI: expressionsByIRI,
+                dataGraph: dataGraph,
+                variableBindings: variableBindings,
+                depth: depth + 1,
+                visited: &visited
+            )
+            guard let dataGraph else {
+                return []
+            }
+            let matched = nodesMatching(
+                shapeIRI: shapeTerm,
+                candidates: Set(input),
+                shapesGraph: shapesGraph,
+                dataGraph: dataGraph
+            )
+            var seen: Set<String> = []
+            var ordered: [String] = []
+            for node in input where matched.contains(node) && !seen.contains(node) {
+                seen.insert(node)
+                ordered.append(node)
+            }
+            return ordered
         default:
             return evaluateTerm(
                 term,
@@ -6273,6 +6337,7 @@ private enum SHACLIRIs {
     static let shnexFindFirst = "http://www.w3.org/ns/shacl-node-expr#findFirst"
     static let shnexOrderBy = "http://www.w3.org/ns/shacl-node-expr#orderBy"
     static let shnexDesc = "http://www.w3.org/ns/shacl-node-expr#desc"
+    static let shnexIntersection = "http://www.w3.org/ns/shacl-node-expr#intersection"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"
     static let nodeKindIRI = "http://www.w3.org/ns/shacl#IRI"
