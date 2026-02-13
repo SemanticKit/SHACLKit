@@ -1,0 +1,16 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:PersonShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:sparql ex:NameConstraint .
+
+ex:NameConstraint
+  sh:prefixes ex:PrefixConfig ;
+  sh:select "PREFIX ex: <http://example.com/> SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }" .
+
+ex:PrefixConfig
+  sh:declare [
+    sh:prefix "ex" ;
+    sh:namespace "http://example.com/"
+  ] .

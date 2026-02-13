@@ -3217,6 +3217,44 @@ private struct TestShapesSource {
     #expect(result.violations.count == 1)
 }
 
+@Test func coreValidatorDoesNotDuplicateInlineSPARQLPrefixDeclarations() async throws {
+    let inlinePrefixedQuery = "PREFIX ex: <http://example.com/> SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }"
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "\(inlinePrefixedQuery)|http://example.com/alice": ["http://example.com/alice"],
+            "\(inlinePrefixedQuery)|http://example.com/bob": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlConstraintWithInlinePrefixShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
+@Test func coreValidatorInjectsSPARQLPrefixesInDeterministicSortedOrder() async throws {
+    let deterministicPrefixQuery = """
+    PREFIX ex: <http://example.com/>
+    PREFIX zzz: <http://example.com/z#>
+    SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }
+    """
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "\(deterministicPrefixQuery)|http://example.com/alice": ["http://example.com/alice"],
+            "\(deterministicPrefixQuery)|http://example.com/bob": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlConstraintWithMultiplePrefixesShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
 @Test func coreValidatorUsesSPARQLMessageForNodeShapeConstraintViolation() async throws {
     let executor = TestSPARQLExecutor(
         selectResults: [

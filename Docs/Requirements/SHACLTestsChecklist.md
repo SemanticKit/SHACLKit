@@ -136,6 +136,8 @@ Legend:
   - Added first-slice fixture/tests for nested property-shape `sh:sparql` constraints.
   - Added fixture/tests for SPARQL `sh:message` propagation on node-shape and property-shape violations.
   - Added fixture/tests proving `sh:prefixes` declarations are applied to executor-bound SPARQL query text (prefix lines injected at runtime).
+  - Added regression fixture/test proving runtime prefix injection does not duplicate prefixes already declared inline in query text.
+  - Added regression fixture/test proving runtime prefix injection order is deterministic (sorted by prefix label).
 - [~] `TEST-SHACL-301` SPARQL target fixtures.
   - Added first-slice fixture/tests for `sh:target` + `sh:select` focus-node resolution through an injected executor boundary.
   - Added first-slice fixture/tests for `sh:targetNode` + inline `sh:select` focus-node resolution through the same executor boundary.
