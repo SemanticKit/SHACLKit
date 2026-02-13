@@ -68,6 +68,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let inValues: [String]
     public let languageInValues: [String]
     public let uniqueLang: Bool
+    public let uniqueMembers: Bool
     public let equalsIRI: String?
     public let disjointIRI: String?
     public let lessThanIRI: String?
@@ -117,6 +118,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         inValues: [String] = [],
         languageInValues: [String] = [],
         uniqueLang: Bool = false,
+        uniqueMembers: Bool = false,
         equalsIRI: String? = nil,
         disjointIRI: String? = nil,
         lessThanIRI: String? = nil,
@@ -165,6 +167,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.inValues = inValues
         self.languageInValues = languageInValues
         self.uniqueLang = uniqueLang
+        self.uniqueMembers = uniqueMembers
         self.equalsIRI = equalsIRI
         self.disjointIRI = disjointIRI
         self.lessThanIRI = lessThanIRI
@@ -580,6 +583,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var inValues: Set<String> = []
             var languageInValues: Set<String> = []
             var uniqueLang = false
+            var uniqueMembers = false
             var equalsIRI: String?
             var disjointIRI: String?
             var lessThanIRI: String?
@@ -739,6 +743,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.languageInValues.insert(object)
             } else if predicate == SHACLIRIs.uniqueLang {
                 current.uniqueLang = isStrictTrueBooleanTerm(object)
+            } else if predicate == SHACLIRIs.uniqueMembers {
+                current.uniqueMembers = isStrictTrueBooleanTerm(object)
             } else if predicate == SHACLIRIs.equals {
                 current.equalsIRI = object
             } else if predicate == SHACLIRIs.disjoint {
@@ -1282,6 +1288,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 inValues: resolveInValues(partial.inValues, triplesBySubject: triplesBySubject).sorted(),
                 languageInValues: resolveInValues(partial.languageInValues, triplesBySubject: triplesBySubject).sorted(),
                 uniqueLang: partial.uniqueLang,
+                uniqueMembers: partial.uniqueMembers,
                 equalsIRI: partial.equalsIRI,
                 disjointIRI: partial.disjointIRI,
                 lessThanIRI: partial.lessThanIRI,
@@ -5455,37 +5462,16 @@ public struct SHACLCoreValidator: SHACLValidator {
         nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition],
         visited: inout Set<String>
     ) -> [SHACLViolation] {
-        guard let memberShapeIRI = hostShape.memberShapeIRI else {
+        let hasMemberShape = hostShape.memberShapeIRI != nil
+        let hasUniqueMembers = hostShape.uniqueMembers
+        if !hasMemberShape && !hasUniqueMembers {
             return []
         }
 
         let triplesBySubject = Dictionary(grouping: dataGraph.triples, by: \.subject)
         guard let members = rdfListMembersStrictInDataGraph(candidateValueNode, triplesBySubject: triplesBySubject) else {
-            return [
-                SHACLViolation(
-                    severity: severity,
-                    shapeIRI: hostShape.shapeIRI,
-                    focusNode: rootFocusNode,
-                    pathIRI: pathIRI,
-                    valueNode: candidateValueNode,
-                    sourceConstraintIRI: SHACLIRIs.memberShape,
-                    message: "memberShape violation: value \(candidateValueNode) is not a well-formed RDF list"
-                )
-            ]
-        }
-
-        var violations: [SHACLViolation] = []
-        for member in members {
-            if !conforms(
-                valueNode: member,
-                toNodeShapeIRI: memberShapeIRI,
-                dataGraph: dataGraph,
-                shapesByIRI: shapesByIRI,
-                expressionGraph: expressionGraph,
-                nodeExpressionsByIRI: nodeExpressionsByIRI,
-                depth: 0,
-                visited: &visited
-            ) {
+            var violations: [SHACLViolation] = []
+            if hasMemberShape {
                 violations.append(
                     SHACLViolation(
                         severity: severity,
@@ -5494,11 +5480,79 @@ public struct SHACLCoreValidator: SHACLValidator {
                         pathIRI: pathIRI,
                         valueNode: candidateValueNode,
                         sourceConstraintIRI: SHACLIRIs.memberShape,
-                        message: "memberShape violation: RDF list member \(member) does not conform to \(memberShapeIRI)"
+                        message: "memberShape violation: value \(candidateValueNode) is not a well-formed RDF list"
+                    )
+                )
+            }
+            if hasUniqueMembers {
+                violations.append(
+                    SHACLViolation(
+                        severity: severity,
+                        shapeIRI: hostShape.shapeIRI,
+                        focusNode: rootFocusNode,
+                        pathIRI: pathIRI,
+                        valueNode: candidateValueNode,
+                        sourceConstraintIRI: SHACLIRIs.uniqueMembers,
+                        message: "uniqueMembers violation: value \(candidateValueNode) is not a well-formed RDF list"
+                    )
+                )
+            }
+            return violations
+        }
+
+        var violations: [SHACLViolation] = []
+        if hasUniqueMembers {
+            var seen: Set<String> = []
+            var hasDuplicate = false
+            for member in members {
+                let inserted = seen.insert(member).inserted
+                if !inserted {
+                    hasDuplicate = true
+                    break
+                }
+            }
+            if hasDuplicate {
+                violations.append(
+                    SHACLViolation(
+                        severity: severity,
+                        shapeIRI: hostShape.shapeIRI,
+                        focusNode: rootFocusNode,
+                        pathIRI: pathIRI,
+                        valueNode: candidateValueNode,
+                        sourceConstraintIRI: SHACLIRIs.uniqueMembers,
+                        message: "uniqueMembers violation: list contains duplicate members"
                     )
                 )
             }
         }
+
+        if let memberShapeIRI = hostShape.memberShapeIRI {
+            for member in members {
+                if !conforms(
+                    valueNode: member,
+                    toNodeShapeIRI: memberShapeIRI,
+                    dataGraph: dataGraph,
+                    shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
+                    nodeExpressionsByIRI: nodeExpressionsByIRI,
+                    depth: 0,
+                    visited: &visited
+                ) {
+                    violations.append(
+                        SHACLViolation(
+                            severity: severity,
+                            shapeIRI: hostShape.shapeIRI,
+                            focusNode: rootFocusNode,
+                            pathIRI: pathIRI,
+                            valueNode: candidateValueNode,
+                            sourceConstraintIRI: SHACLIRIs.memberShape,
+                            message: "memberShape violation: RDF list member \(member) does not conform to \(memberShapeIRI)"
+                        )
+                    )
+                }
+            }
+        }
+
         return violations
     }
 
@@ -5918,6 +5972,7 @@ private enum SHACLIRIs {
     static let `in` = "http://www.w3.org/ns/shacl#in"
     static let languageIn = "http://www.w3.org/ns/shacl#languageIn"
     static let uniqueLang = "http://www.w3.org/ns/shacl#uniqueLang"
+    static let uniqueMembers = "http://www.w3.org/ns/shacl#uniqueMembers"
     static let equals = "http://www.w3.org/ns/shacl#equals"
     static let disjoint = "http://www.w3.org/ns/shacl#disjoint"
     static let lessThan = "http://www.w3.org/ns/shacl#lessThan"
