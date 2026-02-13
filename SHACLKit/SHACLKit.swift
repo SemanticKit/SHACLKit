@@ -3019,6 +3019,10 @@ public struct SHACLCoreValidator: SHACLValidator {
             shapesByIRI: shapeByIRI,
             nodeExpressionsByIRI: nodeExpressionsByIRI
         )
+        let expressionGraph = SHACLShapesGraph(
+            shapes: Array(shapeByIRI.values),
+            nodeExpressions: Array(nodeExpressionsByIRI.values)
+        )
         let sparqlDefinitionsByIRI = Dictionary(uniqueKeysWithValues: parsedShapes.sparqlDefinitions.map { ($0.sparqlIRI, $0) })
         let resolutions = try resolveFocusNodes(
             dataGraph: parsedData,
@@ -3044,6 +3048,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             focusNode: focusNode,
                             dataGraph: parsedData,
                             shapesByIRI: shapeByIRI,
+                            expressionGraph: expressionGraph,
                             nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: 0,
                             visited: &visited
@@ -3066,6 +3071,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             focusNode: focusNode,
                             dataGraph: parsedData,
                             shapesByIRI: shapeByIRI,
+                            expressionGraph: expressionGraph,
                             nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: 0,
                             visited: &visited
@@ -3305,6 +3311,10 @@ public struct SHACLCoreValidator: SHACLValidator {
         let baselineByShapeIRI = Dictionary(uniqueKeysWithValues: baseline.map { ($0.shapeIRI, Set($0.focusNodes)) })
         let shapesByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.shapes.map { ($0.shapeIRI, $0) })
         let nodeExpressionsByIRI = Dictionary(uniqueKeysWithValues: shapesGraph.nodeExpressions.map { ($0.expressionIRI, $0) })
+        let expressionGraph = SHACLShapesGraph(
+            shapes: Array(shapesByIRI.values),
+            nodeExpressions: Array(nodeExpressionsByIRI.values)
+        )
         let candidateTargetWhereNodes = Set(dataGraph.triples.flatMap { [$0.subject, $0.object] }).sorted()
 
         return try shapesGraph.shapes.map { shape in
@@ -3323,6 +3333,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                         toShapeIRI: whereShapeIRI,
                         dataGraph: dataGraph,
                         shapesByIRI: shapesByIRI,
+                        expressionGraph: expressionGraph,
                         nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: 0,
                         visited: &visited
@@ -3655,6 +3666,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             focusNode: focusNode,
                             dataGraph: graphSnapshot,
                             shapesByIRI: shapesByIRI,
+                            expressionGraph: expressionGraph,
                             nodeExpressionsByIRI: nodeExpressionsByIRI
                         ) {
                             continue
@@ -3711,6 +3723,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         focusNode: String,
         dataGraph: SHACLDataGraph,
         shapesByIRI: [String: SHACLShapeDefinition],
+        expressionGraph: SHACLShapesGraph,
         nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition]
     ) -> Bool {
         if rule.conditionShapeIRIs.isEmpty {
@@ -3723,6 +3736,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                 toShapeIRI: conditionShapeIRI,
                 dataGraph: dataGraph,
                 shapesByIRI: shapesByIRI,
+                expressionGraph: expressionGraph,
                 nodeExpressionsByIRI: nodeExpressionsByIRI,
                 depth: 0,
                 visited: &visited
@@ -3761,6 +3775,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         focusNode: String,
         dataGraph: SHACLDataGraph,
         shapesByIRI: [String: SHACLShapeDefinition],
+        expressionGraph: SHACLShapesGraph,
         nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition] = [:],
         depth: Int,
         visited: inout Set<String>
@@ -3773,10 +3788,6 @@ public struct SHACLCoreValidator: SHACLValidator {
             return violations
         }
         let nodeSeverity = nodeShape.severity ?? .violation
-        let expressionGraph = SHACLShapesGraph(
-            shapes: Array(shapesByIRI.values),
-            nodeExpressions: Array(nodeExpressionsByIRI.values)
-        )
 
         if let classIRI = nodeShape.classIRI {
             let hasRequiredType = nodeSatisfiesClassConstraint(
@@ -4137,6 +4148,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                     toNodeShapeIRI: shapeIRI,
                     dataGraph: dataGraph,
                     shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
                     nodeExpressionsByIRI: nodeExpressionsByIRI,
                     depth: depth,
                     visited: &visited
@@ -4164,6 +4176,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                     toNodeShapeIRI: shapeIRI,
                     dataGraph: dataGraph,
                     shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
                     nodeExpressionsByIRI: nodeExpressionsByIRI,
                     depth: depth,
                     visited: &visited
@@ -4190,6 +4203,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                 toNodeShapeIRI: forbiddenShapeIRI,
                 dataGraph: dataGraph,
                 shapesByIRI: shapesByIRI,
+                expressionGraph: expressionGraph,
                 nodeExpressionsByIRI: nodeExpressionsByIRI,
                 depth: depth,
                 visited: &visited
@@ -4216,6 +4230,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                     toNodeShapeIRI: shapeIRI,
                     dataGraph: dataGraph,
                     shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
                     nodeExpressionsByIRI: nodeExpressionsByIRI,
                     depth: depth,
                     visited: &visited
@@ -4276,6 +4291,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                     toNodeShapeIRI: referencedShapeIRI,
                     dataGraph: dataGraph,
                     shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
                     nodeExpressionsByIRI: nodeExpressionsByIRI,
                     depth: depth,
                     visited: &visited
@@ -4307,6 +4323,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                     focusNode: focusNode,
                     dataGraph: dataGraph,
                     shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
                     nodeExpressionsByIRI: nodeExpressionsByIRI,
                     depth: depth + 1,
                     visited: &visited
@@ -4890,6 +4907,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             toNodeShapeIRI: referencedShapeIRI,
                             dataGraph: dataGraph,
                             shapesByIRI: shapesByIRI,
+                            expressionGraph: expressionGraph,
                             nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: depth,
                             visited: &visited
@@ -4925,6 +4943,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                         focusNode: valueNode,
                         dataGraph: dataGraph,
                         shapesByIRI: shapesByIRI,
+                        expressionGraph: expressionGraph,
                         nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: depth + 1,
                         visited: &visited
@@ -4948,6 +4967,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                         focusNode: valueNode,
                         dataGraph: dataGraph,
                         shapesByIRI: shapesByIRI,
+                        expressionGraph: expressionGraph,
                         nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: depth + 1,
                         visited: &visited
@@ -4964,6 +4984,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             toNodeShapeIRI: shapeIRI,
                             dataGraph: dataGraph,
                             shapesByIRI: shapesByIRI,
+                            expressionGraph: expressionGraph,
                             nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: depth,
                             visited: &visited
@@ -4993,6 +5014,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             toNodeShapeIRI: shapeIRI,
                             dataGraph: dataGraph,
                             shapesByIRI: shapesByIRI,
+                            expressionGraph: expressionGraph,
                             nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: depth,
                             visited: &visited
@@ -5021,6 +5043,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                         toNodeShapeIRI: forbiddenShapeIRI,
                         dataGraph: dataGraph,
                         shapesByIRI: shapesByIRI,
+                        expressionGraph: expressionGraph,
                         nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: depth,
                         visited: &visited
@@ -5049,6 +5072,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                             toNodeShapeIRI: shapeIRI,
                             dataGraph: dataGraph,
                             shapesByIRI: shapesByIRI,
+                            expressionGraph: expressionGraph,
                             nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: depth,
                             visited: &visited
@@ -5096,6 +5120,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                         toNodeShapeIRI: qualifiedShapeIRI,
                         dataGraph: dataGraph,
                         shapesByIRI: shapesByIRI,
+                        expressionGraph: expressionGraph,
                         nodeExpressionsByIRI: nodeExpressionsByIRI,
                         depth: depth,
                         visited: &visited
@@ -5111,6 +5136,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                                 toNodeShapeIRI: siblingShapeIRI,
                                 dataGraph: dataGraph,
                                 shapesByIRI: shapesByIRI,
+                                expressionGraph: expressionGraph,
                                 nodeExpressionsByIRI: nodeExpressionsByIRI,
                                 depth: depth,
                                 visited: &visited
@@ -5168,6 +5194,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         toNodeShapeIRI shapeIRI: String,
         dataGraph: SHACLDataGraph,
         shapesByIRI: [String: SHACLShapeDefinition],
+        expressionGraph: SHACLShapesGraph,
         nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition] = [:],
         depth: Int,
         visited: inout Set<String>
@@ -5177,6 +5204,7 @@ public struct SHACLCoreValidator: SHACLValidator {
             toShapeIRI: shapeIRI,
             dataGraph: dataGraph,
             shapesByIRI: shapesByIRI,
+            expressionGraph: expressionGraph,
             nodeExpressionsByIRI: nodeExpressionsByIRI,
             depth: depth,
             visited: &visited
@@ -5188,6 +5216,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         toShapeIRI shapeIRI: String,
         dataGraph: SHACLDataGraph,
         shapesByIRI: [String: SHACLShapeDefinition],
+        expressionGraph: SHACLShapesGraph,
         nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition] = [:],
         depth: Int,
         visited: inout Set<String>
@@ -5212,6 +5241,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                 focusNode: valueNode,
                 dataGraph: dataGraph,
                 shapesByIRI: shapesByIRI,
+                expressionGraph: expressionGraph,
                 nodeExpressionsByIRI: nodeExpressionsByIRI,
                 depth: depth + 1,
                 visited: &visited
@@ -5228,6 +5258,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                 focusNode: valueNode,
                 dataGraph: dataGraph,
                 shapesByIRI: shapesByIRI,
+                expressionGraph: expressionGraph,
                 nodeExpressionsByIRI: nodeExpressionsByIRI,
                 depth: depth + 1,
                 visited: &visited
