@@ -3296,6 +3296,23 @@ private struct TestShapesSource {
     #expect(result.violations.count == 1)
 }
 
+@Test func coreValidatorDoesNotDuplicateInlineDefaultSPARQLPrefixDeclarations() async throws {
+    let inlinePrefixedQuery = "PREFIX : <http://example.com/> SELECT ?this WHERE { ?this :name ?name . FILTER(strlen(str(?name)) = 0) }"
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "\(inlinePrefixedQuery)|http://example.com/alice": ["http://example.com/alice"],
+            "\(inlinePrefixedQuery)|http://example.com/bob": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlConstraintWithInlineDefaultPrefixShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
 @Test func coreValidatorAppliesDefaultSPARQLPrefixForTargetQueries() async throws {
     let prefixedQuery = """
     PREFIX : <http://example.com/>
