@@ -117,6 +117,50 @@ private struct W3CCuratedConformanceCase {
     let conformanceDisallowedSeverities: Set<SHACLSeverity>?
 }
 
+private func resolvedW3CManifestGraphPaths(
+    dataGraphRelativePath: String,
+    shapesGraphRelativePath: String
+) throws -> (data: String, shapes: String) {
+    guard dataGraphRelativePath == shapesGraphRelativePath,
+          dataGraphRelativePath.hasSuffix(".ttl") else {
+        return (dataGraphRelativePath, shapesGraphRelativePath)
+    }
+
+    let wrapperRelativePath = "W3CDataShapes/\(dataGraphRelativePath)"
+    let wrapperPayload = try fixtureData(wrapperRelativePath)
+    guard let wrapperText = String(data: wrapperPayload, encoding: .utf8) else {
+        return (dataGraphRelativePath, shapesGraphRelativePath)
+    }
+
+    guard let dataMatch = firstRegexCapture(
+        pattern: #"sht:dataGraph\s+<([^>]+)>"#,
+        in: wrapperText
+    ),
+        let shapesMatch = firstRegexCapture(
+            pattern: #"sht:shapesGraph\s+<([^>]+)>"#,
+            in: wrapperText
+        ) else {
+        return (dataGraphRelativePath, shapesGraphRelativePath)
+    }
+
+    let baseDirectory = (dataGraphRelativePath as NSString).deletingLastPathComponent
+    let dataResolved = baseDirectory.isEmpty ? dataMatch : "\(baseDirectory)/\(dataMatch)"
+    let shapesResolved = baseDirectory.isEmpty ? shapesMatch : "\(baseDirectory)/\(shapesMatch)"
+    return (dataResolved, shapesResolved)
+}
+
+private func firstRegexCapture(pattern: String, in text: String) -> String? {
+    guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+        return nil
+    }
+    let range = NSRange(text.startIndex..<text.endIndex, in: text)
+    guard let match = regex.firstMatch(in: text, options: [], range: range),
+          let capture = Range(match.range(at: 1), in: text) else {
+        return nil
+    }
+    return String(text[capture])
+}
+
 private func loadW3CCuratedConformanceCases() throws -> [W3CCuratedConformanceCase] {
     let manifestData = try fixtureData("W3CDataShapes/W3CCuratedConformanceManifest.tsv")
     guard let manifestText = String(data: manifestData, encoding: .utf8) else {
@@ -487,8 +531,12 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
             conformanceDisallowedSeverities: conformanceCase.conformanceDisallowedSeverities
                 ?? [.violation, .warning, .info]
         )
-        let dataGraphPayload = try fixtureData("W3CDataShapes/\(conformanceCase.dataGraphRelativePath)")
-        let shapesGraphPayload = try fixtureData("W3CDataShapes/\(conformanceCase.shapesGraphRelativePath)")
+        let resolvedPaths = try resolvedW3CManifestGraphPaths(
+            dataGraphRelativePath: conformanceCase.dataGraphRelativePath,
+            shapesGraphRelativePath: conformanceCase.shapesGraphRelativePath
+        )
+        let dataGraphPayload = try fixtureData("W3CDataShapes/\(resolvedPaths.data)")
+        let shapesGraphPayload = try fixtureData("W3CDataShapes/\(resolvedPaths.shapes)")
 
         let parsedDataGraph: SHACLDataGraph
         let parsedShapesGraph: SHACLShapesGraph
