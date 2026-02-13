@@ -37,6 +37,7 @@ Optional modes:
 ./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --sequential
 ./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --auto
 ./Frameworks/SHACLKit/Scripts/RunChangedAreaGate.sh [<base-ref>]
+./Frameworks/SHACLKit/Scripts/ReportW3CPropertyGaps.sh
 ```
 
 ## Quick recommendations
@@ -47,3 +48,9 @@ Optional modes:
 ## Logs
 Sharded logs are written to:
 - `Frameworks/SHACLKit/.build/test-shards/`
+
+## Coverage Planning
+Generate an up-to-date report of uncurated SHACL 1.2 property fixtures and parser-blocked cases:
+```bash
+./Frameworks/SHACLKit/Scripts/ReportW3CPropertyGaps.sh
+```
