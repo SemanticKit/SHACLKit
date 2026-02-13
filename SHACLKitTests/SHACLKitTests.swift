@@ -3706,15 +3706,15 @@ private struct TestShapesSource {
     }
 }
 
-@Test func coreValidatorBlocksGuardedSPARQLAskConstraintWithoutThisReference() async throws {
-    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
+@Test func coreValidatorAllowsGuardedSPARQLAskConstraintWithoutThisReference() async throws {
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: AlwaysFalseAskSPARQLExecutor())
     let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
     let shapes = try fixtureData("sparqlGuardAskMissingThisReferenceShapes.ttl")
     let dataGraph = try fixtureData("sparqlAskData.ttl")
 
-    #expect(throws: SHACLError.self) {
-        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
-    }
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 2)
 }
 
 @Test func coreValidatorBlocksGuardedSPARQLConstraintByLengthPolicy() async throws {
@@ -4010,6 +4010,26 @@ private struct GuardLiteralKeywordSPARQLExecutor: SHACLSPARQLExecutor {
             return ["http://example.com/alice"]
         }
         return []
+    }
+
+    func ask(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> Bool {
+        false
+    }
+}
+
+private struct AlwaysFalseAskSPARQLExecutor: SHACLSPARQLExecutor {
+    func select(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> [String] {
+        []
     }
 
     func ask(

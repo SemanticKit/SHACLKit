@@ -154,7 +154,7 @@ Legend:
   - Added default-deny executor behavior test coverage proving SPARQL evaluation requires explicit sandboxed executor injection for both `sh:select` and `sh:ask`.
   - Added guarded-executor policy coverage for keyword blocking, query-length blocking, and allowed-query pass-through behavior.
   - Added guarded-policy coverage for blocking `MINUS`, `VALUES`, and rebinding of pre-bound SHACL variables (`?this`, `?path`, `?value`).
-  - Added guarded-policy coverage requiring `SELECT` query text to reference pre-bound `?this`.
+  - Added guarded-policy coverage requiring `SELECT` query text to reference pre-bound `?this`/`$this`, while allowing `ASK` constraints without explicit `this` references.
   - Added guarded-policy regression coverage proving disallowed keywords inside string literals are not blocked as executable keywords.
   - Added guarded-policy regression coverage proving string-literal `'?this'` text does not satisfy required pre-bound `?this` reference checks.
   - Added guarded-policy regression coverage proving string-literal `'?path'` and `'?value'` text does not trigger pre-bound rebind blocking.
