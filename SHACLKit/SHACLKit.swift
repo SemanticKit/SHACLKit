@@ -874,10 +874,11 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             shapes[subject] = current
 
             if predicate == SHACLIRIs.union
+                || predicate == SHACLIRIs.shnexUnion
                 || predicate == SHACLIRIs.intersection
                 || predicate == SHACLIRIs.shnexIntersection {
                 var expression = nodeExpressions[subject] ?? PartialNodeExpression()
-                if predicate == SHACLIRIs.union {
+                if predicate == SHACLIRIs.union || predicate == SHACLIRIs.shnexUnion {
                     expression.unionMemberObjects.insert(object)
                 } else {
                     expression.intersectionMemberObjects.insert(object)
@@ -2563,6 +2564,26 @@ public struct SHACLNodeExpressionEvaluator: Sendable {
                 depth: depth + 1,
                 visited: &visited
             )
+        case .union(let members):
+            var seen: Set<String> = []
+            var ordered: [String] = []
+            for member in members {
+                let memberOrdered = evaluateTermOrdered(
+                    member,
+                    focusNode: focusNode,
+                    shapesGraph: shapesGraph,
+                    expressionsByIRI: expressionsByIRI,
+                    dataGraph: dataGraph,
+                    variableBindings: variableBindings,
+                    depth: depth + 1,
+                    visited: &visited
+                )
+                for node in memberOrdered where !seen.contains(node) {
+                    seen.insert(node)
+                    ordered.append(node)
+                }
+            }
+            return ordered
         case .intersection(let members):
             guard let first = members.first else {
                 return []
@@ -6337,6 +6358,7 @@ private enum SHACLIRIs {
     static let shnexFindFirst = "http://www.w3.org/ns/shacl-node-expr#findFirst"
     static let shnexOrderBy = "http://www.w3.org/ns/shacl-node-expr#orderBy"
     static let shnexDesc = "http://www.w3.org/ns/shacl-node-expr#desc"
+    static let shnexUnion = "http://www.w3.org/ns/shacl-node-expr#union"
     static let shnexIntersection = "http://www.w3.org/ns/shacl-node-expr#intersection"
     static let minCount = "http://www.w3.org/ns/shacl#minCount"
     static let maxCount = "http://www.w3.org/ns/shacl#maxCount"

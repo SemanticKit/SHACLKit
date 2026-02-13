@@ -72,7 +72,7 @@ Legend:
 
 - [~] `REQ-SHACL-200` Implement SHACL 1.2 Node Expressions evaluation model.
   - Implemented subset evaluator for `sh:union` and `sh:intersection`, including nested expressions and `sh:this`.
-  - Added SHACL 1.2 `shnex:intersection` alias parsing plus ordered `shnex:filterShape` and `shnex:intersection` evaluation semantics aligned with W3C SHNEX manifests.
+  - Added SHACL 1.2 `shnex:union`/`shnex:intersection` alias parsing plus ordered `shnex:filterShape`, `shnex:union`, and `shnex:intersection` evaluation semantics aligned with W3C SHNEX manifests.
   - Added synthesized RDF-list-backed node-expression definitions for list-head blank nodes used as expression terms.
   - Implemented first-slice `shnex:nodes`, `shnex:exists`, `shnex:count`, `shnex:var`, `shnex:distinct`, `shnex:instancesOf`, `shnex:nodesMatching`, `shnex:matchAll`, `shnex:filterShape`, `shnex:concat`, `shnex:remove`, `shnex:flatMap`, `shnex:limit`, `shnex:offset`, `shnex:findFirst`, `shnex:orderBy` (with `shnex:desc`), `shnex:min`, `shnex:max`, and `shnex:sum`.
   - Added ordered-evaluation API for node expressions to preserve manifest-defined ordering/cardinality where applicable.
