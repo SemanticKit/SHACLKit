@@ -10,6 +10,9 @@ private let rdfRestIRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"
 private let rdfNilIRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"
 private let mfActionIRI = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action"
 private let mfResultIRI = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result"
+private let srtRulesEvalTestIRI = "http://www.w3.org/ns/shacl-rules-test#RulesEvalTest"
+private let srtRulesetIRI = "http://www.w3.org/ns/shacl-rules-test#ruleset"
+private let srtDataIRI = "http://www.w3.org/ns/shacl-rules-test#data"
 private let shtEvalNodeExprIRI = "http://www.w3.org/ns/shacl-test#EvalNodeExpr"
 private let shtNodeExprIRI = "http://www.w3.org/ns/shacl-test#nodeExpr"
 private let shtFocusNodeIRI = "http://www.w3.org/ns/shacl-test#focusNode"
@@ -492,6 +495,41 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         let payload = try Data(contentsOf: fixturesRoot.appendingPathComponent(relativePath))
         _ = try dataLoader.load(from: payload)
         _ = try shapesLoader.load(from: payload)
+    }
+}
+
+@Test func w3cRulesEvalManifestReferencesExistingArtifacts() async throws {
+    let rulesEvalDirectoryURL = fixturesRootURL()
+        .appendingPathComponent("W3CDataShapes")
+        .appendingPathComponent("shacl12-test-suite/tests/rules/eval")
+    let manifestData = try Data(contentsOf: rulesEvalDirectoryURL.appendingPathComponent("manifest.ttl"))
+    let graph = try SHACLDataGraphLoader().load(from: manifestData)
+    let triples = graph.triples
+
+    let evalSubjects = Set(
+        triples
+            .filter { $0.predicate == rdfTypeIRI && $0.object == srtRulesEvalTestIRI }
+            .map(\.subject)
+    )
+    #expect(!evalSubjects.isEmpty)
+
+    for subject in evalSubjects {
+        let actionNode = try #require(
+            triples.first(where: { $0.subject == subject && $0.predicate == mfActionIRI })?.object
+        )
+        let rulesetPath = try #require(
+            triples.first(where: { $0.subject == actionNode && $0.predicate == srtRulesetIRI })?.object
+        )
+        let dataPath = try #require(
+            triples.first(where: { $0.subject == actionNode && $0.predicate == srtDataIRI })?.object
+        )
+        let resultPath = try #require(
+            triples.first(where: { $0.subject == subject && $0.predicate == mfResultIRI })?.object
+        )
+
+        #expect(FileManager.default.fileExists(atPath: rulesEvalDirectoryURL.appendingPathComponent(rulesetPath).path))
+        #expect(FileManager.default.fileExists(atPath: rulesEvalDirectoryURL.appendingPathComponent(dataPath).path))
+        #expect(FileManager.default.fileExists(atPath: rulesEvalDirectoryURL.appendingPathComponent(resultPath).path))
     }
 }
 

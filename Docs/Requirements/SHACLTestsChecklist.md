@@ -123,6 +123,7 @@ Legend:
   - Added SHACL 1.2 rules `eval` data/result TTL preflight coverage through SHACLKit graph loaders.
   - Rules preflight now includes negation result fixtures after single-quoted literal parser support.
   - Added SHACL 1.2 rules manifest preflight coverage for `manifest-rules.ttl` and nested rules manifests (`eval`, `stratification`, `syntax`, `wellformed`).
+  - Added rules eval manifest artifact-resolution checks ensuring each `srt:RulesEvalTest` entry references existing ruleset/data/result files.
 
 ## Phase 3: SHACL SPARQL Extensions
 
