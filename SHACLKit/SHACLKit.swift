@@ -761,6 +761,13 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.notShapeIRI = object
             } else if predicate == SHACLIRIs.qualifiedValueShape {
                 current.qualifiedValueShapeIRI = object
+            } else if predicate == SHACLIRIs.someValue {
+                if current.qualifiedValueShapeIRI == nil {
+                    current.qualifiedValueShapeIRI = object
+                }
+                if current.qualifiedMinCount == nil {
+                    current.qualifiedMinCount = 1
+                }
             } else if predicate == SHACLIRIs.qualifiedValueShapesDisjoint {
                 current.qualifiedValueShapesDisjoint = isTrueBooleanTerm(object)
             } else if predicate == SHACLIRIs.qualifiedMinCount {
@@ -5545,6 +5552,7 @@ private enum SHACLIRIs {
     static let not = "http://www.w3.org/ns/shacl#not"
     static let xone = "http://www.w3.org/ns/shacl#xone"
     static let qualifiedValueShape = "http://www.w3.org/ns/shacl#qualifiedValueShape"
+    static let someValue = "http://www.w3.org/ns/shacl#someValue"
     static let qualifiedValueShapesDisjoint = "http://www.w3.org/ns/shacl#qualifiedValueShapesDisjoint"
     static let qualifiedMinCount = "http://www.w3.org/ns/shacl#qualifiedMinCount"
     static let qualifiedMaxCount = "http://www.w3.org/ns/shacl#qualifiedMaxCount"

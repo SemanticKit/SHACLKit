@@ -46,6 +46,7 @@ Legend:
   - Implemented range facets for numeric literals and first-slice `xsd:dateTime` comparability: `sh:minInclusive`, `sh:maxInclusive`, `sh:minExclusive`, `sh:maxExclusive`.
 - [x] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).
   - Implemented `sh:hasValue` checks.
+  - Implemented SHACL 1.2 `sh:someValue` checks for property shapes.
   - Implemented `sh:in` checks for direct values and RDF collection list syntax.
   - Implemented `sh:languageIn` checks over literal language tags with basic language-range matching.
   - Implemented first-slice property-pair constraints: `sh:equals`, `sh:disjoint`, `sh:lessThan`, and `sh:lessThanOrEquals`.

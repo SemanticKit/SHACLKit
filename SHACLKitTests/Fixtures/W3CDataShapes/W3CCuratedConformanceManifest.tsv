@@ -122,6 +122,7 @@ core-property-shacl12-node-002	shacl12-test-suite/tests/core/property/node-002.t
 core-property-shacl12-and-001	shacl12-test-suite/tests/core/property/and-001.ttl	shacl12-test-suite/tests/core/property/and-001.ttl	false	SHACL 1.2 property and checks.
 core-property-shacl12-or-001	shacl12-test-suite/tests/core/property/or-001.ttl	shacl12-test-suite/tests/core/property/or-001.ttl	false	SHACL 1.2 property or checks.
 core-property-shacl12-not-001	shacl12-test-suite/tests/core/property/not-001.ttl	shacl12-test-suite/tests/core/property/not-001.ttl	false	SHACL 1.2 property not checks.
+core-property-shacl12-someValue-001	shacl12-test-suite/tests/core/property/someValue-001.ttl	shacl12-test-suite/tests/core/property/someValue-001.ttl	false	SHACL 1.2 property someValue checks.
 core-property-shacl12-property-001	shacl12-test-suite/tests/core/property/property-001.ttl	shacl12-test-suite/tests/core/property/property-001.ttl	false	SHACL 1.2 nested property checks.
 core-property-shacl12-qualifiedValueShape-001	shacl12-test-suite/tests/core/property/qualifiedValueShape-001.ttl	shacl12-test-suite/tests/core/property/qualifiedValueShape-001.ttl	false	SHACL 1.2 property qualifiedValueShape checks.
 core-property-shacl12-qualifiedMinCountDisjoint-001	shacl12-test-suite/tests/core/property/qualifiedMinCountDisjoint-001.ttl	shacl12-test-suite/tests/core/property/qualifiedMinCountDisjoint-001.ttl	false	SHACL 1.2 property qualifiedMinCount with disjoint shapes checks.
