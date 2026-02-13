@@ -58,6 +58,7 @@ Legend:
 - [x] `TEST-SHACL-022` String/range facet tests.
   - Covered `minLength`, `maxLength`, and `pattern` fixtures.
   - Added fixture/test coverage for SHACL 1.2 `sh:singleLine`, including `false` no-op behavior.
+  - Added curated W3C property-shape conformance subset coverage for `singleLine-001` after parser triple-quoted literal support.
   - Added curated W3C node-shape conformance subset coverage for dateTime range boundaries (`minInclusive-002`, `minInclusive-003`).
   - Added curated W3C node-shape conformance subset coverage for exclusive numeric bounds (`minExclusive-001`, `maxExclusive-001`).
   - Added curated W3C node-shape conformance subset coverage for `pattern-002`.

@@ -1418,6 +1418,13 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
     }
 
     private func parsedLiteralLexicalForm(_ value: String) -> String? {
+        if value.hasPrefix("\"\"\"") {
+            let start = value.index(value.startIndex, offsetBy: 3)
+            guard let closing = value.range(of: "\"\"\"", range: start..<value.endIndex)?.lowerBound else {
+                return nil
+            }
+            return String(value[start..<closing])
+        }
         guard value.hasPrefix("\"") else {
             return nil
         }
@@ -5269,6 +5276,13 @@ public struct SHACLCoreValidator: SHACLValidator {
     }
 
     private func extractLiteralLexicalForm(_ value: String) -> String? {
+        if value.hasPrefix("\"\"\"") {
+            let start = value.index(value.startIndex, offsetBy: 3)
+            guard let closing = value.range(of: "\"\"\"", range: start..<value.endIndex)?.lowerBound else {
+                return nil
+            }
+            return String(value[start..<closing])
+        }
         guard value.hasPrefix("\"") else {
             return nil
         }
@@ -5657,7 +5671,7 @@ private struct SHACLTurtleSubsetParser {
                 let iri = String(line[iriRange])
                 prefixes[prefix] = iri
             } else {
-                bodyLines.append(withoutComments)
+                bodyLines.append(String(rawLine))
             }
         }
 
@@ -5700,21 +5714,43 @@ private struct SHACLTurtleSubsetParser {
         var current = ""
         var inIRI = false
         var inString = false
+        var inLongString = false
         var escaped = false
         let characters = Array(body)
         var position = 0
 
         while position < characters.count {
             let ch = characters[position]
-            if ch == "<" && !inString {
+            let startsLongQuote =
+                position + 2 < characters.count
+                && characters[position] == "\""
+                && characters[position + 1] == "\""
+                && characters[position + 2] == "\""
+
+            if startsLongQuote && !inIRI {
+                inLongString.toggle()
+                current.append("\"\"\"")
+                position += 3
+                escaped = false
+                continue
+            }
+
+            if ch == "#" && !inIRI && !inString && !inLongString {
+                while position < characters.count, characters[position] != "\n" {
+                    position += 1
+                }
+                continue
+            }
+
+            if ch == "<" && !inString && !inLongString {
                 inIRI = true
             } else if ch == ">" && inIRI {
                 inIRI = false
-            } else if ch == "\"" && !escaped {
+            } else if ch == "\"" && !escaped && !inLongString {
                 inString.toggle()
             }
 
-            if ch == "." && !inIRI && !inString {
+            if ch == "." && !inIRI && !inString && !inLongString {
                 let previousIsDigit = position > 0 && characters[position - 1].isNumber
                 let nextIsDigit = position + 1 < characters.count && characters[position + 1].isNumber
                 if previousIsDigit && nextIsDigit {
@@ -6049,24 +6085,48 @@ private struct SHACLTurtleSubsetParser {
             }
 
             if ch == "\"" {
-                var end = statement.index(after: index)
-                var escaped = false
-                while end < statement.endIndex {
-                    let c = statement[end]
-                    if c == "\\" && !escaped {
-                        escaped = true
+                let next = statement.index(after: index)
+                let isLongLiteral = next < statement.endIndex
+                    && statement[next] == "\""
+                    && statement.index(after: next) < statement.endIndex
+                    && statement[statement.index(after: next)] == "\""
+
+                var end: String.Index
+                if isLongLiteral {
+                    end = statement.index(index, offsetBy: 3)
+                    while end < statement.endIndex {
+                        if statement[end] == "\"",
+                           statement.index(after: end) < statement.endIndex,
+                           statement[statement.index(after: end)] == "\"",
+                           statement.index(end, offsetBy: 2) < statement.endIndex,
+                           statement[statement.index(end, offsetBy: 2)] == "\"" {
+                            end = statement.index(end, offsetBy: 2)
+                            break
+                        }
                         end = statement.index(after: end)
-                        continue
                     }
-                    if c == "\"" && !escaped {
-                        break
+                } else {
+                    end = statement.index(after: index)
+                    var escaped = false
+                    while end < statement.endIndex {
+                        let c = statement[end]
+                        if c == "\\" && !escaped {
+                            escaped = true
+                            end = statement.index(after: end)
+                            continue
+                        }
+                        if c == "\"" && !escaped {
+                            break
+                        }
+                        escaped = false
+                        end = statement.index(after: end)
                     }
-                    escaped = false
-                    end = statement.index(after: end)
                 }
+
                 guard end < statement.endIndex else {
                     throw SHACLError.invalidStatement(statement)
                 }
+
                 var token = String(statement[index...end])
                 var probe = statement.index(after: end)
 
@@ -6085,11 +6145,11 @@ private struct SHACLTurtleSubsetParser {
                     token += String(statement[langStart..<langEnd])
                     probe = langEnd
                 } else if probe < statement.endIndex, statement[probe] == "^" {
-                    let next = statement.index(after: probe)
-                    guard next < statement.endIndex, statement[next] == "^" else {
+                    let typedNext = statement.index(after: probe)
+                    guard typedNext < statement.endIndex, statement[typedNext] == "^" else {
                         throw SHACLError.invalidStatement(statement)
                     }
-                    probe = statement.index(after: next)
+                    probe = statement.index(after: typedNext)
                     var dtEnd = probe
                     while dtEnd < statement.endIndex,
                           !statement[dtEnd].isWhitespace,
