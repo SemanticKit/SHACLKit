@@ -24,19 +24,22 @@ Command (recommended):
 
 Behavior:
 1. Changed-area gate (auto-selected filters from current diff; falls back to fast gate)
-2. Sharded validation (`core`, `expr`, `w3c`)
-3. Automatic fallback from parallel to sequential shards on hosts where parallel container bootstrap is unsupported
-4. Batch runner emits per-step wall-time (`[timing] ...`) for cycle speed tracking
+2. Linux smoke validation pass through container workflow
+3. Sharded validation (`core`, `expr`, `w3c`)
+4. Automatic fallback from parallel to sequential shards on hosts where parallel container bootstrap is unsupported
+5. Batch runner emits per-step wall-time (`[timing] ...`) for cycle speed tracking
 
 Optional modes:
 ```bash
 ./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --full
 ./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --sharded --changed
 ./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --sharded --fast
+./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --sharded --skip-linux-smoke
 ./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --parallel
 ./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --sequential
 ./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --auto
 ./Frameworks/SHACLKit/Scripts/RunChangedAreaGate.sh [<base-ref>]
+./Frameworks/SHACLKit/Scripts/RunLinuxSmoke.sh
 ./Frameworks/SHACLKit/Scripts/ReportW3CPropertyGaps.sh
 ```
 
