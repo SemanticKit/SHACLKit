@@ -53,6 +53,7 @@ Legend:
 - [x] `TEST-SHACL-020` Cardinality component tests.
 - [x] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
   - Covered `class`, `datatype`, and all `nodeKind` fixtures.
+  - Added curated W3C node-shape conformance subset coverage for `class-001`, `datatype-001`, and `nodeKind-001`.
   - Added curated W3C node-shape conformance subset coverage for `datatype-002`, `class-002`, and `class-003`.
   - Added curated W3C property-shape ill-formed datatype coverage (`datatype-ill-formed`) for lexical/range validation.
 - [x] `TEST-SHACL-022` String/range facet tests.
@@ -65,6 +66,7 @@ Legend:
   - Covered integer range fixtures for `minInclusive` and `maxInclusive`, including non-numeric values.
 - [x] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
   - Covered `hasValue` and `in` fixtures, including RDF list-based `sh:in`.
+  - Added curated W3C node-shape conformance subset coverage for `hasValue-001` and `in-001`.
   - Added curated W3C property-shape conformance subset coverage for SHACL 1.2 `someValue-001`.
   - Added curated W3C property-shape conformance subset coverage for SHACL 1.2 `memberShape-001`.
   - Added curated W3C property-shape conformance subset coverage for SHACL 1.2 `uniqueMembers-001`.
