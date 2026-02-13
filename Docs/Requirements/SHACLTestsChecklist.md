@@ -125,6 +125,7 @@ Legend:
   - Added SHACL 1.2 rules manifest preflight coverage for `manifest-rules.ttl` and nested rules manifests (`eval`, `stratification`, `syntax`, `wellformed`) through RDFKit semantic parsing and SHACLKit graph loaders.
   - Added rules eval manifest artifact-resolution checks ensuring each `srt:RulesEvalTest` entry references existing ruleset/data/result files.
   - Added rules syntax/wellformed/stratification manifest artifact checks ensuring all referenced `.srl` ruleset files exist.
+  - Added manifest-driven `.srl` preflight conformance checks asserting positive/negative expectations across `syntax`, `wellformed`, and `stratification` suites.
 
 ## Phase 3: SHACL SPARQL Extensions
 
