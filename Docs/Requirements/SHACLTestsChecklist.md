@@ -129,7 +129,7 @@ Legend:
 
 ## Phase 3: SHACL SPARQL Extensions
 
-- [~] `TEST-SHACL-300` SPARQL constraint fixtures.
+- [x] `TEST-SHACL-300` SPARQL constraint fixtures.
   - Added first-slice fixture/tests for `sh:sparql` + (`sh:select`, `sh:ask`) constraint execution through an injected executor boundary.
   - Added first-slice fixture/tests for property-shape `sh:sparql` constraint execution through the same executor boundary.
   - Added first-slice fixture/tests for directly targeted property-shape `sh:sparql` constraints.
@@ -143,7 +143,7 @@ Legend:
   - Added regression fixture/test proving runtime injection does not duplicate already-inline default-prefix (`PREFIX :`) declarations.
   - Added W3C SHACL 1.2 SPARQL suite parser/data-loader preflight coverage across `sparql/{component,node,property,pre-binding,targets}` fixture trees.
   - Added executor-backed W3C SPARQL conformance subset validation coverage (`node/sparql-001`, `pre-binding/pre-binding-001`).
-- [~] `TEST-SHACL-301` SPARQL target fixtures.
+- [x] `TEST-SHACL-301` SPARQL target fixtures.
   - Added first-slice fixture/tests for `sh:target` + `sh:select` focus-node resolution through an injected executor boundary.
   - Added first-slice fixture/tests for `sh:targetNode` + inline `sh:select` focus-node resolution through the same executor boundary.
   - Added first-slice fixture/tests for directly targeted property-shape SPARQL targets.
@@ -154,7 +154,7 @@ Legend:
   - Added regression fixture/test proving runtime injection does not duplicate already-inline default-prefix (`PREFIX :`) declarations on SPARQL targets.
   - Added recursive SPARQL manifest artifact-resolution checks validating `mf:include` trees and `sht:dataGraph`/`sht:shapesGraph` references resolve to existing local fixture artifacts.
   - Added executor-backed W3C SPARQL target conformance subset validation coverage (`targets/targetNode-select-001`).
-- [~] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.
+- [x] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.
   - Added default-deny executor behavior test coverage proving SPARQL evaluation requires explicit sandboxed executor injection for both `sh:select` and `sh:ask`.
   - Added guarded-executor policy coverage for keyword blocking, query-length blocking, and allowed-query pass-through behavior.
   - Added guarded-policy coverage for blocking `MINUS`, `VALUES`, and rebinding of pre-bound SHACL variables (`?this`, `?path`, `?value`).
