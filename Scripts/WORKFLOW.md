@@ -35,11 +35,14 @@ Optional modes:
 ./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --sharded --changed
 ./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --sharded --fast
 ./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --sharded --skip-linux-smoke
+./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --sharded --fast --enforce-budget
 ./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --parallel
 ./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --sequential
 ./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --auto
 ./Frameworks/SHACLKit/Scripts/RunChangedAreaGate.sh [<base-ref>]
 ./Frameworks/SHACLKit/Scripts/RunLinuxSmoke.sh
+./Frameworks/SHACLKit/Scripts/RecordPerformanceBaseline.sh --runs 3
+./Frameworks/SHACLKit/Scripts/CheckPerformanceBudget.sh
 ./Frameworks/SHACLKit/Scripts/ReportW3CPropertyGaps.sh
 ```
 
@@ -51,6 +54,14 @@ Optional modes:
 ## Logs
 Sharded logs are written to:
 - `Frameworks/SHACLKit/.build/test-shards/`
+
+Timing baseline and budget artifacts:
+- `Frameworks/SHACLKit/Docs/Requirements/PerformanceBaseline.tsv`
+
+CI timing gate command:
+```bash
+./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --sharded --fast --enforce-budget
+```
 
 ## Coverage Planning
 Generate an up-to-date report of uncurated SHACL 1.2 property fixtures and parser-blocked cases:

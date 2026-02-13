@@ -1,0 +1,7 @@
+# SHACLKit timing baseline
+# generated_at_utc: 2026-02-13T05:03:38Z
+# mode: RunBatchCycle --sharded --fast
+# label	median_seconds	runs
+step1-fast-gate	9.000	2
+step2-linux-smoke	8.000	2
+step3-sharded	15.500	2
