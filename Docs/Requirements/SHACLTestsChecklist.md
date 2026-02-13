@@ -53,6 +53,7 @@ Legend:
 - [x] `TEST-SHACL-020` Cardinality component tests.
 - [x] `TEST-SHACL-021` Type constraint tests (`class`, `datatype`, `nodeKind`).
   - Covered `class`, `datatype`, and all `nodeKind` fixtures.
+  - Added curated W3C node-shape conformance subset coverage for `nodeKind-002` (RDF-list `sh:nodeKind` form).
   - Added curated W3C node-shape conformance subset coverage for `class-001`, `datatype-001`, and `nodeKind-001`.
   - Added curated W3C node-shape conformance subset coverage for `datatype-002`, `class-002`, and `class-003`.
   - Added curated W3C property-shape ill-formed datatype coverage (`datatype-ill-formed`) for lexical/range validation.

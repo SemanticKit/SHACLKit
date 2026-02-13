@@ -582,6 +582,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var expressionIRI: String?
             var classIRI: String?
             var nodeKind: SHACLNodeKindConstraint?
+            var nodeKindTerm: String?
             var datatypeIRI: String?
             var minLength: Int?
             var maxLength: Int?
@@ -727,6 +728,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.classIRI = object
             } else if predicate == SHACLIRIs.nodeKind {
                 current.nodeKind = parseNodeKind(object)
+                current.nodeKindTerm = object
             } else if predicate == SHACLIRIs.datatype {
                 current.datatypeIRI = object
             } else if predicate == SHACLIRIs.minLength {
@@ -1304,7 +1306,9 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 propertyPath: partial.pathIRI.flatMap { parsePropertyPath($0, triplesBySubject: triplesBySubject) },
                 expressionIRI: partial.expressionIRI,
                 classIRI: partial.classIRI,
-                nodeKind: partial.nodeKind,
+                nodeKind: partial.nodeKind ?? partial.nodeKindTerm.flatMap { term in
+                    parseNodeKindConstraint(term, triplesBySubject: triplesBySubject)
+                },
                 datatypeIRI: partial.datatypeIRI,
                 minLength: partial.minLength,
                 maxLength: partial.maxLength,
@@ -1443,6 +1447,35 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         default:
             return nil
         }
+    }
+
+    private func parseNodeKindConstraint(
+        _ term: String,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> SHACLNodeKindConstraint? {
+        if let direct = parseNodeKind(term) {
+            return direct
+        }
+
+        let listTerms = resolveRDFListTermsOrdered(term, triplesBySubject: triplesBySubject)
+        let resolvedKinds = listTerms.compactMap(parseNodeKind)
+        guard resolvedKinds.count == listTerms.count, !resolvedKinds.isEmpty else {
+            return nil
+        }
+        let uniqueKinds = Set(resolvedKinds)
+        if uniqueKinds.count == 1 {
+            return uniqueKinds.first
+        }
+        if uniqueKinds == Set<SHACLNodeKindConstraint>([.blankNode, .iri]) {
+            return .blankNodeOrIRI
+        }
+        if uniqueKinds == Set<SHACLNodeKindConstraint>([.blankNode, .literal]) {
+            return .blankNodeOrLiteral
+        }
+        if uniqueKinds == Set<SHACLNodeKindConstraint>([.iri, .literal]) {
+            return .iriOrLiteral
+        }
+        return nil
     }
 
     private func parseSeverity(_ iri: String) -> SHACLSeverity? {

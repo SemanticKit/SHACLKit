@@ -40,6 +40,7 @@ Legend:
   - Implemented `sh:datatype` checks with literal datatype inference (`xsd:integer`, typed literals).
   - Added datatype lexical/range validity enforcement for key XSD datatypes (including `xsd:byte` ill-formed literal handling).
   - Implemented `sh:nodeKind` checks (`sh:IRI`, `sh:Literal`, `sh:BlankNode`, `sh:BlankNodeOrIRI`, `sh:BlankNodeOrLiteral`, `sh:IRIOrLiteral`).
+  - Implemented SHACL 1.2 RDF-list syntax parsing for `sh:nodeKind` combinations (e.g., `(sh:BlankNode sh:IRI)`).
 - [x] `REQ-SHACL-008` Constraint components: value range/string facets (`sh:minLength`, `sh:maxLength`, `sh:pattern`, `sh:minInclusive`, `sh:maxInclusive`, `sh:minExclusive`, `sh:maxExclusive`).
   - Implemented string facets: `sh:minLength`, `sh:maxLength`, `sh:pattern`.
   - Implemented SHACL 1.2 `sh:singleLine` for property shapes.
