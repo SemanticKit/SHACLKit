@@ -158,6 +158,7 @@ Legend:
   - Added guarded-policy regression coverage proving disallowed keywords inside string literals are not blocked as executable keywords.
   - Added guarded-policy regression coverage proving string-literal `'?this'` text does not satisfy required pre-bound `?this` reference checks.
   - Added guarded-policy regression coverage proving string-literal `'?path'` and `'?value'` text does not trigger pre-bound rebind blocking.
+  - Added guarded-policy coverage for `$this` pre-bound variable parity (`$this` accepted as required pre-bound reference, and `AS $this` blocked as rebinding).
 
 ## Robustness and Regression
 

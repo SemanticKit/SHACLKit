@@ -479,7 +479,7 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
         let preboundVariables = ["this", "path", "value"]
         let preboundRange = NSRange(policyQuery.startIndex..<policyQuery.endIndex, in: policyQuery)
         for variable in preboundVariables {
-            let pattern = #"(?i)\bAS\s+\?\#(variable)\b"#
+            let pattern = #"(?i)\bAS\s+[\?\$]\#(variable)\b"#
             let regex = try NSRegularExpression(pattern: pattern)
             if regex.firstMatch(in: policyQuery, options: [], range: preboundRange) != nil {
                 throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query attempts to rebind pre-bound ?\(variable).")
@@ -487,7 +487,7 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
         }
 
         if requirePreboundThisReference {
-            let thisReferencePattern = #"(?i)\?this\b"#
+            let thisReferencePattern = #"(?i)[\?\$]this\b"#
             let thisReferenceRegex = try NSRegularExpression(pattern: thisReferencePattern)
             if thisReferenceRegex.firstMatch(in: policyQuery, options: [], range: preboundRange) == nil {
                 throw SHACLError.notImplemented("SPARQL query blocked by guard policy: SELECT query does not reference pre-bound ?this.")

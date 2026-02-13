@@ -3207,6 +3207,23 @@ private struct TestShapesSource {
     #expect(violation.sourceConstraintIRI == "http://example.com/NameConstraint")
 }
 
+@Test func coreValidatorExecutesSPARQLSelectConstraintWithDollarThisVariable() async throws {
+    let query = "SELECT $this WHERE { $this ex:name ?name . FILTER(strlen(str(?name)) = 0) }"
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "\(query)|http://example.com/alice": ["http://example.com/alice"],
+            "\(query)|http://example.com/bob": [],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlConstraintDollarThisShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
 @Test func coreValidatorAcceptsSPARQLConstraintWithPrefixesDeclaration() async throws {
     let prefixedQuery = """
     PREFIX ex: <http://example.com/>
@@ -3645,6 +3662,17 @@ private struct TestShapesSource {
     }
 }
 
+@Test func coreValidatorBlocksGuardedSPARQLConstraintByPreboundDollarThisPolicy() async throws {
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardBlockedPreboundDollarThisShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorBlocksGuardedSPARQLConstraintByPreboundPathPolicy() async throws {
     let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
     let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
@@ -3718,6 +3746,28 @@ private struct TestShapesSource {
     )
     let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
     let shapes = try fixtureData("sparqlConstraintShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
+@Test func coreValidatorAllowsGuardedSPARQLConstraintWithDollarThisReference() async throws {
+    let query = "SELECT $this WHERE { $this ex:name ?name . FILTER(strlen(str(?name)) = 0) }"
+    let innerExecutor = TestSPARQLExecutor(
+        selectResults: [
+            "\(query)|http://example.com/alice": ["http://example.com/alice"],
+            "\(query)|http://example.com/bob": [],
+        ]
+    )
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(
+        wrapping: innerExecutor,
+        disallowedKeywords: ["SERVICE"],
+        maxQueryLength: 512
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlConstraintDollarThisShapes.ttl")
     let dataGraph = try fixtureData("sparqlData.ttl")
 
     let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
