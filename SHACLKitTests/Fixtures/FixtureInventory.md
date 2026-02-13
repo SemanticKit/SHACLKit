@@ -33,6 +33,7 @@ Current local families:
   - Includes prefix-injection regression where string literals contain `prefix` markers.
   - Includes default-prefix (`sh:prefix ""`) injection fixtures for both SPARQL constraints and SPARQL targets.
   - Includes inline-default-prefix dedup regression for SPARQL constraints.
+  - Includes inline-default-prefix dedup regression for SPARQL targets.
 - Optional staged W3C conformance corpus sync target (`W3CDataShapes*` from `Knowledge/Inbox/Fixtures` into `SHACLKitTests/Fixtures/W3CDataShapes`)
   - Includes preflight parser/loader coverage across W3C SHACL 1.2 `node-expr/shnex/*.ttl` fixtures.
   - Includes subset `sht:EvalNodeExpr` manifest-result verification for W3C SHACL 1.2 `node-expr/shnex` fixtures.

@@ -149,6 +149,7 @@ Legend:
   - Added fixture/tests proving target-query `sh:prefixes` declarations are applied to executor-bound `sh:select` text.
   - Added fixture/test coverage proving SPARQL constraints with `sh:prefixes` declarations are accepted by loader/validator paths and flow through executor-bound query text.
   - Added fixture/tests for default-prefix (`sh:prefix ""`) declarations on SPARQL targets to verify runtime `PREFIX : <...>` injection.
+  - Added regression fixture/test proving runtime injection does not duplicate already-inline default-prefix (`PREFIX :`) declarations on SPARQL targets.
 - [~] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.
   - Added default-deny executor behavior test coverage proving SPARQL evaluation requires explicit sandboxed executor injection for both `sh:select` and `sh:ask`.
   - Added guarded-executor policy coverage for keyword blocking, query-length blocking, and allowed-query pass-through behavior.

@@ -3335,6 +3335,22 @@ private struct TestShapesSource {
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
 }
 
+@Test func coreValidatorDoesNotDuplicateInlineDefaultSPARQLPrefixTargetQueries() async throws {
+    let inlinePrefixedQuery = "PREFIX : <http://example.com/> SELECT ?this WHERE { ?this :segment :vip }"
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "\(inlinePrefixedQuery)|": ["http://example.com/alice"],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlTargetWithInlineDefaultPrefixShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
 @Test func coreValidatorUsesSPARQLMessageForNodeShapeConstraintViolation() async throws {
     let executor = TestSPARQLExecutor(
         selectResults: [
