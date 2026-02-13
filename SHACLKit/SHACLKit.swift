@@ -465,7 +465,7 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
             throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query length exceeds \(maxQueryLength) characters.")
         }
 
-        let policyQuery = queryWithoutStringLiterals(query)
+        let policyQuery = queryWithoutLineComments(queryWithoutStringLiterals(query))
 
         for keyword in disallowedKeywords where !keyword.isEmpty {
             let pattern = "\\b\(NSRegularExpression.escapedPattern(for: keyword))\\b"
@@ -546,6 +546,14 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
         }
 
         return output
+    }
+
+    private func queryWithoutLineComments(_ query: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: #"(?m)(^|\s)#.*$"#) else {
+            return query
+        }
+        let range = NSRange(query.startIndex..<query.endIndex, in: query)
+        return regex.stringByReplacingMatches(in: query, options: [], range: range, withTemplate: "$1")
     }
 }
 

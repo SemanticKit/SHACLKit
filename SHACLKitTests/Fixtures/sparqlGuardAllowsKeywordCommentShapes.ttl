@@ -1,0 +1,15 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:PersonShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:sparql ex:NameConstraint .
+
+ex:NameConstraint
+  sh:select """
+    SELECT ?this WHERE {
+      # MINUS appears only in a comment and should not be treated as an executable keyword.
+      ?this ex:name ?name .
+      FILTER(strlen(str(?name)) = 0)
+    }
+  """ .

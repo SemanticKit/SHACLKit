@@ -156,7 +156,9 @@ Legend:
   - Added guarded-policy coverage for blocking `MINUS`, `VALUES`, and rebinding of pre-bound SHACL variables (`?this`, `?path`, `?value`).
   - Added guarded-policy coverage requiring `SELECT` query text to reference pre-bound `?this`/`$this`, while allowing `ASK` constraints without explicit `this` references.
   - Added guarded-policy regression coverage proving disallowed keywords inside string literals are not blocked as executable keywords.
+  - Added guarded-policy regression coverage proving disallowed keywords inside line comments are not blocked as executable keywords.
   - Added guarded-policy regression coverage proving string-literal `'?this'` text does not satisfy required pre-bound `?this` reference checks.
+  - Added guarded-policy regression coverage proving line-comment `?this` text does not satisfy required pre-bound `?this` reference checks.
   - Added guarded-policy regression coverage proving string-literal `'?path'` and `'?value'` text does not trigger pre-bound rebind blocking.
   - Added guarded-policy coverage for `$this` pre-bound variable parity (`$this` accepted as required pre-bound reference, and `AS $this` blocked as rebinding).
   - Added guarded-policy coverage for `AS $path` and `AS $value` rebinding blocks alongside existing `?path`/`?value` coverage.
