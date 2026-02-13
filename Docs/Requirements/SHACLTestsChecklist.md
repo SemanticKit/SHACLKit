@@ -68,6 +68,8 @@ Legend:
   - Added curated W3C property-shape conformance subset coverage for SHACL 1.2 `someValue-001`.
   - Added curated W3C property-shape conformance subset coverage for SHACL 1.2 `memberShape-001`.
   - Added curated W3C property-shape conformance subset coverage for SHACL 1.2 `uniqueMembers-001`.
+  - Added curated W3C property-shape conformance subset coverage for SHACL 1.2 `minListLength-001` and `maxListLength-001`.
+  - Added curated W3C property-shape conformance subset coverage for SHACL 1.2 `reifierShape-001` and `reifierShape-002`.
   - Added curated W3C node-shape conformance subset coverage for `languageIn-001`.
   - Added curated W3C property-shape conformance subset coverage for `uniqueLang-001` and `uniqueLang-002`.
 - [x] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).

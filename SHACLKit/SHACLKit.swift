@@ -59,6 +59,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let minLength: Int?
     public let maxLength: Int?
     public let singleLine: Bool
+    public let minListLength: Int?
+    public let maxListLength: Int?
     public let minInclusive: String?
     public let maxInclusive: String?
     public let minExclusive: String?
@@ -81,6 +83,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let orShapeIRIs: [String]
     public let xoneShapeIRIs: [String]
     public let notShapeIRI: String?
+    public let reifierShapeIRI: String?
+    public let reificationRequired: Bool
     public let memberShapeIRI: String?
     public let qualifiedValueShapeIRI: String?
     public let qualifiedValueShapesDisjoint: Bool
@@ -109,6 +113,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         minLength: Int? = nil,
         maxLength: Int? = nil,
         singleLine: Bool = false,
+        minListLength: Int? = nil,
+        maxListLength: Int? = nil,
         minInclusive: String? = nil,
         maxInclusive: String? = nil,
         minExclusive: String? = nil,
@@ -131,6 +137,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         orShapeIRIs: [String] = [],
         xoneShapeIRIs: [String] = [],
         notShapeIRI: String? = nil,
+        reifierShapeIRI: String? = nil,
+        reificationRequired: Bool = false,
         memberShapeIRI: String? = nil,
         qualifiedValueShapeIRI: String? = nil,
         qualifiedValueShapesDisjoint: Bool = false,
@@ -158,6 +166,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.minLength = minLength
         self.maxLength = maxLength
         self.singleLine = singleLine
+        self.minListLength = minListLength
+        self.maxListLength = maxListLength
         self.minInclusive = minInclusive
         self.maxInclusive = maxInclusive
         self.minExclusive = minExclusive
@@ -180,6 +190,8 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.orShapeIRIs = orShapeIRIs
         self.xoneShapeIRIs = xoneShapeIRIs
         self.notShapeIRI = notShapeIRI
+        self.reifierShapeIRI = reifierShapeIRI
+        self.reificationRequired = reificationRequired
         self.memberShapeIRI = memberShapeIRI
         self.qualifiedValueShapeIRI = qualifiedValueShapeIRI
         self.qualifiedValueShapesDisjoint = qualifiedValueShapesDisjoint
@@ -574,6 +586,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var minLength: Int?
             var maxLength: Int?
             var singleLine = false
+            var minListLength: Int?
+            var maxListLength: Int?
             var minInclusive: String?
             var maxInclusive: String?
             var minExclusive: String?
@@ -596,6 +610,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var orShapeIRIs: Set<String> = []
             var xoneShapeIRIs: Set<String> = []
             var notShapeIRI: String?
+            var reifierShapeIRI: String?
+            var reificationRequired = false
             var memberShapeIRI: String?
             var qualifiedValueShapeIRI: String?
             var qualifiedValueShapesDisjoint = false
@@ -725,6 +741,16 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.maxLength = length
             } else if predicate == SHACLIRIs.singleLine {
                 current.singleLine = isStrictTrueBooleanTerm(object)
+            } else if predicate == SHACLIRIs.minListLength {
+                guard let length = Int(object) else {
+                    throw SHACLError.invalidIntegerLiteral(object)
+                }
+                current.minListLength = length
+            } else if predicate == SHACLIRIs.maxListLength {
+                guard let length = Int(object) else {
+                    throw SHACLError.invalidIntegerLiteral(object)
+                }
+                current.maxListLength = length
             } else if predicate == SHACLIRIs.minInclusive {
                 current.minInclusive = object
             } else if predicate == SHACLIRIs.maxInclusive {
@@ -769,6 +795,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.xoneShapeIRIs.insert(object)
             } else if predicate == SHACLIRIs.not {
                 current.notShapeIRI = object
+            } else if predicate == SHACLIRIs.reifierShape {
+                current.reifierShapeIRI = object
+            } else if predicate == SHACLIRIs.reificationRequired {
+                current.reificationRequired = isStrictTrueBooleanTerm(object)
             } else if predicate == SHACLIRIs.memberShape {
                 current.memberShapeIRI = object
             } else if predicate == SHACLIRIs.qualifiedValueShape {
@@ -1279,6 +1309,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 minLength: partial.minLength,
                 maxLength: partial.maxLength,
                 singleLine: partial.singleLine,
+                minListLength: partial.minListLength,
+                maxListLength: partial.maxListLength,
                 minInclusive: partial.minInclusive,
                 maxInclusive: partial.maxInclusive,
                 minExclusive: partial.minExclusive,
@@ -1301,6 +1333,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 orShapeIRIs: resolveShapeReferenceIRIs(partial.orShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
                 xoneShapeIRIs: resolveShapeReferenceIRIs(partial.xoneShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
                 notShapeIRI: partial.notShapeIRI,
+                reifierShapeIRI: partial.reifierShapeIRI,
+                reificationRequired: partial.reificationRequired,
                 memberShapeIRI: partial.memberShapeIRI,
                 qualifiedValueShapeIRI: partial.qualifiedValueShapeIRI,
                 qualifiedValueShapesDisjoint: partial.qualifiedValueShapesDisjoint,
@@ -3208,7 +3242,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
             let referencedNodeShapeIRIs =
-                [shape.nodeShapeReferenceIRI, shape.notShapeIRI, shape.memberShapeIRI, shape.qualifiedValueShapeIRI].compactMap { $0 }
+                [shape.nodeShapeReferenceIRI, shape.notShapeIRI, shape.reifierShapeIRI, shape.memberShapeIRI, shape.qualifiedValueShapeIRI].compactMap { $0 }
                 + shape.andShapeIRIs
                 + shape.orShapeIRIs
                 + shape.xoneShapeIRIs
@@ -3291,7 +3325,7 @@ public struct SHACLCoreValidator: SHACLValidator {
             }
 
             let referencedNodeShapeIRIs =
-                [shape.nodeShapeReferenceIRI, shape.notShapeIRI, shape.memberShapeIRI, shape.qualifiedValueShapeIRI].compactMap { $0 }
+                [shape.nodeShapeReferenceIRI, shape.notShapeIRI, shape.reifierShapeIRI, shape.memberShapeIRI, shape.qualifiedValueShapeIRI].compactMap { $0 }
                 + shape.andShapeIRIs
                 + shape.orShapeIRIs
                 + shape.xoneShapeIRIs
@@ -5328,7 +5362,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         var violations: [SHACLViolation] = []
         let nodeSeverity = nodeShape.severity ?? .violation
         violations.append(
-            contentsOf: evaluateMemberShapeOnValueNode(
+            contentsOf: evaluateDeferredListExtensionsOnValueNode(
                 hostShape: nodeShape,
                 rootFocusNode: focusNode,
                 pathIRI: nil,
@@ -5411,7 +5445,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         var violations: [SHACLViolation] = []
         for valueNode in values {
             violations.append(
-                contentsOf: evaluateMemberShapeOnValueNode(
+                contentsOf: evaluateDeferredListExtensionsOnValueNode(
                     hostShape: propertyShape,
                     rootFocusNode: rootFocusNode,
                     pathIRI: pathIRI,
@@ -5425,6 +5459,21 @@ public struct SHACLCoreValidator: SHACLValidator {
                 )
             )
         }
+        violations.append(
+            contentsOf: evaluateDeferredReifierExtensionsForPropertyShape(
+                propertyShape: propertyShape,
+                rootFocusNode: rootFocusNode,
+                currentNode: currentNode,
+                pathIRI: pathIRI,
+                values: values,
+                severity: severity,
+                dataGraph: dataGraph,
+                shapesByIRI: shapesByIRI,
+                expressionGraph: expressionGraph,
+                nodeExpressionsByIRI: nodeExpressionsByIRI,
+                visited: &visited
+            )
+        )
 
         for nestedPropertyShapeIRI in propertyShape.propertyShapeIRIs.sorted() {
             guard let nestedShape = shapesByIRI[nestedPropertyShapeIRI], nestedShape.kind == .propertyShape else {
@@ -5450,7 +5499,7 @@ public struct SHACLCoreValidator: SHACLValidator {
         return violations
     }
 
-    private func evaluateMemberShapeOnValueNode(
+    private func evaluateDeferredListExtensionsOnValueNode(
         hostShape: SHACLShapeDefinition,
         rootFocusNode: String,
         pathIRI: String?,
@@ -5464,7 +5513,9 @@ public struct SHACLCoreValidator: SHACLValidator {
     ) -> [SHACLViolation] {
         let hasMemberShape = hostShape.memberShapeIRI != nil
         let hasUniqueMembers = hostShape.uniqueMembers
-        if !hasMemberShape && !hasUniqueMembers {
+        let hasMinListLength = hostShape.minListLength != nil
+        let hasMaxListLength = hostShape.maxListLength != nil
+        if !hasMemberShape && !hasUniqueMembers && !hasMinListLength && !hasMaxListLength {
             return []
         }
 
@@ -5497,10 +5548,63 @@ public struct SHACLCoreValidator: SHACLValidator {
                     )
                 )
             }
+            if hasMinListLength {
+                violations.append(
+                    SHACLViolation(
+                        severity: severity,
+                        shapeIRI: hostShape.shapeIRI,
+                        focusNode: rootFocusNode,
+                        pathIRI: pathIRI,
+                        valueNode: candidateValueNode,
+                        sourceConstraintIRI: SHACLIRIs.minListLength,
+                        message: "minListLength violation: value \(candidateValueNode) is not a well-formed RDF list"
+                    )
+                )
+            }
+            if hasMaxListLength {
+                violations.append(
+                    SHACLViolation(
+                        severity: severity,
+                        shapeIRI: hostShape.shapeIRI,
+                        focusNode: rootFocusNode,
+                        pathIRI: pathIRI,
+                        valueNode: candidateValueNode,
+                        sourceConstraintIRI: SHACLIRIs.maxListLength,
+                        message: "maxListLength violation: value \(candidateValueNode) is not a well-formed RDF list"
+                    )
+                )
+            }
             return violations
         }
 
         var violations: [SHACLViolation] = []
+        if let minListLength = hostShape.minListLength, members.count < minListLength {
+            violations.append(
+                SHACLViolation(
+                    severity: severity,
+                    shapeIRI: hostShape.shapeIRI,
+                    focusNode: rootFocusNode,
+                    pathIRI: pathIRI,
+                    valueNode: candidateValueNode,
+                    sourceConstraintIRI: SHACLIRIs.minListLength,
+                    message: "minListLength violation: expected >= \(minListLength), got \(members.count)"
+                )
+            )
+        }
+        if let maxListLength = hostShape.maxListLength, members.count > maxListLength {
+            violations.append(
+                SHACLViolation(
+                    severity: severity,
+                    shapeIRI: hostShape.shapeIRI,
+                    focusNode: rootFocusNode,
+                    pathIRI: pathIRI,
+                    valueNode: candidateValueNode,
+                    sourceConstraintIRI: SHACLIRIs.maxListLength,
+                    message: "maxListLength violation: expected <= \(maxListLength), got \(members.count)"
+                )
+            )
+        }
+
         if hasUniqueMembers {
             var seen: Set<String> = []
             var hasDuplicate = false
@@ -5528,6 +5632,7 @@ public struct SHACLCoreValidator: SHACLValidator {
 
         if let memberShapeIRI = hostShape.memberShapeIRI {
             for member in members {
+                var memberVisited: Set<String> = []
                 if !conforms(
                     valueNode: member,
                     toNodeShapeIRI: memberShapeIRI,
@@ -5536,7 +5641,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                     expressionGraph: expressionGraph,
                     nodeExpressionsByIRI: nodeExpressionsByIRI,
                     depth: 0,
-                    visited: &visited
+                    visited: &memberVisited
                 ) {
                     violations.append(
                         SHACLViolation(
@@ -5554,6 +5659,102 @@ public struct SHACLCoreValidator: SHACLValidator {
         }
 
         return violations
+    }
+
+    private func evaluateDeferredReifierExtensionsForPropertyShape(
+        propertyShape: SHACLShapeDefinition,
+        rootFocusNode: String,
+        currentNode: String,
+        pathIRI: String?,
+        values: [String],
+        severity: SHACLSeverity,
+        dataGraph: SHACLDataGraph,
+        shapesByIRI: [String: SHACLShapeDefinition],
+        expressionGraph: SHACLShapesGraph,
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition],
+        visited: inout Set<String>
+    ) -> [SHACLViolation] {
+        let hasReifierShape = propertyShape.reifierShapeIRI != nil
+        let reificationRequired = propertyShape.reificationRequired
+        if !hasReifierShape && !reificationRequired {
+            return []
+        }
+        guard let pathIRI else {
+            return []
+        }
+
+        var violations: [SHACLViolation] = []
+        for valueNode in values {
+            let reifierNodes = findReifierNodes(
+                subject: currentNode,
+                predicate: pathIRI,
+                object: valueNode,
+                dataGraph: dataGraph
+            )
+
+            if reificationRequired && reifierNodes.isEmpty {
+                violations.append(
+                    SHACLViolation(
+                        severity: severity,
+                        shapeIRI: propertyShape.shapeIRI,
+                        focusNode: rootFocusNode,
+                        pathIRI: pathIRI,
+                        valueNode: valueNode,
+                        sourceConstraintIRI: SHACLIRIs.reifierShape,
+                        message: "reifierShape violation: missing required reifier for value \(valueNode)"
+                    )
+                )
+            }
+
+            if let reifierShapeIRI = propertyShape.reifierShapeIRI {
+                for reifierNode in reifierNodes {
+                    var reifierVisited: Set<String> = []
+                    if !conforms(
+                        valueNode: reifierNode,
+                        toNodeShapeIRI: reifierShapeIRI,
+                        dataGraph: dataGraph,
+                        shapesByIRI: shapesByIRI,
+                        expressionGraph: expressionGraph,
+                        nodeExpressionsByIRI: nodeExpressionsByIRI,
+                        depth: 0,
+                        visited: &reifierVisited
+                    ) {
+                        violations.append(
+                            SHACLViolation(
+                                severity: severity,
+                                shapeIRI: propertyShape.shapeIRI,
+                                focusNode: rootFocusNode,
+                                pathIRI: pathIRI,
+                                valueNode: valueNode,
+                                sourceConstraintIRI: SHACLIRIs.reifierShape,
+                                message: "reifierShape violation: reifier does not conform to \(reifierShapeIRI)"
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        return violations
+    }
+
+    private func findReifierNodes(
+        subject: String,
+        predicate: String,
+        object: String,
+        dataGraph: SHACLDataGraph
+    ) -> [String] {
+        let triplesBySubject = Dictionary(grouping: dataGraph.triples, by: \.subject)
+        var matches: [String] = []
+        for (candidate, triples) in triplesBySubject {
+            let hasSubject = triples.contains { $0.predicate == SHACLIRIs.rdfSubject && $0.object == subject }
+            let hasPredicate = triples.contains { $0.predicate == SHACLIRIs.rdfPredicate && $0.object == predicate }
+            let hasObject = triples.contains { $0.predicate == SHACLIRIs.rdfObject && $0.object == object }
+            if hasSubject && hasPredicate && hasObject {
+                matches.append(candidate)
+            }
+        }
+        return matches.sorted()
     }
 
     private func resolvePropertyPathValues(
@@ -5938,6 +6139,9 @@ private enum SHACLIRIs {
     static let rdfFirst = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first"
     static let rdfRest = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"
     static let rdfNil = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"
+    static let rdfSubject = "http://www.w3.org/1999/02/22-rdf-syntax-ns#subject"
+    static let rdfPredicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate"
+    static let rdfObject = "http://www.w3.org/1999/02/22-rdf-syntax-ns#object"
     static let nodeShape = "http://www.w3.org/ns/shacl#NodeShape"
     static let propertyShape = "http://www.w3.org/ns/shacl#PropertyShape"
     static let shapeClass = "http://www.w3.org/ns/shacl#ShapeClass"
@@ -5963,6 +6167,8 @@ private enum SHACLIRIs {
     static let minLength = "http://www.w3.org/ns/shacl#minLength"
     static let maxLength = "http://www.w3.org/ns/shacl#maxLength"
     static let singleLine = "http://www.w3.org/ns/shacl#singleLine"
+    static let minListLength = "http://www.w3.org/ns/shacl#minListLength"
+    static let maxListLength = "http://www.w3.org/ns/shacl#maxListLength"
     static let minInclusive = "http://www.w3.org/ns/shacl#minInclusive"
     static let maxInclusive = "http://www.w3.org/ns/shacl#maxInclusive"
     static let minExclusive = "http://www.w3.org/ns/shacl#minExclusive"
@@ -5985,6 +6191,8 @@ private enum SHACLIRIs {
     static let or = "http://www.w3.org/ns/shacl#or"
     static let not = "http://www.w3.org/ns/shacl#not"
     static let xone = "http://www.w3.org/ns/shacl#xone"
+    static let reifierShape = "http://www.w3.org/ns/shacl#reifierShape"
+    static let reificationRequired = "http://www.w3.org/ns/shacl#reificationRequired"
     static let memberShape = "http://www.w3.org/ns/shacl#memberShape"
     static let qualifiedValueShape = "http://www.w3.org/ns/shacl#qualifiedValueShape"
     static let someValue = "http://www.w3.org/ns/shacl#someValue"
@@ -6247,6 +6455,72 @@ private struct SHACLTurtleSubsetParser {
             return tokens[index]
         }
 
+        func parseObjectWithOptionalReifier(
+            subject: String,
+            predicate: String
+        ) throws -> String {
+            let object = try parseTerm(
+                tokens: tokens,
+                index: &index,
+                prefixes: prefixes,
+                triples: &triples,
+                listCounter: &listCounter,
+                blankNodeCounter: &blankNodeCounter,
+                statement: statement
+            )
+            if index < tokens.count, tokens[index] == "{|" {
+                _ = takeToken()
+                blankNodeCounter += 1
+                let reifierNode = "_:shacl_reifier_\(blankNodeCounter)"
+                triples.append(SHACLTriple(subject: reifierNode, predicate: SHACLIRIs.rdfSubject, object: subject))
+                triples.append(SHACLTriple(subject: reifierNode, predicate: SHACLIRIs.rdfPredicate, object: predicate))
+                triples.append(SHACLTriple(subject: reifierNode, predicate: SHACLIRIs.rdfObject, object: object))
+
+                while index < tokens.count {
+                    if tokens[index] == "|}" {
+                        _ = takeToken()
+                        break
+                    }
+                    guard let annotationPredicateToken = takeToken() else {
+                        throw SHACLError.invalidStatement(statement)
+                    }
+                    let annotationPredicate = try resolveTerm(annotationPredicateToken, prefixes: prefixes)
+                    var annotationObjects: [String] = [
+                        try parseTerm(
+                            tokens: tokens,
+                            index: &index,
+                            prefixes: prefixes,
+                            triples: &triples,
+                            listCounter: &listCounter,
+                            blankNodeCounter: &blankNodeCounter,
+                            statement: statement
+                        )
+                    ]
+                    while index < tokens.count, tokens[index] == "," {
+                        _ = takeToken()
+                        annotationObjects.append(
+                            try parseTerm(
+                                tokens: tokens,
+                                index: &index,
+                                prefixes: prefixes,
+                                triples: &triples,
+                                listCounter: &listCounter,
+                                blankNodeCounter: &blankNodeCounter,
+                                statement: statement
+                            )
+                        )
+                    }
+                    for annotationObject in annotationObjects {
+                        triples.append(SHACLTriple(subject: reifierNode, predicate: annotationPredicate, object: annotationObject))
+                    }
+                    if index < tokens.count, tokens[index] == ";" {
+                        _ = takeToken()
+                    }
+                }
+            }
+            return object
+        }
+
         var triples: [SHACLTriple] = []
         let subject = try parseTerm(
             tokens: tokens,
@@ -6270,29 +6544,13 @@ private struct SHACLTurtleSubsetParser {
             let predicate = try resolveTerm(predicateToken, prefixes: prefixes)
 
             var objects: [String] = [
-                try parseTerm(
-                    tokens: tokens,
-                    index: &index,
-                    prefixes: prefixes,
-                    triples: &triples,
-                    listCounter: &listCounter,
-                    blankNodeCounter: &blankNodeCounter,
-                    statement: statement
-                )
+                try parseObjectWithOptionalReifier(subject: subject, predicate: predicate)
             ]
 
             while index < tokens.count, tokens[index] == "," {
                 _ = takeToken()
                 objects.append(
-                    try parseTerm(
-                        tokens: tokens,
-                        index: &index,
-                        prefixes: prefixes,
-                        triples: &triples,
-                        listCounter: &listCounter,
-                        blankNodeCounter: &blankNodeCounter,
-                        statement: statement
-                    )
+                    try parseObjectWithOptionalReifier(subject: subject, predicate: predicate)
                 )
             }
 
@@ -6466,7 +6724,7 @@ private struct SHACLTurtleSubsetParser {
         }
 
         let token = tokens[index]
-        if token == ";" || token == "," || token == ")" || token == "]" {
+        if token == ";" || token == "," || token == ")" || token == "]" || token == "{|" || token == "|}" {
             throw SHACLError.invalidStatement(statement)
         }
 
@@ -6509,6 +6767,22 @@ private struct SHACLTurtleSubsetParser {
 
             if ch.isWhitespace {
                 index = statement.index(after: index)
+                continue
+            }
+
+            if ch == "{",
+               statement.index(after: index) < statement.endIndex,
+               statement[statement.index(after: index)] == "|" {
+                tokens.append("{|")
+                index = statement.index(index, offsetBy: 2)
+                continue
+            }
+
+            if ch == "|",
+               statement.index(after: index) < statement.endIndex,
+               statement[statement.index(after: index)] == "}" {
+                tokens.append("|}")
+                index = statement.index(index, offsetBy: 2)
                 continue
             }
 
@@ -6619,7 +6893,9 @@ private struct SHACLTurtleSubsetParser {
                   statement[end] != "(",
                   statement[end] != ")",
                   statement[end] != "[",
-                  statement[end] != "]" {
+                  statement[end] != "]",
+                  statement[end] != "{",
+                  statement[end] != "|" {
                 end = statement.index(after: end)
             }
 

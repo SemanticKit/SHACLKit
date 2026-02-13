@@ -49,6 +49,8 @@ Legend:
   - Implemented SHACL 1.2 `sh:someValue` checks for property shapes.
   - Implemented SHACL 1.2 `sh:memberShape` checks for node/property shapes via deferred extension evaluation.
   - Implemented SHACL 1.2 `sh:uniqueMembers` checks for node/property shapes via deferred extension evaluation.
+  - Implemented SHACL 1.2 `sh:minListLength`/`sh:maxListLength` checks for node/property shapes via deferred extension evaluation.
+  - Implemented SHACL 1.2 `sh:reifierShape` and `sh:reificationRequired` checks via deferred extension evaluation and parser-backed reifier nodes.
   - Implemented `sh:in` checks for direct values and RDF collection list syntax.
   - Implemented `sh:languageIn` checks over literal language tags with basic language-range matching.
   - Implemented first-slice property-pair constraints: `sh:equals`, `sh:disjoint`, `sh:lessThan`, and `sh:lessThanOrEquals`.

@@ -289,7 +289,9 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     guard let turtle = String(data: data, encoding: .utf8) else {
         throw SHACLError.invalidUTF8
     }
-    let normalized = normalizedW3CTurtle(turtle).replacingOccurrences(of: "\r\n", with: "\n")
+    let usesReifierAnnotations = turtle.contains("sh:reifierShape") || turtle.contains("sh:reificationRequired")
+    let normalizedSource = usesReifierAnnotations ? turtle : normalizedW3CTurtle(turtle)
+    let normalized = normalizedSource.replacingOccurrences(of: "\r\n", with: "\n")
     let stripped = strippedW3CManifestStatements(from: normalized)
     return Data(
         stripped
