@@ -3748,6 +3748,30 @@ private struct TestShapesSource {
     }
 }
 
+@Test func coreValidatorAllowsGuardedSPARQLConstraintWhenPathOnlyAppearsInStringLiteral() async throws {
+    let innerExecutor = GuardLiteralKeywordSPARQLExecutor()
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: innerExecutor)
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardAllowsPathLiteralShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
+@Test func coreValidatorAllowsGuardedSPARQLConstraintWhenValueOnlyAppearsInStringLiteral() async throws {
+    let innerExecutor = GuardLiteralKeywordSPARQLExecutor()
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: innerExecutor)
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardAllowsValueLiteralShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
 @Test func coreValidatorAcceptsNodeExpressionPredicate() async throws {
     let validator = SHACLCoreValidator()
     let shapes = try fixtureData("phaseGatedNodeExpressionsShapes.ttl")
@@ -3929,7 +3953,7 @@ private struct GuardLiteralKeywordSPARQLExecutor: SHACLSPARQLExecutor {
         shapesGraph: SHACLShapesGraph
     ) throws -> [String] {
         let uppercased = query.uppercased()
-        guard uppercased.contains("MINUS"), uppercased.contains("?THIS") else {
+        guard uppercased.contains("?THIS"), uppercased.contains("EX:NAME"), uppercased.contains("STRLEN") else {
             return []
         }
         if focusNode == "http://example.com/alice" {

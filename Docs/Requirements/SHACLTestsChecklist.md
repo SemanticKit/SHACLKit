@@ -157,6 +157,7 @@ Legend:
   - Added guarded-policy coverage requiring `SELECT` query text to reference pre-bound `?this`.
   - Added guarded-policy regression coverage proving disallowed keywords inside string literals are not blocked as executable keywords.
   - Added guarded-policy regression coverage proving string-literal `'?this'` text does not satisfy required pre-bound `?this` reference checks.
+  - Added guarded-policy regression coverage proving string-literal `'?path'` and `'?value'` text does not trigger pre-bound rebind blocking.
 
 ## Robustness and Regression
 
