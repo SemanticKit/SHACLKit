@@ -475,6 +475,26 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     }
 }
 
+@Test func w3cRulesManifestFixturesParseThroughSHACLLoaders() async throws {
+    let fixturesRoot = fixturesRootURL().appendingPathComponent("W3CDataShapes/shacl12-test-suite/tests/rules")
+    let manifestPaths = [
+        "manifest-rules.ttl",
+        "eval/manifest.ttl",
+        "stratification/manifest.ttl",
+        "syntax/manifest.ttl",
+        "wellformed/manifest.ttl",
+    ]
+
+    let shapesLoader = SHACLShapesGraphLoader()
+    let dataLoader = SHACLDataGraphLoader()
+
+    for relativePath in manifestPaths {
+        let payload = try Data(contentsOf: fixturesRoot.appendingPathComponent(relativePath))
+        _ = try dataLoader.load(from: payload)
+        _ = try shapesLoader.load(from: payload)
+    }
+}
+
 @Test func w3cNodeExprShnexEvalSubsetMatchesManifestResults() async throws {
     let shnexDirectoryURL = fixturesRootURL()
         .appendingPathComponent("W3CDataShapes")
