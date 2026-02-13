@@ -3272,6 +3272,28 @@ private struct TestShapesSource {
     #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
 }
 
+@Test func coreValidatorAppliesSPARQLPrefixesForTargetQueries() async throws {
+    let prefixedQuery = """
+    PREFIX ex: <http://example.com/>
+    SELECT ?this WHERE { ?this ex:segment ex:vip }
+    """
+    let executor = TestSPARQLExecutor(
+        selectResults: [
+            "\(prefixedQuery)|": ["http://example.com/alice"],
+        ]
+    )
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlTargetWithPrefixesShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+    let violation = try #require(result.violations.first)
+    #expect(violation.focusNode == "http://example.com/alice")
+    #expect(violation.sourceConstraintIRI == "http://www.w3.org/ns/shacl#hasValue")
+}
+
 @Test func coreValidatorExecutesTargetNodeSelectThroughExecutorBoundary() async throws {
     let executor = TestSPARQLExecutor(
         selectResults: [
