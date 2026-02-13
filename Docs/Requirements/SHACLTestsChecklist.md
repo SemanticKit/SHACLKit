@@ -33,12 +33,14 @@ Legend:
   - Added regression coverage ensuring empty target outputs are ignored, including empty `shnex:nodes ()`.
   - Added curated W3C core target selector subset coverage (`targetNode`, `targetClass`, implicit `targetClass`, `targetSubjectsOf`, `targetObjectsOf`, `multipleTargets`).
   - Added curated W3C core path conformance subset coverage (inverse/alternative/sequence and cardinality path operators).
+  - Expanded curated SHACL 1.2 core path conformance subset coverage, including wrapper + split data/shapes cases for `path-complex-002` and `path-unused-001`.
 - [x] `TEST-SHACL-015` Focus-node resolution tests over RDF triples for single and multi-shape target sets.
 - [x] `TEST-SHACL-011` Node shape validation pass/fail matrix.
   - Covered node-shape-level `sh:class` and `sh:nodeKind` pass/fail fixtures with matrix assertions.
   - Added curated W3C node-shape conformance subset coverage for `closed-001` and `closed-002`.
   - Expanded curated SHACL 1.2 node-shape conformance subset coverage for `closed-001` and `closed-002`.
   - Expanded curated SHACL 1.2 node-shape conformance subset coverage for conforming `closed-003` and `closed-004`.
+  - Expanded curated SHACL 1.2 complex conformance subset coverage for `personexample` and `shacl-shacl`.
   - Added curated W3C complex conformance subset coverage for `personexample` and `shacl-shacl`.
 - [x] `TEST-SHACL-012` Property shape validation pass/fail matrix.
   - Covered fixture matrix assertions across implemented property-shape constraint components.
@@ -48,8 +50,10 @@ Legend:
   - Expanded curated W3C property-shape conformance subset coverage across cardinality, type, string/range, logical, shape-reference, and nested `sh:property` cases.
 - [x] `TEST-SHACL-013` Severity propagation tests (`Violation`, `Warning`, `Info`).
   - Added curated W3C misc conformance subset coverage for severity/message/deactivated behavior (`severity-001`, `severity-002`, `message-001`, `deactivated-001`, `deactivated-002`).
+  - Expanded curated SHACL 1.2 misc conformance subset coverage for `message-001`, `severity-001/002`, and `deactivated-001/002`.
   - Added curated W3C validation-report conformance policy coverage for `conformance-disallows-001` / `conformance-disallows-002`.
 - [x] `TEST-SHACL-014` Report model shape and deterministic ordering assertions.
+  - Expanded curated SHACL 1.2 validation-report coverage for shared nested property-shape reporting (`shared-data/shared-shapes` and wrapper `shared.ttl`).
 
 ## Phase 1: Constraint Component Coverage
 
