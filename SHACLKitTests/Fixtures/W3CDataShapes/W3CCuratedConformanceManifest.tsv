@@ -236,3 +236,4 @@ core-complex-personexample	data-shapes-test-suite/tests/core/complex/personexamp
 core-complex-shacl-shacl	data-shapes-test-suite/tests/core/complex/shacl-shacl-data-shapes.ttl	data-shapes-test-suite/tests/core/complex/shacl-shacl-data-shapes.ttl	true	SHACL-for-SHACL frozen dogfood self-validation scenario.
 core-complex-shacl12-personexample	shacl12-test-suite/tests/core/complex/personexample.ttl	shacl12-test-suite/tests/core/complex/personexample.ttl	false	SHACL 1.2 complex person example conformance checks.
 core-complex-shacl12-shacl-shacl	shacl12-test-suite/tests/core/complex/shacl-shacl.ttl	shacl12-test-suite/tests/core/complex/shacl-shacl.ttl	true	SHACL 1.2 SHACL-for-SHACL wrapper conformance checks.
+core-complex-shacl12-shacl-shacl-data	shacl12-test-suite/tests/core/complex/shacl-shacl-data-shapes.ttl	shacl12-test-suite/tests/core/complex/shacl-shacl-data-shapes.ttl	true	SHACL 1.2 SHACL-for-SHACL direct data-shapes graph conformance checks.

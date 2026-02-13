@@ -41,6 +41,7 @@ Legend:
   - Expanded curated SHACL 1.2 node-shape conformance subset coverage for `closed-001` and `closed-002`.
   - Expanded curated SHACL 1.2 node-shape conformance subset coverage for conforming `closed-003` and `closed-004`.
   - Expanded curated SHACL 1.2 complex conformance subset coverage for `personexample` and `shacl-shacl`.
+  - Expanded curated SHACL 1.2 SHACL-for-SHACL direct graph coverage for `shacl-shacl-data-shapes`.
   - Added curated W3C complex conformance subset coverage for `personexample` and `shacl-shacl`.
 - [x] `TEST-SHACL-012` Property shape validation pass/fail matrix.
   - Covered fixture matrix assertions across implemented property-shape constraint components.
