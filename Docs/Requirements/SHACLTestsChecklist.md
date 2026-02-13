@@ -37,6 +37,7 @@ Legend:
 - [x] `TEST-SHACL-011` Node shape validation pass/fail matrix.
   - Covered node-shape-level `sh:class` and `sh:nodeKind` pass/fail fixtures with matrix assertions.
   - Added curated W3C node-shape conformance subset coverage for `closed-001` and `closed-002`.
+  - Expanded curated SHACL 1.2 node-shape conformance subset coverage for `closed-001` and `closed-002`.
   - Added curated W3C complex conformance subset coverage for `personexample` and `shacl-shacl`.
 - [x] `TEST-SHACL-012` Property shape validation pass/fail matrix.
   - Covered fixture matrix assertions across implemented property-shape constraint components.
@@ -64,6 +65,7 @@ Legend:
   - Added curated W3C node-shape conformance subset coverage for dateTime range boundaries (`minInclusive-002`, `minInclusive-003`).
   - Added curated W3C node-shape conformance subset coverage for exclusive numeric bounds (`minExclusive-001`, `maxExclusive-001`).
   - Added curated W3C node-shape conformance subset coverage for `pattern-002`.
+  - Expanded curated SHACL 1.2 node-shape conformance subset coverage for `minLength-001`, `maxLength-001`, `pattern-001`, `pattern-002`, `minExclusive-001`, `maxExclusive-001`, `maxInclusive-001`, and `minInclusive-001/002/003`.
   - Covered integer range fixtures for `minInclusive` and `maxInclusive`, including non-numeric values.
 - [x] `TEST-SHACL-023` Membership/value constraint tests (`in`, `hasValue`).
   - Covered `hasValue` and `in` fixtures, including RDF list-based `sh:in`.
@@ -78,9 +80,11 @@ Legend:
 - [x] `TEST-SHACL-024` Logical constraint tests (`and`, `or`, `not`, `xone`).
   - Covered fixtures for `and`, `or`, `not`, and `xone` across direct shape references and RDF list syntax.
   - Added curated W3C node-shape logical conformance subset coverage (`and-001`, `and-002`, `or-001`, `not-001`, `not-002`, `xone-001`, `xone-duplicate`).
+  - Expanded curated SHACL 1.2 node-shape logical conformance subset coverage for `and-001`, `and-002`, `or-001`, `not-001`, `not-002`, `xone-001`, and `xone-duplicate`.
 - [x] `TEST-SHACL-025` Shape-reference and qualified shape tests.
   - Covered `sh:node` fixtures, qualified value shape count fixtures, and invalid reference diagnostics.
   - Added curated W3C node-shape conformance subset coverage for `class-001`, `node-001`, and `qualified-001`.
+  - Expanded curated SHACL 1.2 node-shape conformance subset coverage for `node-001` and `qualified-001`.
   - Added curated W3C property-shape qualified disjoint coverage (`qualifiedMinCountDisjoint-001`, `qualifiedValueShapesDisjoint-001`).
 
 ## Phase 2: Node Expressions and Rules
