@@ -80,6 +80,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
     public let orShapeIRIs: [String]
     public let xoneShapeIRIs: [String]
     public let notShapeIRI: String?
+    public let memberShapeIRI: String?
     public let qualifiedValueShapeIRI: String?
     public let qualifiedValueShapesDisjoint: Bool
     public let qualifiedMinCount: Int?
@@ -128,6 +129,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         orShapeIRIs: [String] = [],
         xoneShapeIRIs: [String] = [],
         notShapeIRI: String? = nil,
+        memberShapeIRI: String? = nil,
         qualifiedValueShapeIRI: String? = nil,
         qualifiedValueShapesDisjoint: Bool = false,
         qualifiedMinCount: Int? = nil,
@@ -175,6 +177,7 @@ public struct SHACLShapeDefinition: Sendable, Hashable {
         self.orShapeIRIs = orShapeIRIs
         self.xoneShapeIRIs = xoneShapeIRIs
         self.notShapeIRI = notShapeIRI
+        self.memberShapeIRI = memberShapeIRI
         self.qualifiedValueShapeIRI = qualifiedValueShapeIRI
         self.qualifiedValueShapesDisjoint = qualifiedValueShapesDisjoint
         self.qualifiedMinCount = qualifiedMinCount
@@ -589,6 +592,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var orShapeIRIs: Set<String> = []
             var xoneShapeIRIs: Set<String> = []
             var notShapeIRI: String?
+            var memberShapeIRI: String?
             var qualifiedValueShapeIRI: String?
             var qualifiedValueShapesDisjoint = false
             var qualifiedMinCount: Int?
@@ -759,6 +763,8 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 current.xoneShapeIRIs.insert(object)
             } else if predicate == SHACLIRIs.not {
                 current.notShapeIRI = object
+            } else if predicate == SHACLIRIs.memberShape {
+                current.memberShapeIRI = object
             } else if predicate == SHACLIRIs.qualifiedValueShape {
                 current.qualifiedValueShapeIRI = object
             } else if predicate == SHACLIRIs.someValue {
@@ -1288,6 +1294,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
                 orShapeIRIs: resolveShapeReferenceIRIs(partial.orShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
                 xoneShapeIRIs: resolveShapeReferenceIRIs(partial.xoneShapeIRIs, triplesBySubject: triplesBySubject).sorted(),
                 notShapeIRI: partial.notShapeIRI,
+                memberShapeIRI: partial.memberShapeIRI,
                 qualifiedValueShapeIRI: partial.qualifiedValueShapeIRI,
                 qualifiedValueShapesDisjoint: partial.qualifiedValueShapesDisjoint,
                 qualifiedMinCount: partial.qualifiedMinCount,
@@ -3041,6 +3048,7 @@ public struct SHACLCoreValidator: SHACLValidator {
             }
             for focusNode in resolution.focusNodes {
                 var visited: Set<String> = []
+                var deferredVisited: Set<String> = []
                 if shape.kind == .nodeShape {
                     violations.append(
                         contentsOf: evaluate(
@@ -3052,6 +3060,17 @@ public struct SHACLCoreValidator: SHACLValidator {
                             nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: 0,
                             visited: &visited
+                        )
+                    )
+                    violations.append(
+                        contentsOf: evaluateDeferredMemberShapeConstraints(
+                            nodeShape: shape,
+                            focusNode: focusNode,
+                            dataGraph: parsedData,
+                            shapesByIRI: shapeByIRI,
+                            expressionGraph: expressionGraph,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI,
+                            visited: &deferredVisited
                         )
                     )
                 } else if shape.kind == .propertyShape {
@@ -3075,6 +3094,19 @@ public struct SHACLCoreValidator: SHACLValidator {
                             nodeExpressionsByIRI: nodeExpressionsByIRI,
                             depth: 0,
                             visited: &visited
+                        )
+                    )
+                    violations.append(
+                        contentsOf: evaluateDeferredMemberShapeForPropertyShape(
+                            propertyShape: shape,
+                            rootFocusNode: focusNode,
+                            currentNode: focusNode,
+                            inheritedSeverity: shape.severity,
+                            dataGraph: parsedData,
+                            shapesByIRI: shapeByIRI,
+                            expressionGraph: expressionGraph,
+                            nodeExpressionsByIRI: nodeExpressionsByIRI,
+                            visited: &deferredVisited
                         )
                     )
                 }
@@ -3169,7 +3201,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                 }
             }
             let referencedNodeShapeIRIs =
-                [shape.nodeShapeReferenceIRI, shape.notShapeIRI, shape.qualifiedValueShapeIRI].compactMap { $0 }
+                [shape.nodeShapeReferenceIRI, shape.notShapeIRI, shape.memberShapeIRI, shape.qualifiedValueShapeIRI].compactMap { $0 }
                 + shape.andShapeIRIs
                 + shape.orShapeIRIs
                 + shape.xoneShapeIRIs
@@ -3252,7 +3284,7 @@ public struct SHACLCoreValidator: SHACLValidator {
             }
 
             let referencedNodeShapeIRIs =
-                [shape.nodeShapeReferenceIRI, shape.notShapeIRI, shape.qualifiedValueShapeIRI].compactMap { $0 }
+                [shape.nodeShapeReferenceIRI, shape.notShapeIRI, shape.memberShapeIRI, shape.qualifiedValueShapeIRI].compactMap { $0 }
                 + shape.andShapeIRIs
                 + shape.orShapeIRIs
                 + shape.xoneShapeIRIs
@@ -5273,6 +5305,203 @@ public struct SHACLCoreValidator: SHACLValidator {
         return violations
     }
 
+    private func evaluateDeferredMemberShapeConstraints(
+        nodeShape: SHACLShapeDefinition,
+        focusNode: String,
+        dataGraph: SHACLDataGraph,
+        shapesByIRI: [String: SHACLShapeDefinition],
+        expressionGraph: SHACLShapesGraph,
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition],
+        visited: inout Set<String>
+    ) -> [SHACLViolation] {
+        if nodeShape.isDeactivated {
+            return []
+        }
+
+        var violations: [SHACLViolation] = []
+        let nodeSeverity = nodeShape.severity ?? .violation
+        violations.append(
+            contentsOf: evaluateMemberShapeOnValueNode(
+                hostShape: nodeShape,
+                rootFocusNode: focusNode,
+                pathIRI: nil,
+                candidateValueNode: focusNode,
+                severity: nodeSeverity,
+                dataGraph: dataGraph,
+                shapesByIRI: shapesByIRI,
+                expressionGraph: expressionGraph,
+                nodeExpressionsByIRI: nodeExpressionsByIRI,
+                visited: &visited
+            )
+        )
+
+        for propertyShapeIRI in nodeShape.propertyShapeIRIs.sorted() {
+            guard let propertyShape = shapesByIRI[propertyShapeIRI], propertyShape.kind == .propertyShape else {
+                continue
+            }
+            violations.append(
+                contentsOf: evaluateDeferredMemberShapeForPropertyShape(
+                    propertyShape: propertyShape,
+                    rootFocusNode: focusNode,
+                    currentNode: focusNode,
+                    inheritedSeverity: nodeShape.severity,
+                    dataGraph: dataGraph,
+                    shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
+                    nodeExpressionsByIRI: nodeExpressionsByIRI,
+                    visited: &visited
+                )
+            )
+        }
+
+        return violations
+    }
+
+    private func evaluateDeferredMemberShapeForPropertyShape(
+        propertyShape: SHACLShapeDefinition,
+        rootFocusNode: String,
+        currentNode: String,
+        inheritedSeverity: SHACLSeverity?,
+        dataGraph: SHACLDataGraph,
+        shapesByIRI: [String: SHACLShapeDefinition],
+        expressionGraph: SHACLShapesGraph,
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition],
+        visited: inout Set<String>
+    ) -> [SHACLViolation] {
+        if propertyShape.isDeactivated {
+            return []
+        }
+
+        let visitKey = "\(propertyShape.shapeIRI)|\(currentNode)"
+        if visited.contains(visitKey) {
+            return []
+        }
+        visited.insert(visitKey)
+        defer { visited.remove(visitKey) }
+
+        let severity = propertyShape.severity ?? inheritedSeverity ?? .violation
+        let pathIRI = propertyShape.pathIRI
+        let values: [String]
+        if let propertyPath = propertyShape.propertyPath {
+            values = resolvePropertyPathValues(propertyPath, from: currentNode, dataGraph: dataGraph).sorted()
+        } else if let pathIRI = propertyShape.pathIRI {
+            values = dataGraph.triples
+                .filter { $0.subject == currentNode && $0.predicate == pathIRI }
+                .map(\.object)
+        } else if let expressionIRI = propertyShape.expressionIRI {
+            values = SHACLNodeExpressionEvaluator()
+                .evaluate(
+                    expressionIRI: expressionIRI,
+                    focusNode: currentNode,
+                    shapesGraph: expressionGraph,
+                    dataGraph: dataGraph
+                )
+                .sorted()
+        } else {
+            values = []
+        }
+
+        var violations: [SHACLViolation] = []
+        for valueNode in values {
+            violations.append(
+                contentsOf: evaluateMemberShapeOnValueNode(
+                    hostShape: propertyShape,
+                    rootFocusNode: rootFocusNode,
+                    pathIRI: pathIRI,
+                    candidateValueNode: valueNode,
+                    severity: severity,
+                    dataGraph: dataGraph,
+                    shapesByIRI: shapesByIRI,
+                    expressionGraph: expressionGraph,
+                    nodeExpressionsByIRI: nodeExpressionsByIRI,
+                    visited: &visited
+                )
+            )
+        }
+
+        for nestedPropertyShapeIRI in propertyShape.propertyShapeIRIs.sorted() {
+            guard let nestedShape = shapesByIRI[nestedPropertyShapeIRI], nestedShape.kind == .propertyShape else {
+                continue
+            }
+            for valueNode in values {
+                violations.append(
+                    contentsOf: evaluateDeferredMemberShapeForPropertyShape(
+                        propertyShape: nestedShape,
+                        rootFocusNode: rootFocusNode,
+                        currentNode: valueNode,
+                        inheritedSeverity: severity,
+                        dataGraph: dataGraph,
+                        shapesByIRI: shapesByIRI,
+                        expressionGraph: expressionGraph,
+                        nodeExpressionsByIRI: nodeExpressionsByIRI,
+                        visited: &visited
+                    )
+                )
+            }
+        }
+
+        return violations
+    }
+
+    private func evaluateMemberShapeOnValueNode(
+        hostShape: SHACLShapeDefinition,
+        rootFocusNode: String,
+        pathIRI: String?,
+        candidateValueNode: String,
+        severity: SHACLSeverity,
+        dataGraph: SHACLDataGraph,
+        shapesByIRI: [String: SHACLShapeDefinition],
+        expressionGraph: SHACLShapesGraph,
+        nodeExpressionsByIRI: [String: SHACLNodeExpressionDefinition],
+        visited: inout Set<String>
+    ) -> [SHACLViolation] {
+        guard let memberShapeIRI = hostShape.memberShapeIRI else {
+            return []
+        }
+
+        let triplesBySubject = Dictionary(grouping: dataGraph.triples, by: \.subject)
+        guard let members = rdfListMembersStrictInDataGraph(candidateValueNode, triplesBySubject: triplesBySubject) else {
+            return [
+                SHACLViolation(
+                    severity: severity,
+                    shapeIRI: hostShape.shapeIRI,
+                    focusNode: rootFocusNode,
+                    pathIRI: pathIRI,
+                    valueNode: candidateValueNode,
+                    sourceConstraintIRI: SHACLIRIs.memberShape,
+                    message: "memberShape violation: value \(candidateValueNode) is not a well-formed RDF list"
+                )
+            ]
+        }
+
+        var violations: [SHACLViolation] = []
+        for member in members {
+            if !conforms(
+                valueNode: member,
+                toNodeShapeIRI: memberShapeIRI,
+                dataGraph: dataGraph,
+                shapesByIRI: shapesByIRI,
+                expressionGraph: expressionGraph,
+                nodeExpressionsByIRI: nodeExpressionsByIRI,
+                depth: 0,
+                visited: &visited
+            ) {
+                violations.append(
+                    SHACLViolation(
+                        severity: severity,
+                        shapeIRI: hostShape.shapeIRI,
+                        focusNode: rootFocusNode,
+                        pathIRI: pathIRI,
+                        valueNode: candidateValueNode,
+                        sourceConstraintIRI: SHACLIRIs.memberShape,
+                        message: "memberShape violation: RDF list member \(member) does not conform to \(memberShapeIRI)"
+                    )
+                )
+            }
+        }
+        return violations
+    }
+
     private func resolvePropertyPathValues(
         _ path: SHACLPropertyPath,
         from focusNode: String,
@@ -5455,6 +5684,33 @@ public struct SHACLCoreValidator: SHACLValidator {
             "\\u000D", "\\u000d"
         ]
         return escapedControlSequences.contains { sequence in lexical.contains(sequence) }
+    }
+
+    private func rdfListMembersStrictInDataGraph(
+        _ term: String,
+        triplesBySubject: [String: [SHACLDataTriple]]
+    ) -> [String]? {
+        if term == SHACLIRIs.rdfNil {
+            return []
+        }
+        guard hasRDFListStructureInDataGraph(term, triplesBySubject: triplesBySubject) else {
+            return nil
+        }
+
+        var members: [String] = []
+        var current = term
+        var visited: Set<String> = []
+        while current != SHACLIRIs.rdfNil && !visited.contains(current) {
+            visited.insert(current)
+            guard let triples = triplesBySubject[current],
+                  let first = triples.first(where: { $0.predicate == SHACLIRIs.rdfFirst })?.object,
+                  let rest = triples.first(where: { $0.predicate == SHACLIRIs.rdfRest })?.object else {
+                return nil
+            }
+            members.append(first)
+            current = rest
+        }
+        return current == SHACLIRIs.rdfNil ? members : nil
     }
 
     private func matchesLanguageIn(languageTag: String?, ranges: [String]) -> Bool {
@@ -5674,6 +5930,7 @@ private enum SHACLIRIs {
     static let or = "http://www.w3.org/ns/shacl#or"
     static let not = "http://www.w3.org/ns/shacl#not"
     static let xone = "http://www.w3.org/ns/shacl#xone"
+    static let memberShape = "http://www.w3.org/ns/shacl#memberShape"
     static let qualifiedValueShape = "http://www.w3.org/ns/shacl#qualifiedValueShape"
     static let someValue = "http://www.w3.org/ns/shacl#someValue"
     static let qualifiedValueShapesDisjoint = "http://www.w3.org/ns/shacl#qualifiedValueShapesDisjoint"

@@ -47,6 +47,7 @@ Legend:
 - [x] `REQ-SHACL-009` Constraint components: set membership (`sh:in`, `sh:hasValue`).
   - Implemented `sh:hasValue` checks.
   - Implemented SHACL 1.2 `sh:someValue` checks for property shapes.
+  - Implemented SHACL 1.2 `sh:memberShape` checks for node/property shapes via deferred extension evaluation.
   - Implemented `sh:in` checks for direct values and RDF collection list syntax.
   - Implemented `sh:languageIn` checks over literal language tags with basic language-range matching.
   - Implemented first-slice property-pair constraints: `sh:equals`, `sh:disjoint`, `sh:lessThan`, and `sh:lessThanOrEquals`.

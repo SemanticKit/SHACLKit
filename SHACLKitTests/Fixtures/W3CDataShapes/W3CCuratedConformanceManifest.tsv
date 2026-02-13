@@ -113,6 +113,7 @@ core-property-shacl12-languageIn-001	shacl12-test-suite/tests/core/property/lang
 core-property-shacl12-uniqueLang-001	shacl12-test-suite/tests/core/property/uniqueLang-001.ttl	shacl12-test-suite/tests/core/property/uniqueLang-001.ttl	false	SHACL 1.2 property uniqueLang checks.
 core-property-shacl12-minLength-001	shacl12-test-suite/tests/core/property/minLength-001.ttl	shacl12-test-suite/tests/core/property/minLength-001.ttl	false	SHACL 1.2 property minLength checks.
 core-property-shacl12-maxLength-001	shacl12-test-suite/tests/core/property/maxLength-001.ttl	shacl12-test-suite/tests/core/property/maxLength-001.ttl	false	SHACL 1.2 property maxLength checks.
+core-property-shacl12-memberShape-001	shacl12-test-suite/tests/core/property/memberShape-001.ttl	shacl12-test-suite/tests/core/property/memberShape-001.ttl	false	SHACL 1.2 property memberShape checks.
 core-property-shacl12-minExclusive-001	shacl12-test-suite/tests/core/property/minExclusive-001.ttl	shacl12-test-suite/tests/core/property/minExclusive-001.ttl	false	SHACL 1.2 property minExclusive checks.
 core-property-shacl12-minExclusive-002	shacl12-test-suite/tests/core/property/minExclusive-002.ttl	shacl12-test-suite/tests/core/property/minExclusive-002.ttl	false	SHACL 1.2 property minExclusive checks (variant 2).
 core-property-shacl12-maxExclusive-001	shacl12-test-suite/tests/core/property/maxExclusive-001.ttl	shacl12-test-suite/tests/core/property/maxExclusive-001.ttl	false	SHACL 1.2 property maxExclusive checks.
