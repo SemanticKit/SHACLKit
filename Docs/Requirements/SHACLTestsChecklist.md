@@ -142,6 +142,7 @@ Legend:
   - Added fixture/tests for default-prefix (`sh:prefix ""`) declarations on SPARQL constraints to verify runtime `PREFIX : <...>` injection.
   - Added regression fixture/test proving runtime injection does not duplicate already-inline default-prefix (`PREFIX :`) declarations.
   - Added W3C SHACL 1.2 SPARQL suite parser/data-loader preflight coverage across `sparql/{component,node,property,pre-binding,targets}` fixture trees.
+  - Added executor-backed W3C SPARQL conformance subset validation coverage (`node/sparql-001`, `pre-binding/pre-binding-001`).
 - [~] `TEST-SHACL-301` SPARQL target fixtures.
   - Added first-slice fixture/tests for `sh:target` + `sh:select` focus-node resolution through an injected executor boundary.
   - Added first-slice fixture/tests for `sh:targetNode` + inline `sh:select` focus-node resolution through the same executor boundary.
@@ -152,6 +153,7 @@ Legend:
   - Added fixture/tests for default-prefix (`sh:prefix ""`) declarations on SPARQL targets to verify runtime `PREFIX : <...>` injection.
   - Added regression fixture/test proving runtime injection does not duplicate already-inline default-prefix (`PREFIX :`) declarations on SPARQL targets.
   - Added recursive SPARQL manifest artifact-resolution checks validating `mf:include` trees and `sht:dataGraph`/`sht:shapesGraph` references resolve to existing local fixture artifacts.
+  - Added executor-backed W3C SPARQL target conformance subset validation coverage (`targets/targetNode-select-001`).
 - [~] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.
   - Added default-deny executor behavior test coverage proving SPARQL evaluation requires explicit sandboxed executor injection for both `sh:select` and `sh:ask`.
   - Added guarded-executor policy coverage for keyword blocking, query-length blocking, and allowed-query pass-through behavior.

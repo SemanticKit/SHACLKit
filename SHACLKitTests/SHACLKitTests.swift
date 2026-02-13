@@ -1025,6 +1025,43 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(visited.count >= 5)
 }
 
+@Test func w3cSPARQLCuratedValidationSubsetMatchesExpectations() async throws {
+    struct SPARQLCuratedCase {
+        let fixturePath: String
+        let expectedConforms: Bool
+        let expectedViolations: Int
+    }
+
+    let cases: [SPARQLCuratedCase] = [
+        .init(
+            fixturePath: "W3CDataShapes/shacl12-test-suite/tests/sparql/node/sparql-001.ttl",
+            expectedConforms: false,
+            expectedViolations: 3
+        ),
+        .init(
+            fixturePath: "W3CDataShapes/shacl12-test-suite/tests/sparql/pre-binding/pre-binding-001.ttl",
+            expectedConforms: false,
+            expectedViolations: 1
+        ),
+        .init(
+            fixturePath: "W3CDataShapes/shacl12-test-suite/tests/sparql/targets/targetNode-select-001.ttl",
+            expectedConforms: false,
+            expectedViolations: 1
+        ),
+    ]
+
+    let validator = SHACLCoreValidator(sparqlExecutor: W3CSPARQLFixtureSubsetExecutor())
+
+    for testCase in cases {
+        let payload = try normalizedLineEndings(fixtureData(testCase.fixturePath))
+        let dataGraph = try SHACLDataGraphLoader().load(from: payload)
+        let shapesGraph = try SHACLShapesGraphLoader().load(from: payload)
+        let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapesGraph)
+        #expect(result.conforms == testCase.expectedConforms, "Conformance mismatch for \(testCase.fixturePath)")
+        #expect(result.violations.count == testCase.expectedViolations, "Violation count mismatch for \(testCase.fixturePath)")
+    }
+}
+
 @Test func w3cRulesEvalManifestReferencesExistingArtifacts() async throws {
     let rulesEvalDirectoryURL = fixturesRootURL()
         .appendingPathComponent("W3CDataShapes")
@@ -4257,6 +4294,50 @@ private struct AlwaysFalseAskSPARQLExecutor: SHACLSPARQLExecutor {
         shapesGraph: SHACLShapesGraph
     ) throws -> [String] {
         []
+    }
+
+    func ask(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> Bool {
+        false
+    }
+}
+
+private struct W3CSPARQLFixtureSubsetExecutor: SHACLSPARQLExecutor {
+    func select(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> [String] {
+        let normalizedQuery = query.lowercased()
+
+        if normalizedQuery.contains("filter (?path = <http://www.w3.org/2000/01/rdf-schema#label>)"),
+           let focusNode {
+            return dataGraph.triples
+                .filter {
+                    $0.subject == focusNode
+                        && $0.predicate == "http://www.w3.org/2000/01/rdf-schema#label"
+                }
+                .map(\.object)
+        }
+
+        if normalizedQuery.contains("filter ($this = ex:invalidresource)"),
+           let focusNode,
+           focusNode == "http://example.com/ns#InvalidResource" {
+            return [focusNode]
+        }
+
+        if normalizedQuery.contains("select ?person"),
+           normalizedQuery.contains("?person ex:age ?age"),
+           normalizedQuery.contains("?age < 18") {
+            return ["http://example.com/ns#Benjamin"]
+        }
+
+        return []
     }
 
     func ask(

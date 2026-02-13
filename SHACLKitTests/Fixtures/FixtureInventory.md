@@ -45,3 +45,4 @@ Current local families:
   - Includes subset `sht:EvalNodeExpr` manifest-result verification for W3C SHACL 1.2 `node-expr/shnex` fixtures.
   - Includes W3C SHACL 1.2 SPARQL suite parser/data-loader preflight coverage across `sparql` fixture trees.
   - Includes recursive W3C SPARQL manifest artifact-resolution checks for `mf:include` trees and action graph references.
+  - Includes executor-backed W3C SPARQL validation subset checks across representative node/pre-binding/target fixtures.
