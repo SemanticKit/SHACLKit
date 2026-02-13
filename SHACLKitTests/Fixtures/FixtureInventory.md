@@ -43,3 +43,5 @@ Current local families:
 - Optional staged W3C conformance corpus sync target (`W3CDataShapes*` from `Knowledge/Inbox/Fixtures` into `SHACLKitTests/Fixtures/W3CDataShapes`)
   - Includes preflight parser/loader coverage across W3C SHACL 1.2 `node-expr/shnex/*.ttl` fixtures.
   - Includes subset `sht:EvalNodeExpr` manifest-result verification for W3C SHACL 1.2 `node-expr/shnex` fixtures.
+  - Includes W3C SHACL 1.2 SPARQL suite parser/data-loader preflight coverage across `sparql` fixture trees.
+  - Includes recursive W3C SPARQL manifest artifact-resolution checks for `mf:include` trees and action graph references.

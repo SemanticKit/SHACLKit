@@ -24,6 +24,8 @@ private let shtNodeExprIRI = "http://www.w3.org/ns/shacl-test#nodeExpr"
 private let shtFocusNodeIRI = "http://www.w3.org/ns/shacl-test#focusNode"
 private let shtIgnoreOrderIRI = "http://www.w3.org/ns/shacl-test#ignoreOrder"
 private let shtScopePrefixIRI = "http://www.w3.org/ns/shacl-test#scope-"
+private let shtDataGraphIRI = "http://www.w3.org/ns/shacl-test#dataGraph"
+private let shtShapesGraphIRI = "http://www.w3.org/ns/shacl-test#shapesGraph"
 
 private func fixtureData(_ name: String) throws -> Data {
     let fileURL = URL(fileURLWithPath: #filePath)
@@ -527,6 +529,25 @@ private func firstRegexCapture(pattern: String, in text: String) -> String? {
     return String(text[capture])
 }
 
+private func relativePath(from baseRelativePath: String, appending childPath: String) -> String {
+    let baseDirectory = (baseRelativePath as NSString).deletingLastPathComponent
+    if baseDirectory.isEmpty {
+        return (childPath as NSString).standardizingPath
+    }
+    return ((baseDirectory as NSString).appendingPathComponent(childPath) as NSString).standardizingPath
+}
+
+private func isFixtureSelfReference(_ value: String) -> Bool {
+    value == "https://example.invalid/shaclkit/w3c-fixture-self"
+}
+
+private func normalizedLineEndings(_ data: Data) throws -> Data {
+    guard let source = String(data: data, encoding: .utf8) else {
+        throw SHACLError.invalidUTF8
+    }
+    return Data(source.replacingOccurrences(of: "\r\n", with: "\n").utf8)
+}
+
 private func loadW3CCuratedConformanceCases() throws -> [W3CCuratedConformanceCase] {
     let manifestData = try fixtureData("W3CDataShapes/W3CCuratedConformanceManifest.tsv")
     guard let manifestText = String(data: manifestData, encoding: .utf8) else {
@@ -889,6 +910,119 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         _ = try dataLoader.load(from: payload)
         _ = try shapesLoader.load(from: payload)
     }
+}
+
+@Test func w3cSPARQLFixturesParseThroughSemanticAndDataLoaders() async throws {
+    let sparqlDirectoryURL = fixturesRootURL()
+        .appendingPathComponent("W3CDataShapes")
+        .appendingPathComponent("shacl12-test-suite/tests/sparql")
+    let enumerator = try #require(FileManager.default.enumerator(
+        at: sparqlDirectoryURL,
+        includingPropertiesForKeys: nil
+    ))
+
+    var fixtureURLs: [URL] = []
+    while let fileURL = enumerator.nextObject() as? URL {
+        if fileURL.pathExtension == "ttl" {
+            fixtureURLs.append(fileURL)
+        }
+    }
+    fixtureURLs.sort { $0.path < $1.path }
+    #expect(!fixtureURLs.isEmpty)
+
+    let dataLoader = SHACLDataGraphLoader()
+    for fixtureURL in fixtureURLs {
+        let payload = try normalizedLineEndings(Data(contentsOf: fixtureURL))
+        if supportsStandardTurtleSemanticPreflight(payload) {
+            _ = try semanticGraph(fromTurtleData: payload)
+        }
+        _ = try dataLoader.load(from: payload)
+    }
+}
+
+@Test func w3cSPARQLManifestTreeReferencesExistingArtifacts() async throws {
+    let sparqlRootRelativePath = "shacl12-test-suite/tests/sparql"
+    let sparqlRootURL = fixturesRootURL()
+        .appendingPathComponent("W3CDataShapes")
+        .appendingPathComponent(sparqlRootRelativePath)
+    let rootManifestRelativePath = "manifest.ttl"
+
+    var manifestsToVisit: [String] = [rootManifestRelativePath]
+    var visited: Set<String> = []
+
+    while let manifestRelativePath = manifestsToVisit.popLast() {
+        if visited.contains(manifestRelativePath) {
+            continue
+        }
+        visited.insert(manifestRelativePath)
+
+        let manifestURL = sparqlRootURL.appendingPathComponent(manifestRelativePath)
+        #expect(FileManager.default.fileExists(atPath: manifestURL.path))
+        let manifestData = try normalizedLineEndings(Data(contentsOf: manifestURL))
+        let graph = try SHACLDataGraphLoader().load(from: manifestData)
+        let triples = graph.triples
+
+        let includePaths = Set(
+            triples
+                .filter { $0.predicate == "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include" }
+                .map(\.object)
+        )
+
+        for includePath in includePaths {
+            let includeRelativePath = relativePath(from: manifestRelativePath, appending: includePath)
+            let includeURL = sparqlRootURL.appendingPathComponent(includeRelativePath)
+            #expect(FileManager.default.fileExists(atPath: includeURL.path))
+            manifestsToVisit.append(includeRelativePath)
+        }
+
+        let entrySubjects = Set(
+            triples
+                .filter { $0.predicate == rdfTypeIRI && $0.object == "http://www.w3.org/ns/shacl-test#Validate" }
+                .map(\.subject)
+        )
+
+        for subject in entrySubjects {
+            let actionNode = try #require(
+                triples.first(where: { $0.subject == subject && $0.predicate == mfActionIRI })?.object
+            )
+            _ = try #require(
+                triples.first(where: { $0.subject == subject && $0.predicate == mfResultIRI })?.object
+            )
+
+            let graphPaths = triples
+                .filter {
+                    $0.subject == actionNode
+                        && ($0.predicate == shtDataGraphIRI || $0.predicate == shtShapesGraphIRI)
+                }
+                .map(\.object)
+            #expect(graphPaths.count == 2)
+
+            let manifestDirectoryRelativePath = (manifestRelativePath as NSString).deletingLastPathComponent
+            for graphPath in graphPaths {
+                if isFixtureSelfReference(graphPath) || graphPath == "<>" {
+                    continue
+                }
+                if graphPath.hasPrefix("http://") || graphPath.hasPrefix("https://") {
+                    continue
+                }
+
+                let graphRelativePath: String
+                if manifestDirectoryRelativePath.isEmpty {
+                    graphRelativePath = graphPath
+                } else {
+                    graphRelativePath = ((manifestDirectoryRelativePath as NSString)
+                        .appendingPathComponent(graphPath) as NSString).standardizingPath
+                }
+                let graphURL = sparqlRootURL.appendingPathComponent(graphRelativePath)
+                #expect(
+                    FileManager.default.fileExists(atPath: graphURL.path),
+                    "Missing SPARQL manifest graph artifact: \(graphRelativePath)"
+                )
+            }
+        }
+    }
+
+    #expect(visited.count >= 5)
 }
 
 @Test func w3cRulesEvalManifestReferencesExistingArtifacts() async throws {
