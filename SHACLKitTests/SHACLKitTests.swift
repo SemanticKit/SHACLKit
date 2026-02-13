@@ -3684,10 +3684,32 @@ private struct TestShapesSource {
     }
 }
 
+@Test func coreValidatorBlocksGuardedSPARQLConstraintByPreboundDollarPathPolicy() async throws {
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardBlockedPreboundDollarPathShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
 @Test func coreValidatorBlocksGuardedSPARQLConstraintByPreboundValuePolicy() async throws {
     let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
     let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
     let shapes = try fixtureData("sparqlGuardBlockedPreboundValueShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    #expect(throws: SHACLError.self) {
+        _ = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    }
+}
+
+@Test func coreValidatorBlocksGuardedSPARQLConstraintByPreboundDollarValuePolicy() async throws {
+    let guardedExecutor = SHACLGuardedSPARQLExecutor(wrapping: TestSPARQLExecutor())
+    let validator = SHACLCoreValidator(sparqlExecutor: guardedExecutor)
+    let shapes = try fixtureData("sparqlGuardBlockedPreboundDollarValueShapes.ttl")
     let dataGraph = try fixtureData("sparqlData.ttl")
 
     #expect(throws: SHACLError.self) {

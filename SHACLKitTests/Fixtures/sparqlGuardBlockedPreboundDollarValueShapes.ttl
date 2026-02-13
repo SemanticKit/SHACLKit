@@ -1,0 +1,9 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.com/> .
+
+ex:GuardedDollarValueShape a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:sparql ex:UnsafeValueConstraint .
+
+ex:UnsafeValueConstraint
+  sh:select "SELECT $this WHERE { $this ex:name ?name . BIND(?name AS $value) }" .

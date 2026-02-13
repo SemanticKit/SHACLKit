@@ -36,6 +36,7 @@ Current local families:
   - Includes inline-default-prefix dedup regression for SPARQL targets.
   - Includes guarded-policy literal-safety regressions (`MINUS` keyword inside string literal and `'?this'` literal-only reference case).
   - Includes guarded-policy parity fixtures for `$this` pre-bound variable handling.
+  - Includes guarded-policy parity fixtures for `$path` and `$value` pre-bound variable rebinding blocks.
 - Optional staged W3C conformance corpus sync target (`W3CDataShapes*` from `Knowledge/Inbox/Fixtures` into `SHACLKitTests/Fixtures/W3CDataShapes`)
   - Includes preflight parser/loader coverage across W3C SHACL 1.2 `node-expr/shnex/*.ttl` fixtures.
   - Includes subset `sht:EvalNodeExpr` manifest-result verification for W3C SHACL 1.2 `node-expr/shnex` fixtures.
