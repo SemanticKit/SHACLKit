@@ -287,17 +287,20 @@ public struct SHACLSPARQLDefinition: Sendable, Hashable {
     public let selectQuery: String?
     public let askQuery: String?
     public let message: String?
+    public let prefixes: [String: String]
 
     public init(
         sparqlIRI: String,
         selectQuery: String? = nil,
         askQuery: String? = nil,
-        message: String? = nil
+        message: String? = nil,
+        prefixes: [String: String] = [:]
     ) {
         self.sparqlIRI = sparqlIRI
         self.selectQuery = selectQuery
         self.askQuery = askQuery
         self.message = message
+        self.prefixes = prefixes
     }
 }
 
@@ -665,6 +668,7 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             var selectQuery: String?
             var askQuery: String?
             var message: String?
+            var prefixesIRIs: Set<String> = []
         }
 
         var shapes: [String: PartialShape] = [:]
@@ -868,6 +872,10 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             } else if predicate == SHACLIRIs.message {
                 var sparql = sparqlDefinitions[subject] ?? PartialSPARQL()
                 sparql.message = parsedLiteralLexicalForm(object) ?? object
+                sparqlDefinitions[subject] = sparql
+            } else if predicate == SHACLIRIs.prefixes {
+                var sparql = sparqlDefinitions[subject] ?? PartialSPARQL()
+                sparql.prefixesIRIs.insert(object)
                 sparqlDefinitions[subject] = sparql
             }
 
@@ -1400,11 +1408,16 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
             if partial.selectQuery == nil && partial.askQuery == nil {
                 throw SHACLError.invalidShapesGraph("SPARQL definition \(sparqlIRI) is missing sh:select/sh:ask")
             }
+            let prefixes = resolveSPARQLPrefixes(
+                for: partial.prefixesIRIs,
+                triplesBySubject: triplesBySubject
+            )
             return SHACLSPARQLDefinition(
                 sparqlIRI: sparqlIRI,
                 selectQuery: partial.selectQuery,
                 askQuery: partial.askQuery,
-                message: partial.message
+                message: partial.message,
+                prefixes: prefixes
             )
         }
 
@@ -1492,6 +1505,35 @@ public struct SHACLShapesGraphLoader: SHACLShapesGraphLoading {
         default:
             return nil
         }
+    }
+
+    private func resolveSPARQLPrefixes(
+        for prefixesIRIs: Set<String>,
+        triplesBySubject: [String: [SHACLTriple]]
+    ) -> [String: String] {
+        var resolved: [String: String] = [:]
+        for prefixesIRI in prefixesIRIs.sorted() {
+            guard let prefixTriples = triplesBySubject[prefixesIRI] else {
+                continue
+            }
+            let declareNodes = prefixTriples
+                .filter { $0.predicate == SHACLIRIs.declare }
+                .map(\.object)
+                .sorted()
+            for declareNode in declareNodes {
+                guard let declareTriples = triplesBySubject[declareNode],
+                      let prefixTerm = declareTriples.first(where: { $0.predicate == SHACLIRIs.prefix })?.object,
+                      let namespaceTerm = declareTriples.first(where: { $0.predicate == SHACLIRIs.namespace })?.object else {
+                    continue
+                }
+                let prefix = parsedLiteralLexicalForm(prefixTerm) ?? prefixTerm
+                let namespace = parsedLiteralLexicalForm(namespaceTerm) ?? namespaceTerm
+                if !prefix.isEmpty && !namespace.isEmpty {
+                    resolved[prefix] = namespace
+                }
+            }
+        }
+        return resolved
     }
 
     private func isTrueBooleanTerm(_ term: String) -> Bool {
@@ -3538,7 +3580,7 @@ public struct SHACLCoreValidator: SHACLValidator {
                     continue
                 }
                 let resolved = try sparqlExecutor.select(
-                    query: selectQuery,
+                    query: withSPARQLPrefixes(selectQuery, prefixes: sparql.prefixes),
                     focusNode: nil,
                     dataGraph: dataGraph,
                     shapesGraph: shapesGraph
@@ -3581,7 +3623,7 @@ public struct SHACLCoreValidator: SHACLValidator {
 
                         if let askQuery = sparql.askQuery {
                             let result = try sparqlExecutor.ask(
-                                query: askQuery,
+                                query: withSPARQLPrefixes(askQuery, prefixes: sparql.prefixes),
                                 focusNode: focusNode,
                                 dataGraph: dataGraph,
                                 shapesGraph: shapesGraph
@@ -3603,7 +3645,7 @@ public struct SHACLCoreValidator: SHACLValidator {
 
                         if let selectQuery = sparql.selectQuery {
                             let boundNodes = try sparqlExecutor.select(
-                                query: selectQuery,
+                                query: withSPARQLPrefixes(selectQuery, prefixes: sparql.prefixes),
                                 focusNode: focusNode,
                                 dataGraph: dataGraph,
                                 shapesGraph: shapesGraph
@@ -3711,7 +3753,7 @@ public struct SHACLCoreValidator: SHACLValidator {
             for propertyValue in propertyValues {
                 if let askQuery = sparql.askQuery {
                     let result = try sparqlExecutor.ask(
-                        query: askQuery,
+                        query: withSPARQLPrefixes(askQuery, prefixes: sparql.prefixes),
                         focusNode: propertyValue,
                         dataGraph: dataGraph,
                         shapesGraph: shapesGraph
@@ -3733,7 +3775,7 @@ public struct SHACLCoreValidator: SHACLValidator {
 
                 if let selectQuery = sparql.selectQuery {
                     let boundNodes = try sparqlExecutor.select(
-                        query: selectQuery,
+                        query: withSPARQLPrefixes(selectQuery, prefixes: sparql.prefixes),
                         focusNode: propertyValue,
                         dataGraph: dataGraph,
                         shapesGraph: shapesGraph
@@ -6119,6 +6161,24 @@ public struct SHACLCoreValidator: SHACLValidator {
         return (parsed, Int(lexical) != nil)
     }
 
+    private func withSPARQLPrefixes(_ query: String, prefixes: [String: String]) -> String {
+        if prefixes.isEmpty {
+            return query
+        }
+        let lowercasedQuery = query.lowercased()
+        var lines: [String] = []
+        for (prefix, namespace) in prefixes.sorted(by: { $0.key < $1.key }) {
+            let marker = "prefix \(prefix.lowercased()):"
+            if !lowercasedQuery.contains(marker) {
+                lines.append("PREFIX \(prefix): <\(namespace)>")
+            }
+        }
+        if lines.isEmpty {
+            return query
+        }
+        return lines.joined(separator: "\n") + "\n" + query
+    }
+
     private func compareRangeValueTerm(_ valueTerm: String, toBoundTerm boundTerm: String) -> ComparisonResult? {
         guard let valueComparable = parseRangeComparable(valueTerm),
               let boundComparable = parseRangeComparable(boundTerm) else {
@@ -6328,6 +6388,9 @@ private enum SHACLIRIs {
     static let ask = "http://www.w3.org/ns/shacl#ask"
     static let message = "http://www.w3.org/ns/shacl#message"
     static let prefixes = "http://www.w3.org/ns/shacl#prefixes"
+    static let declare = "http://www.w3.org/ns/shacl#declare"
+    static let prefix = "http://www.w3.org/ns/shacl#prefix"
+    static let namespace = "http://www.w3.org/ns/shacl#namespace"
     static let target = "http://www.w3.org/ns/shacl#target"
     static let expression = "http://www.w3.org/ns/shacl#expression"
     static let union = "http://www.w3.org/ns/shacl#union"

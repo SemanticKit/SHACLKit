@@ -135,12 +135,13 @@ Legend:
   - Added first-slice fixture/tests for directly targeted property-shape `sh:sparql` constraints.
   - Added first-slice fixture/tests for nested property-shape `sh:sparql` constraints.
   - Added fixture/tests for SPARQL `sh:message` propagation on node-shape and property-shape violations.
+  - Added fixture/tests proving `sh:prefixes` declarations are applied to executor-bound SPARQL query text (prefix lines injected at runtime).
 - [~] `TEST-SHACL-301` SPARQL target fixtures.
   - Added first-slice fixture/tests for `sh:target` + `sh:select` focus-node resolution through an injected executor boundary.
   - Added first-slice fixture/tests for `sh:targetNode` + inline `sh:select` focus-node resolution through the same executor boundary.
   - Added first-slice fixture/tests for directly targeted property-shape SPARQL targets.
   - Added first-slice fixture/tests for directly targeted property-shape `sh:targetNode` inline `sh:select` targets.
-  - Added fixture/test coverage proving SPARQL constraints with `sh:prefixes` declarations are accepted by loader/validator paths.
+  - Added fixture/test coverage proving SPARQL constraints with `sh:prefixes` declarations are accepted by loader/validator paths and flow through executor-bound query text.
 - [~] `TEST-SHACL-302` SPARQL extension sandbox/guard behavior tests.
   - Added default-deny executor behavior test coverage proving SPARQL evaluation requires explicit sandboxed executor injection for both `sh:select` and `sh:ask`.
   - Added guarded-executor policy coverage for keyword blocking, query-length blocking, and allowed-query pass-through behavior.

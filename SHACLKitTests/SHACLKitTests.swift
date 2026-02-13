@@ -790,6 +790,16 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(definition.selectQuery?.contains("SELECT ?this") == true)
 }
 
+@Test func shapesLoaderParsesSPARQLPrefixDeclarations() async throws {
+    let loader = SHACLShapesGraphLoader()
+    let graph = try loader.load(from: fixtureData("sparqlConstraintWithPrefixesShapes.ttl"))
+
+    #expect(graph.sparqlDefinitions.count == 1)
+    let definition = try #require(graph.sparqlDefinitions.first)
+    #expect(definition.sparqlIRI == "http://example.com/NameConstraint")
+    #expect(definition.prefixes["ex"] == "http://example.com/")
+}
+
 @Test func w3cCuratedFixturePackIsSyncedIntoTestResources() async throws {
     #expect(fixtureExists("W3CDataShapes/SourceInventory.md"))
     #expect(fixtureExists("W3CDataShapes/data-shapes-test-suite/tests/manifest.ttl"))
@@ -3188,10 +3198,14 @@ private struct TestShapesSource {
 }
 
 @Test func coreValidatorAcceptsSPARQLConstraintWithPrefixesDeclaration() async throws {
+    let prefixedQuery = """
+    PREFIX ex: <http://example.com/>
+    SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }
+    """
     let executor = TestSPARQLExecutor(
         selectResults: [
-            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/alice": ["http://example.com/alice"],
-            "SELECT ?this WHERE { ?this ex:name ?name . FILTER(strlen(str(?name)) = 0) }|http://example.com/bob": [],
+            "\(prefixedQuery)|http://example.com/alice": ["http://example.com/alice"],
+            "\(prefixedQuery)|http://example.com/bob": [],
         ]
     )
     let validator = SHACLCoreValidator(sparqlExecutor: executor)
