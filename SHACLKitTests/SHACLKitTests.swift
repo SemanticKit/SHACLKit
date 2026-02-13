@@ -3255,6 +3255,17 @@ private struct TestShapesSource {
     #expect(result.violations.count == 1)
 }
 
+@Test func coreValidatorInjectsSPARQLPrefixesWhenLiteralContainsPrefixMarker() async throws {
+    let executor = PrefixMarkerLiteralSPARQLExecutor()
+    let validator = SHACLCoreValidator(sparqlExecutor: executor)
+    let shapes = try fixtureData("sparqlConstraintWithPrefixMarkerLiteralShapes.ttl")
+    let dataGraph = try fixtureData("sparqlData.ttl")
+
+    let result = try validator.validate(dataGraph: dataGraph, shapesGraph: shapes)
+    #expect(!result.conforms)
+    #expect(result.violations.count == 1)
+}
+
 @Test func coreValidatorUsesSPARQLMessageForNodeShapeConstraintViolation() async throws {
     let executor = TestSPARQLExecutor(
         selectResults: [
@@ -3770,5 +3781,34 @@ private struct TestSPARQLExecutor: SHACLSPARQLExecutor {
     ) throws -> Bool {
         let key = "\(query)|\(focusNode ?? "")"
         return askResults[key] ?? true
+    }
+}
+
+private struct PrefixMarkerLiteralSPARQLExecutor: SHACLSPARQLExecutor {
+    func select(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> [String] {
+        let containsInjectedPrefix = query.contains("PREFIX ex: <http://example.com/>")
+        let containsMarkerLiteral = query.contains("BIND('prefix ex:' AS ?marker)")
+        let containsNamePattern = query.contains("?this ex:name ?name")
+        guard containsInjectedPrefix && containsMarkerLiteral && containsNamePattern else {
+            return []
+        }
+        if focusNode == "http://example.com/alice" {
+            return ["http://example.com/alice"]
+        }
+        return []
+    }
+
+    func ask(
+        query: String,
+        focusNode: String?,
+        dataGraph: SHACLDataGraph,
+        shapesGraph: SHACLShapesGraph
+    ) throws -> Bool {
+        false
     }
 }

@@ -104,6 +104,7 @@ Legend:
   - Added recursive execution for nested property-shape `sh:sparql` constraints.
   - Added `sh:message` parsing/propagation for SPARQL constraint violations on node and property shapes.
   - Added `sh:prefixes` + `sh:declare`/`sh:prefix`/`sh:namespace` parsing and runtime query-prefix injection before SPARQL executor calls.
+  - Hardened runtime prefix deduplication to recognize declared `PREFIX` directives structurally (not substring-based), avoiding false negatives when `prefix` markers appear inside query string literals.
 - [~] `REQ-SHACL-301` Implement SHACL SPARQL targets.
   - Added first-slice parsing and focus-node resolution hooks for `sh:target` with `sh:select` through an explicit executor boundary.
   - Added first-slice support for `sh:targetNode` values backed by inline `sh:select` resources.

@@ -138,6 +138,7 @@ Legend:
   - Added fixture/tests proving `sh:prefixes` declarations are applied to executor-bound SPARQL query text (prefix lines injected at runtime).
   - Added regression fixture/test proving runtime prefix injection does not duplicate prefixes already declared inline in query text.
   - Added regression fixture/test proving runtime prefix injection order is deterministic (sorted by prefix label).
+  - Added regression fixture/test proving runtime prefix injection still occurs when query string literals contain `prefix <label>:` text that is not an actual `PREFIX` directive.
 - [~] `TEST-SHACL-301` SPARQL target fixtures.
   - Added first-slice fixture/tests for `sh:target` + `sh:select` focus-node resolution through an injected executor boundary.
   - Added first-slice fixture/tests for `sh:targetNode` + inline `sh:select` focus-node resolution through the same executor boundary.

@@ -6165,11 +6165,10 @@ public struct SHACLCoreValidator: SHACLValidator {
         if prefixes.isEmpty {
             return query
         }
-        let lowercasedQuery = query.lowercased()
+        let declaredPrefixLabels = declaredSPARQLPrefixLabels(in: query)
         var lines: [String] = []
         for (prefix, namespace) in prefixes.sorted(by: { $0.key < $1.key }) {
-            let marker = "prefix \(prefix.lowercased()):"
-            if !lowercasedQuery.contains(marker) {
+            if !declaredPrefixLabels.contains(prefix.lowercased()) {
                 lines.append("PREFIX \(prefix): <\(namespace)>")
             }
         }
@@ -6177,6 +6176,26 @@ public struct SHACLCoreValidator: SHACLValidator {
             return query
         }
         return lines.joined(separator: "\n") + "\n" + query
+    }
+
+    private func declaredSPARQLPrefixLabels(in query: String) -> Set<String> {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?im)^\s*prefix\s+([A-Za-z_][A-Za-z0-9_-]*|)\s*:"#,
+            options: []
+        ) else {
+            return []
+        }
+        let fullRange = NSRange(query.startIndex..<query.endIndex, in: query)
+        let matches = regex.matches(in: query, options: [], range: fullRange)
+        var labels: Set<String> = []
+        labels.reserveCapacity(matches.count)
+        for match in matches {
+            guard let range = Range(match.range(at: 1), in: query) else {
+                continue
+            }
+            labels.insert(String(query[range]).lowercased())
+        }
+        return labels
     }
 
     private func compareRangeValueTerm(_ valueTerm: String, toBoundTerm boundTerm: String) -> ComparisonResult? {
