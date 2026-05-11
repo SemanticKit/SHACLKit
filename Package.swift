@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.3
 import PackageDescription
 
 let package = Package(
@@ -6,7 +6,7 @@ let package = Package(
     platforms: [
         .macOS(.v26),
         .iOS(.v26),
-        .visionOS(.v26)
+        .visionOS(.v26),
     ],
     products: [
         .library(
@@ -15,13 +15,12 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(path: "../SemanticKit"),
-        .package(path: "../RDFKit")
+        .package(url: "https://github.com/SemanticKit/RDFKit.git", branch: "main"),
+        .package(url: "https://github.com/SemanticKit/SemanticKit.git", branch: "main"),
     ],
     targets: [
         .target(
             name: "SHACLKit",
-            path: "SHACLKit"
         ),
         .testTarget(
             name: "SHACLKitTests",
@@ -30,7 +29,6 @@ let package = Package(
                 "SemanticKit",
                 "RDFKit"
             ],
-            path: "SHACLKitTests",
             resources: [
                 .copy("Fixtures")
             ]
