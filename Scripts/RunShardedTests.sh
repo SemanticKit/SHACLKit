@@ -61,9 +61,13 @@ run_parallel() {
 }
 
 run_sequential() {
-  run_shard core coreValidator
-  run_shard expr nodeExpressionEvaluator shapesLoaderParses focusNodeResolver
-  run_shard w3c w3c
+  # Collect failures explicitly: this function runs as an `if` condition,
+  # where bash ignores `set -e`, so a failing shard must not be masked.
+  local fail=0
+  run_shard core coreValidator || fail=1
+  run_shard expr nodeExpressionEvaluator shapesLoaderParses focusNodeResolver || fail=1
+  run_shard w3c w3c || fail=1
+  return "${fail}"
 }
 
 if [[ "${MODE}" == "sequential" ]]; then
