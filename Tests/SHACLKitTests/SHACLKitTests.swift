@@ -1,6 +1,4 @@
 import Foundation
-import RDFKit
-import SemanticKit
 import Testing
 @testable import SHACLKit
 
@@ -629,25 +627,6 @@ private func loadW3CCuratedConformanceCases() throws -> [W3CCuratedConformanceCa
     return cases
 }
 
-private func semanticGraph(fromTurtleData data: Data) throws -> Graph {
-    guard let turtle = String(data: data, encoding: .utf8) else {
-        throw SHACLError.invalidUTF8
-    }
-    let sanitizedTurtle = normalizedW3CTurtle(turtle)
-        .replacingOccurrences(of: "\r\n", with: "\n")
-        .replacingOccurrences(of: "<>", with: "<https://example.invalid/shaclkit/w3c-fixture-self>")
-    let baseIRI = try IRI("https://example.invalid/shaclkit/w3c-fixture")
-    return try Graph(turtle: sanitizedTurtle, baseIRI: baseIRI)
-}
-
-private func supportsStandardTurtleSemanticPreflight(_ data: Data) -> Bool {
-    guard let turtle = String(data: data, encoding: .utf8) else {
-        return false
-    }
-    // SHACL test fixtures may include annotation shorthand (`{| ... |}`), which is non-standard Turtle.
-    return !turtle.contains("{|") && !turtle.contains("|}")
-}
-
 private func normalizedW3CTurtle(_ turtle: String) -> String {
     turtle
         .replacingOccurrences(of: "{|", with: ";")
@@ -838,7 +817,7 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     #expect(fixtureExists("W3CDataShapes/shacl12-test-suite/tests/rules/manifest-rules.ttl"))
 }
 
-@Test func w3cNodeExprShnexFixturesParseThroughSemanticAndLoaders() async throws {
+@Test func w3cNodeExprShnexFixturesParseThroughSHACLLoaders() async throws {
     let shnexDirectoryURL = fixturesRootURL()
         .appendingPathComponent("W3CDataShapes")
         .appendingPathComponent("shacl12-test-suite/tests/node-expr/shnex")
@@ -856,14 +835,13 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
 
     for turtleFixtureURL in turtleFixtureURLs {
         let fixturePayload = try Data(contentsOf: turtleFixtureURL)
-        _ = try semanticGraph(fromTurtleData: fixturePayload)
         let dataGraph = try dataLoader.load(from: fixturePayload)
         _ = try shapesLoader.load(from: fixturePayload)
         #expect(!dataGraph.triples.isEmpty)
     }
 }
 
-@Test func w3cRulesEvalFixturesParseThroughSemanticAndLoaders() async throws {
+@Test func w3cRulesEvalFixturesParseThroughSHACLLoaders() async throws {
     let rulesEvalDirectoryURL = fixturesRootURL()
         .appendingPathComponent("W3CDataShapes")
         .appendingPathComponent("shacl12-test-suite/tests/rules/eval")
@@ -885,7 +863,6 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
 
     for turtleFixtureURL in turtleFixtureURLs {
         let fixturePayload = try Data(contentsOf: turtleFixtureURL)
-        _ = try semanticGraph(fromTurtleData: fixturePayload)
         _ = try dataLoader.load(from: fixturePayload)
         _ = try shapesLoader.load(from: fixturePayload)
     }
@@ -906,13 +883,12 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
 
     for relativePath in manifestPaths {
         let payload = try Data(contentsOf: fixturesRoot.appendingPathComponent(relativePath))
-        _ = try semanticGraph(fromTurtleData: payload)
         _ = try dataLoader.load(from: payload)
         _ = try shapesLoader.load(from: payload)
     }
 }
 
-@Test func w3cSPARQLFixturesParseThroughSemanticAndDataLoaders() async throws {
+@Test func w3cSPARQLFixturesParseThroughDataLoader() async throws {
     let sparqlDirectoryURL = fixturesRootURL()
         .appendingPathComponent("W3CDataShapes")
         .appendingPathComponent("shacl12-test-suite/tests/sparql")
@@ -933,9 +909,6 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
     let dataLoader = SHACLDataGraphLoader()
     for fixtureURL in fixtureURLs {
         let payload = try normalizedLineEndings(Data(contentsOf: fixtureURL))
-        if supportsStandardTurtleSemanticPreflight(payload) {
-            _ = try semanticGraph(fromTurtleData: payload)
-        }
         _ = try dataLoader.load(from: payload)
     }
 }
@@ -1262,21 +1235,13 @@ private func cleanedGraphSectionData(fromTurtleData data: Data) throws -> Data {
         )
         let dataGraphPayload = try fixtureData("W3CDataShapes/\(resolvedPaths.data)")
         let shapesGraphPayload = try fixtureData("W3CDataShapes/\(resolvedPaths.shapes)")
-        let dataSupportsSemanticPreflight = supportsStandardTurtleSemanticPreflight(dataGraphPayload)
-        let shapesSupportsSemanticPreflight = supportsStandardTurtleSemanticPreflight(shapesGraphPayload)
         let cleanedDataGraphPayload = try cleanedGraphSectionData(fromTurtleData: dataGraphPayload)
         let cleanedShapesGraphPayload = try cleanedGraphSectionData(fromTurtleData: shapesGraphPayload)
 
         let parsedDataGraph: SHACLDataGraph
         let parsedShapesGraph: SHACLShapesGraph
         do {
-            if dataSupportsSemanticPreflight {
-                _ = try semanticGraph(fromTurtleData: cleanedDataGraphPayload)
-            }
             parsedDataGraph = try SHACLDataGraphLoader().load(from: cleanedDataGraphPayload)
-            if shapesSupportsSemanticPreflight {
-                _ = try semanticGraph(fromTurtleData: cleanedShapesGraphPayload)
-            }
             parsedShapesGraph = try SHACLShapesGraphLoader().load(from: cleanedShapesGraphPayload)
         } catch {
             Issue.record("W3C curated case \(conformanceCase.caseID) failed preflight parse/load: \(error)")

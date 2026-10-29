@@ -12,7 +12,7 @@ fi
 
 FILTERS=(
   "w3cNodeExprShnexEvalSubsetMatchesManifestResults"
-  "w3cNodeExprShnexFixturesParseThroughSemanticAndLoaders"
+  "w3cNodeExprShnexFixturesParseThroughSHACLLoaders"
   "w3cCuratedConformanceSubsetMatchesExpectations"
   "coreValidatorRuleEvaluationTerminatesForSelfLoopingRule"
   "coreValidatorExecutesSPARQLSelectConstraintThroughExecutorBoundary"
