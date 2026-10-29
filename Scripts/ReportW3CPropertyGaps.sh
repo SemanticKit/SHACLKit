@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FIXTURE_ROOT="$ROOT_DIR/SHACLKitTests/Fixtures/W3CDataShapes"
+FIXTURE_ROOT="$ROOT_DIR/Tests/SHACLKitTests/Fixtures/W3CDataShapes"
 PROP_DIR="$FIXTURE_ROOT/shacl12-test-suite/tests/core/property"
 MANIFEST="$FIXTURE_ROOT/W3CCuratedConformanceManifest.tsv"
 
@@ -39,11 +39,11 @@ while IFS= read -r abs_path; do
   blocked="no"
   reason="not yet curated"
 
-  if rg -q '"""' "$abs_path"; then
+  if grep -qF '"""' "$abs_path"; then
     blocked="yes"
     reason="uses triple-quoted Turtle literal"
     blocked_count=$((blocked_count + 1))
-  elif rg -q 'sh:sourceConstraintComponent sh:(MemberShape|ReifierShape|UniqueMembers|MinListLength|MaxListLength|SomeValue|SingleLine)ConstraintComponent' "$abs_path"; then
+  elif grep -qE 'sh:sourceConstraintComponent sh:(MemberShape|ReifierShape|UniqueMembers|MinListLength|MaxListLength|SomeValue|SingleLine)ConstraintComponent' "$abs_path"; then
     reason="requires unshipped/partial SHACL 1.2 constraint"
   fi
 

@@ -2,9 +2,9 @@
 
 This directory contains SHACLKit test fixtures grouped by constraint family.
 
-Sync source of truth:
-- Canonical inbox path: `./Knowledge/SHACL/Fixtures`
-- Sync command: `./Scripts/SyncFixturesFromKnowledge.sh`
+Source of truth:
+- These fixtures are canonical in this repository; edit them here.
+- The W3C corpus under `W3CDataShapes` was imported from https://github.com/w3c/data-shapes; `W3CDataShapes/SourceInventory.md` records what was imported.
 
 Current local families:
 - Targets and focus resolution
@@ -40,7 +40,7 @@ Current local families:
   - Includes guarded-policy comment-safety regressions for `AS $path` and `AS $value` markers inside line comments.
   - Includes guarded-policy parity fixtures for `$this` pre-bound variable handling.
   - Includes guarded-policy parity fixtures for `$path` and `$value` pre-bound variable rebinding blocks.
-- Optional staged W3C conformance corpus sync target (`W3CDataShapes*` from `Knowledge/Inbox/Fixtures` into `SHACLKitTests/Fixtures/W3CDataShapes`)
+- Curated W3C conformance corpus (`W3CDataShapes`)
   - Includes preflight parser/loader coverage across W3C SHACL 1.2 `node-expr/shnex/*.ttl` fixtures.
   - Includes subset `sht:EvalNodeExpr` manifest-result verification for W3C SHACL 1.2 `node-expr/shnex` fixtures.
   - Includes W3C SHACL 1.2 SPARQL suite parser/data-loader preflight coverage across `sparql` fixture trees.

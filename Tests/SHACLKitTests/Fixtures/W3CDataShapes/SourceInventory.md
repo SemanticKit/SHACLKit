@@ -16,4 +16,4 @@ Included directories:
 
 Notes:
 - This is a curated fixture-and-manifest subset intended for SHACL core, SPARQL, node-expression, and rules work.
-- Keep this folder as inbox staging; do not treat as canonical until triaged and synced into topic-specific Knowledge folders.
+- This folder is the canonical copy SHACLKit tests run against. Refreshing it from upstream is a deliberate fixture change: re-run the full suite and update `W3CCuratedConformanceManifest.tsv` in the same change.

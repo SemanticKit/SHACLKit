@@ -1,17 +1,18 @@
 # SHACLKit Test Workflow
 
-This project supports two execution modes:
+Run these scripts from anywhere; each one changes to the repository root before it calls SwiftPM.
+They call `swift` from `PATH`. Set `SWIFT` to use another toolchain driver, for example `SWIFT=/path/to/swift ./Scripts/RunLegacyFull.sh`.
 
 ## 1) Legacy Full (stable baseline)
 Use this when you want a single authoritative result with minimal orchestration.
 
 Command:
 ```bash
-./Frameworks/SHACLKit/Scripts/RunLegacyFull.sh
+./Scripts/RunLegacyFull.sh
 ```
 
 Behavior:
-- Runs `./Scripts/ContainerTask.sh test Frameworks/SHACLKit`
+- Runs `swift test` at the repository root
 - Full suite only
 
 ## 2) Layered Cycle (fast + fallback)
@@ -19,25 +20,23 @@ Use this for active development cycles where faster feedback is needed.
 
 Command (recommended):
 ```bash
-./Frameworks/SHACLKit/Scripts/RunLayeredCycle.sh --sharded
+./Scripts/RunLayeredCycle.sh --sharded
 ```
 
 Behavior:
-1. Changed-area gate (auto-selected filters from current diff; falls back to fast gate)
-2. Sharded validation (`core`, `expr`, `w3c`)
-3. Automatic fallback from parallel to sequential shards on hosts where parallel container bootstrap is unsupported
-4. Batch runner emits per-step wall-time (`[timing] ...`) for cycle speed tracking
+1. Changed-area gate (filters chosen from the diff against `origin/main` plus uncommitted changes; falls back to the fast gate)
+2. Sharded validation (`core`, `expr`, `w3c`), each shard in its own `--scratch-path` so they can build in parallel
+3. Batch runner emits per-step wall-time (`[timing] ...`) for cycle speed tracking
 
 Optional modes:
 ```bash
-./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --full
-./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --sharded --changed
-./Frameworks/SHACLKit/Scripts/RunBatchCycle.sh --sharded --fast
-./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --parallel
-./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --sequential
-./Frameworks/SHACLKit/Scripts/RunShardedTests.sh --auto
-./Frameworks/SHACLKit/Scripts/RunChangedAreaGate.sh [<base-ref>]
-./Frameworks/SHACLKit/Scripts/ReportW3CPropertyGaps.sh
+./Scripts/RunBatchCycle.sh --full
+./Scripts/RunBatchCycle.sh --sharded --changed
+./Scripts/RunBatchCycle.sh --sharded --fast
+./Scripts/RunShardedTests.sh --parallel
+./Scripts/RunShardedTests.sh --sequential
+./Scripts/RunChangedAreaGate.sh [<base-ref>]
+./Scripts/ReportW3CPropertyGaps.sh
 ```
 
 ## Quick recommendations
@@ -47,10 +46,10 @@ Optional modes:
 
 ## Logs
 Sharded logs are written to:
-- `Frameworks/SHACLKit/.build/test-shards/`
+- `.build/test-shards/`
 
 ## Coverage Planning
 Generate an up-to-date report of uncurated SHACL 1.2 property fixtures and parser-blocked cases:
 ```bash
-./Frameworks/SHACLKit/Scripts/ReportW3CPropertyGaps.sh
+./Scripts/ReportW3CPropertyGaps.sh
 ```

@@ -2,8 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-CONTAINER_TASK="${WORKSPACE_ROOT}/Scripts/ContainerTask.sh"
+FULL="${SCRIPT_DIR}/RunLegacyFull.sh"
 FAST_GATE="${SCRIPT_DIR}/RunFastConformanceGate.sh"
 CHANGED_GATE="${SCRIPT_DIR}/RunChangedAreaGate.sh"
 SHARDED="${SCRIPT_DIR}/RunShardedTests.sh"
@@ -55,7 +54,7 @@ echo "[batch-cycle] step 2/2: validation mode = ${MODE}"
 if [[ "${MODE}" == "sharded" ]]; then
   run_timed "step2-sharded" "${SHARDED}"
 else
-  run_timed "step2-full" "${CONTAINER_TASK}" test Frameworks/SHACLKit
+  run_timed "step2-full" "${FULL}"
 fi
 
 echo "[batch-cycle] complete"

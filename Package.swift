@@ -14,21 +14,13 @@ let package = Package(
             targets: ["SHACLKit"]
         )
     ],
-    dependencies: [
-        .package(url: "https://github.com/SemanticKit/RDFKit.git", branch: "main"),
-        .package(url: "https://github.com/SemanticKit/SemanticKit.git", branch: "main"),
-    ],
     targets: [
         .target(
-            name: "SHACLKit",
+            name: "SHACLKit"
         ),
         .testTarget(
             name: "SHACLKitTests",
-            dependencies: [
-                "SHACLKit",
-                "SemanticKit",
-                "RDFKit"
-            ],
+            dependencies: ["SHACLKit"],
             resources: [
                 .copy("Fixtures")
             ]
