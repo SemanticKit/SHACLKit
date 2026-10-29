@@ -2,69 +2,57 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-CONTAINER_TASK="${WORKSPACE_ROOT}/Scripts/ContainerTask.sh"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SWIFT="${SWIFT:-swift}"
 
-if [[ ! -x "${CONTAINER_TASK}" ]]; then
-  echo "error: missing container task script at ${CONTAINER_TASK}" >&2
-  exit 1
-fi
-
-BUILD_KEY_BASE="${CONTAINERBUILDKEY:-shard}"
-LOG_DIR="${WORKSPACE_ROOT}/Frameworks/SHACLKit/.build/test-shards"
+LOG_DIR="${REPO_ROOT}/.build/test-shards"
 mkdir -p "${LOG_DIR}"
-MODE="auto"
-PARALLEL_BLOCK_MARKER="${LOG_DIR}/.parallel-bootstrap-unavailable"
-PARALLEL_BLOCK_SECONDS=3600
+MODE="parallel"
 
 for arg in "$@"; do
   case "${arg}" in
-    --parallel)
+    --parallel|--auto)
       MODE="parallel"
       ;;
     --sequential)
       MODE="sequential"
       ;;
-    --auto)
-      MODE="auto"
-      ;;
     *)
-      echo "Usage: ${0} [--auto|--parallel|--sequential]" >&2
+      echo "Usage: ${0} [--parallel|--sequential]" >&2
+      echo "  --parallel (default, alias --auto): run the shards at once, each in its own scratch path" >&2
+      echo "  --sequential: run the shards one after another" >&2
       exit 1
       ;;
   esac
 done
 
+# Each shard builds into its own scratch path so parallel shards never share a build directory.
 run_shard() {
   local name="$1"
-  local build_key="$2"
-  shift 2
+  shift
   local filters=("$@")
 
-  local cmd=("swift" "test")
   local filter_pattern
   filter_pattern="$(IFS='|'; echo "${filters[*]}")"
-  cmd+=("--filter" "${filter_pattern}")
-
-  printf -v test_command '%q ' "${cmd[@]}"
-  echo "[shard:${name}] ${test_command}"
+  echo "[shard:${name}] ${SWIFT} test --filter ${filter_pattern}"
 
   (
-    CONTAINERBUILDKEY="${build_key}" "${CONTAINER_TASK}" command Frameworks/SHACLKit "${test_command}"
+    cd "${REPO_ROOT}"
+    "${SWIFT}" test --scratch-path "${REPO_ROOT}/.build/shard-${name}" --filter "${filter_pattern}"
   ) >"${LOG_DIR}/${name}.log" 2>&1
 }
 
 run_parallel() {
-  run_shard core "${BUILD_KEY_BASE}-core" coreValidator &
-  PID_CORE=$!
-  run_shard expr "${BUILD_KEY_BASE}-expr" nodeExpressionEvaluator shapesLoaderParses focusNodeResolver &
-  PID_EXPR=$!
-  run_shard w3c "${BUILD_KEY_BASE}-w3c" w3c &
-  PID_W3C=$!
+  run_shard core coreValidator &
+  local pid_core=$!
+  run_shard expr nodeExpressionEvaluator shapesLoaderParses focusNodeResolver &
+  local pid_expr=$!
+  run_shard w3c w3c &
+  local pid_w3c=$!
 
   local fail=0
   local pid
-  for pid in "${PID_CORE}" "${PID_EXPR}" "${PID_W3C}"; do
+  for pid in "${pid_core}" "${pid_expr}" "${pid_w3c}"; do
     if ! wait "${pid}"; then
       fail=1
     fi
@@ -73,65 +61,23 @@ run_parallel() {
 }
 
 run_sequential() {
-  run_shard core "${BUILD_KEY_BASE}-core" coreValidator
-  run_shard expr "${BUILD_KEY_BASE}-expr" nodeExpressionEvaluator shapesLoaderParses focusNodeResolver
-  run_shard w3c "${BUILD_KEY_BASE}-w3c" w3c
+  run_shard core coreValidator
+  run_shard expr nodeExpressionEvaluator shapesLoaderParses focusNodeResolver
+  run_shard w3c w3c
 }
 
-marker_is_fresh() {
-  local marker="$1"
-  local now mtime age
-
-  [[ -f "${marker}" ]] || return 1
-  now=$(date +%s)
-
-  if mtime=$(stat -f %m "${marker}" 2>/dev/null); then
-    :
-  elif mtime=$(stat -c %Y "${marker}" 2>/dev/null); then
-    :
-  else
-    return 1
-  fi
-
-  age=$((now - mtime))
-  [[ "${age}" -lt "${PARALLEL_BLOCK_SECONDS}" ]]
-}
-
-if [[ "${MODE}" == "parallel" ]]; then
-  if run_parallel; then
-    echo "[sharded] all shards passed in parallel. Logs: ${LOG_DIR}"
+if [[ "${MODE}" == "sequential" ]]; then
+  if run_sequential; then
+    echo "[sharded] all shards passed sequentially. Logs: ${LOG_DIR}"
     exit 0
   fi
-  echo "[sharded] parallel mode failed. Logs: ${LOG_DIR}" >&2
+  echo "[sharded] a shard failed. Logs: ${LOG_DIR}" >&2
   exit 1
 fi
 
-if [[ "${MODE}" == "sequential" ]]; then
-  run_sequential
-  echo "[sharded] all shards passed sequentially. Logs: ${LOG_DIR}"
-  exit 0
-fi
-
-if marker_is_fresh "${PARALLEL_BLOCK_MARKER}"; then
-  echo "[sharded] recent parallel bootstrap failure detected; running sequential shards directly."
-  run_sequential
-  echo "[sharded] all shards passed sequentially. Logs: ${LOG_DIR}"
-  exit 0
-fi
-
 if run_parallel; then
-  rm -f "${PARALLEL_BLOCK_MARKER}"
   echo "[sharded] all shards passed in parallel. Logs: ${LOG_DIR}"
   exit 0
 fi
-
-if grep -R -q "failed to bootstrap container" "${LOG_DIR}"; then
-  touch "${PARALLEL_BLOCK_MARKER}"
-  echo "[sharded] parallel bootstrap failed on this host, retrying shards sequentially..."
-  run_sequential
-  echo "[sharded] all shards passed sequentially. Logs: ${LOG_DIR}"
-  exit 0
-fi
-
 echo "[sharded] one or more shards failed. Logs: ${LOG_DIR}" >&2
 exit 1

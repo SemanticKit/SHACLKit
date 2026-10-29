@@ -7,18 +7,18 @@ Legend:
 
 ## Test Infrastructure
 
-- [x] `TEST-SHACL-000` Create test target and fixtures directory (`SHACLKitTests/Fixtures`).
-- [x] `TEST-SHACL-001` Add canonical SHACL Core fixture corpus copied from Knowledge master set.
-  - Canonical fixtures now live in `Knowledge/SHACL/Fixtures` and sync via `Scripts/SyncFixturesFromKnowledge.sh`.
+- [x] `TEST-SHACL-000` Create test target and fixtures directory (`Tests/SHACLKitTests/Fixtures`).
+- [x] `TEST-SHACL-001` Add canonical SHACL Core fixture corpus.
+  - The canonical fixtures live in this repository under `Tests/SHACLKitTests/Fixtures`.
 - [x] `TEST-SHACL-003` Add curated W3C fixture-pack sync target for conformance expansion.
-  - Optional corpus sync now materializes under `SHACLKitTests/Fixtures/W3CDataShapes` from newest `Knowledge/Inbox/Fixtures/W3CDataShapes*`.
+  - The curated W3C corpus lives under `Tests/SHACLKitTests/Fixtures/W3CDataShapes`, imported from https://github.com/w3c/data-shapes (see its `SourceInventory.md`).
   - Added smoke coverage asserting curated fixture availability in the test bundle.
-  - Added curated conformance subset harness with explicit per-case expectations and RDFKit semantic parser preflight for standard-Turtle fixture ingestion.
+  - Added curated conformance subset harness with explicit per-case expectations.
   - Added W3C-aligned coverage for node-shape datatype/string/range/`hasValue`/`in` cases plus implicit class targeting behavior.
 - [x] `TEST-SHACL-002` Add helper loaders for data graph + shapes graph fixture pairs.
 - [x] `TEST-SHACL-004` Add speed-cycle test runners for fast gate and sharded execution.
   - Added `Scripts/RunFastConformanceGate.sh` (targeted high-signal conformance checks).
-  - Added `Scripts/RunShardedTests.sh` (parallel `core` / `expr` / `w3c` shards via container commands).
+  - Added `Scripts/RunShardedTests.sh` (parallel `core` / `expr` / `w3c` shards, each with its own SwiftPM scratch path).
   - Added `Scripts/RunBatchCycle.sh` to enforce batched workflow (`fast gate` + one final full or sharded pass).
 
 ## Phase 1: Core Behavior Tests
@@ -101,7 +101,7 @@ Legend:
 - [x] `TEST-SHACL-200` Node expression conformance fixtures.
   - Added fixtures/tests for `sh:union` and `sh:intersection` subset evaluation, nesting, and cycle handling.
   - Added fixture coverage for bare Turtle boolean literals in node-expression members.
-  - Added W3C SHACL 1.2 `node-expr/shnex` fixture preflight coverage through SemanticKit Turtle parsing and SHACLKit data/shapes graph loaders.
+  - Added W3C SHACL 1.2 `node-expr/shnex` fixture preflight coverage through the SHACLKit data/shapes graph loaders.
   - Added W3C SHACL 1.2 `sht:EvalNodeExpr` manifest-evaluation subset harness (ordered and multiset comparison modes).
   - Expanded W3C manifest-evaluation subset to include `constant.ttl`, `empty.ttl`, and `list.ttl`.
   - Expanded W3C manifest-evaluation subset to include `filterShape.ttl` and `intersection.ttl`.
@@ -122,7 +122,7 @@ Legend:
   - Added fixtures/tests for property-shape `sh:condition` gating behavior.
   - Added SHACL 1.2 rules `eval` data/result TTL preflight coverage through SHACLKit graph loaders.
   - Rules preflight now includes negation result fixtures after single-quoted literal parser support.
-  - Added SHACL 1.2 rules manifest preflight coverage for `manifest-rules.ttl` and nested rules manifests (`eval`, `stratification`, `syntax`, `wellformed`) through RDFKit semantic parsing and SHACLKit graph loaders.
+  - Added SHACL 1.2 rules manifest preflight coverage for `manifest-rules.ttl` and nested rules manifests (`eval`, `stratification`, `syntax`, `wellformed`) through the SHACLKit graph loaders.
   - Added rules eval manifest artifact-resolution checks ensuring each `srt:RulesEvalTest` entry references existing ruleset/data/result files.
   - Added rules syntax/wellformed/stratification manifest artifact checks ensuring all referenced `.srl` ruleset files exist.
   - Added manifest-driven `.srl` preflight conformance checks asserting positive/negative expectations across `syntax`, `wellformed`, and `stratification` suites.
