@@ -526,6 +526,12 @@ public struct SHACL: Ontology {
             Comment("A regular expression each value node matches.")
         }
 
+        Property("flags") {
+            Type(RDF.Property)
+            Label("flags")
+            Comment("The flags of the regular expression of sh:pattern.")
+        }
+
         Property("singleLine") {
             Type(RDF.Property)
             Label("singleLine")

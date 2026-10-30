@@ -1,5 +1,4 @@
-import Foundation
-
+/// A shapes graph adapter made from a closure.
 public struct AnySHACLShapesGraphAdapter<Source>: SHACLShapesGraphAdapting {
     private let adapter: @Sendable (Source) throws -> SHACLShapesGraph
 
