@@ -5,4 +5,5 @@ ex:ThingShape a sh:NodeShape ;
   sh:targetClass ex:Person, ex:Agent .
 
 ex:NamePropShape a sh:PropertyShape ;
+  sh:path ex:name ;
   sh:targetNode ex:alice .

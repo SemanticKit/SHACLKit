@@ -14,4 +14,4 @@ ex:ZipShape a sh:PropertyShape ;
   sh:sparql ex:ZipConstraint .
 
 ex:ZipConstraint
-  sh:select "SELECT ?this WHERE { FILTER(strlen(str(?this)) = 0) }" .
+  sh:select "SELECT $this ?value WHERE { $this $PATH ?value . FILTER(strlen(str(?value)) = 0) }" .

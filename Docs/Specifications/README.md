@@ -23,3 +23,12 @@ Tracking documents:
 
 - `Docs/Requirements/SHACLImplementationChecklist.md`
 - `Docs/Requirements/SHACLTestsChecklist.md`
+
+## Vocabularies
+
+The SHACL vocabulary is not written by hand: the `SHACL` and `SHNEX` targets translate the documents the Working Group publishes into Swift on every build, with RDFKit's `RDFTranslatorPlugin`. Each document is stored byte for byte as its source gives it.
+
+| File | Source | sha256 |
+|---|---|---|
+| `Sources/SHACL/shacl.ttl` | [`shacl12-vocabularies/shacl.ttl`](https://github.com/w3c/data-shapes/blob/a6ed26f7385d6e03eeb8441d72d3c172d27657c7/shacl12-vocabularies/shacl.ttl) in github.com/w3c/data-shapes at commit a6ed26f (2026-10-25) | `f210919274934710e9bef6b59b2409df4fe7cdaff25b5708e428e3e186763857` |
+| `Sources/SHNEX/shnex.ttl` | [`shacl12-vocabularies/shnex.ttl`](https://github.com/w3c/data-shapes/blob/a6ed26f7385d6e03eeb8441d72d3c172d27657c7/shacl12-vocabularies/shnex.ttl) in github.com/w3c/data-shapes at commit a6ed26f (2026-10-25) | `c4e5d7706e00685d6e9139855627d800215d3bb9aa657f23b529da12ada5bee3` |

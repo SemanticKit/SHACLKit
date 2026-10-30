@@ -5,7 +5,7 @@ ex:ConstNodes
     shnex:nodes ( ex:a 42 ) .
 
 ex:EmptyNodes
-    shnex:nodes () .
+    shnex:nodes [] .
 
 ex:ExistsTrue
     shnex:exists ex:ConstNodes .

@@ -11,4 +11,4 @@ ex:NamePropertyShape a sh:PropertyShape ;
 
 ex:NonEmptyNameConstraint
   sh:message "Property name must not be empty" ;
-  sh:select "SELECT ?this WHERE { FILTER(strlen(str(?this)) = 0) }" .
+  sh:select "SELECT $this ?value WHERE { $this $PATH ?value . FILTER(strlen(str(?value)) = 0) }" .

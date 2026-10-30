@@ -1,5 +1,10 @@
 import Foundation
+import RDFCore
 
+/// An executor that refuses queries outside a policy before handing them to
+/// the executor it wraps: queries with a disallowed keyword, queries that
+/// rebind a pre-bound variable, `SELECT` queries that do not use `$this`,
+/// and queries over a length limit.
 public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
     public let wrappedExecutor: any SHACLSPARQLExecutor
     public let disallowedKeywords: [String]
@@ -17,27 +22,27 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
 
     public func select(
         query: String,
-        focusNode: String?,
-        dataGraph: SHACLDataGraph,
+        bindings: SHACLSPARQLSolution,
+        dataGraph: Graph,
         shapesGraph: SHACLShapesGraph
-    ) throws -> [String] {
+    ) throws -> [SHACLSPARQLSolution] {
         try enforcePolicy(query: query, requirePreboundThisReference: true)
-        return try wrappedExecutor.select(query: query, focusNode: focusNode, dataGraph: dataGraph, shapesGraph: shapesGraph)
+        return try wrappedExecutor.select(query: query, bindings: bindings, dataGraph: dataGraph, shapesGraph: shapesGraph)
     }
 
     public func ask(
         query: String,
-        focusNode: String?,
-        dataGraph: SHACLDataGraph,
+        bindings: SHACLSPARQLSolution,
+        dataGraph: Graph,
         shapesGraph: SHACLShapesGraph
     ) throws -> Bool {
         try enforcePolicy(query: query, requirePreboundThisReference: false)
-        return try wrappedExecutor.ask(query: query, focusNode: focusNode, dataGraph: dataGraph, shapesGraph: shapesGraph)
+        return try wrappedExecutor.ask(query: query, bindings: bindings, dataGraph: dataGraph, shapesGraph: shapesGraph)
     }
 
     private func enforcePolicy(query: String, requirePreboundThisReference: Bool) throws {
         if let maxQueryLength, query.count > maxQueryLength {
-            throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query length exceeds \(maxQueryLength) characters.")
+            throw SHACLError.sparqlNotExecuted("SPARQL query blocked by guard policy: query length exceeds \(maxQueryLength) characters.")
         }
 
         let policyQuery = queryWithoutLineComments(queryWithoutStringLiterals(query))
@@ -47,7 +52,7 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
             let regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
             let range = NSRange(policyQuery.startIndex..<policyQuery.endIndex, in: policyQuery)
             if regex.firstMatch(in: policyQuery, options: [], range: range) != nil {
-                throw SHACLError.notImplemented("SPARQL query blocked by guard policy: contains disallowed keyword \(keyword).")
+                throw SHACLError.sparqlNotExecuted("SPARQL query blocked by guard policy: contains disallowed keyword \(keyword).")
             }
         }
 
@@ -57,7 +62,7 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
             let pattern = #"(?i)\bAS\s+[\?\$]\#(variable)\b"#
             let regex = try NSRegularExpression(pattern: pattern)
             if regex.firstMatch(in: policyQuery, options: [], range: preboundRange) != nil {
-                throw SHACLError.notImplemented("SPARQL query blocked by guard policy: query attempts to rebind pre-bound ?\(variable).")
+                throw SHACLError.sparqlNotExecuted("SPARQL query blocked by guard policy: query attempts to rebind pre-bound ?\(variable).")
             }
         }
 
@@ -65,7 +70,7 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
             let thisReferencePattern = #"(?i)[\?\$]this\b"#
             let thisReferenceRegex = try NSRegularExpression(pattern: thisReferencePattern)
             if thisReferenceRegex.firstMatch(in: policyQuery, options: [], range: preboundRange) == nil {
-                throw SHACLError.notImplemented("SPARQL query blocked by guard policy: SELECT query does not reference pre-bound ?this.")
+                throw SHACLError.sparqlNotExecuted("SPARQL query blocked by guard policy: SELECT query does not reference pre-bound ?this.")
             }
         }
     }

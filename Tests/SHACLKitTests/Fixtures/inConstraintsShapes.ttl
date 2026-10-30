@@ -7,4 +7,4 @@ ex:PersonShape a sh:NodeShape ;
 
 ex:StatusShape a sh:PropertyShape ;
   sh:path ex:status ;
-  sh:in ex:Active, ex:Pending .
+  sh:in ( ex:Active ex:Pending ) .

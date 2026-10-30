@@ -7,7 +7,7 @@ ex:EntryShape a sh:NodeShape ;
 
 ex:RoleShape a sh:PropertyShape ;
   sh:path ex:role ;
-  sh:or ex:AdminShape , ex:EditorShape .
+  sh:or ( ex:AdminShape ex:EditorShape ) .
 
 ex:AdminShape a sh:NodeShape ;
   sh:property ex:TypeAdminShape .
