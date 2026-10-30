@@ -1,6 +1,7 @@
 import Foundation
 import IRIKit
 import RDFCore
+import RDFFormats
 import RDFKit
 import Testing
 import RDF
@@ -29,8 +30,7 @@ struct ReportTests {
 
     /// The report the W3C test in `fixture` expects as its `mf:result`.
     private func expectedReport(in graph: Graph) throws -> Graph {
-        let entry = try #require(W3CManifest.entries(of: W3CManifest.validate, in: graph).first)
-        let result = try #require(graph.object(of: entry, W3CManifest.result))
+        let result = try #require(W3CValidateTest.entries(in: graph).first?.result)
         return description(of: result, in: graph)
     }
 
@@ -46,8 +46,8 @@ struct ReportTests {
     func reportGraphMatchesExpectedResult(fixture: String) throws {
         let graph = try Fixtures.graph("W3CDataShapes/\(fixture)")
         let report = try SHACLValidator().validate(graph, against: SHACLShapesGraph(graph))
-        let written = Graph(report.graph.filter { $0.predicate != SHACL.resultMessage.iri! })
-        let expected = Graph(try expectedReport(in: graph).filter { $0.predicate != SHACL.resultMessage.iri! })
+        let written = Graph(report.graph.filter { $0.predicate != IRIKit.IRI(of: SHACL.resultMessage)! })
+        let expected = Graph(try expectedReport(in: graph).filter { $0.predicate != IRIKit.IRI(of: SHACL.resultMessage)! })
         #expect(written.isIsomorphic(to: expected), "Report of \(fixture):\n\(written)\nexpected:\n\(expected)")
     }
 
@@ -56,8 +56,8 @@ struct ReportTests {
         let report = SHACLValidationReport(conforms: true)
         let report1 = try BlankNode("report")
         #expect(report.graph == [
-            Graph.Element(subject: .blankNode(report1), predicate: RDF.type.iri!, object: .iri(SHACL.ValidationReportIndividual.iri!)),
-            Graph.Element(subject: .blankNode(report1), predicate: SHACL.conforms.iri!, object: term("true")),
+            Graph.Element(subject: .blankNode(report1), predicate: IRIKit.IRI(of: RDF.type)!, object: .iri(IRIKit.IRI(of: SHACL.ValidationReportIndividual.self)!)),
+            Graph.Element(subject: .blankNode(report1), predicate: IRIKit.IRI(of: SHACL.conforms)!, object: term("true")),
         ])
     }
 }

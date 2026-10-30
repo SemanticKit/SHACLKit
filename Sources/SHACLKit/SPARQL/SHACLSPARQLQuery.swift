@@ -1,5 +1,6 @@
 import IRIKit
 import RDFCore
+import RDFFormats
 import SHACL
 import struct RDFCore.Literal
 import struct RDFCore.Graph
@@ -51,20 +52,20 @@ public struct SHACLSPARQLQuery: Sendable, Hashable {
     /// Decodes the SPARQL-based constraint or target whose node is `node`.
     init(_ node: ObjectTerm, in graph: Graph) {
         var prefixes: [String: IRI] = [:]
-        for declarations in graph.objects(of: node, SHACL.prefixes.iri!) {
-            for declaration in graph.objects(of: declarations, SHACL.declare.iri!) {
-                guard let prefix = graph.object(of: declaration, SHACL.prefix.iri!)?.stringValue,
-                      let namespace = graph.object(of: declaration, SHACL.namespace.iri!)?.stringValue,
+        for declarations in graph.objects(of: node, IRIKit.IRI(of: SHACL.prefixes)!) {
+            for declaration in graph.objects(of: declarations, IRIKit.IRI(of: SHACL.declare)!) {
+                guard let prefix = graph.object(of: declaration, IRIKit.IRI(of: SHACL.prefix)!)?.stringValue,
+                      let namespace = graph.object(of: declaration, IRIKit.IRI(of: SHACL.namespace)!)?.stringValue,
                       let iri = IRI(rawValue: namespace) else { continue }
                 prefixes[prefix] = iri
             }
         }
         self.init(
             node: node,
-            select: graph.object(of: node, SHACL.select.iri!)?.stringValue,
-            ask: graph.object(of: node, SHACL.ask.iri!)?.stringValue,
-            message: graph.object(of: node, SHACL.message.iri!)?.stringValue,
-            isDeactivated: graph.object(of: node, SHACL.deactivated.iri!)?.literal?.isTrue ?? false,
+            select: graph.object(of: node, IRIKit.IRI(of: SHACL.select)!)?.stringValue,
+            ask: graph.object(of: node, IRIKit.IRI(of: SHACL.ask)!)?.stringValue,
+            message: graph.object(of: node, IRIKit.IRI(of: SHACL.message)!)?.stringValue,
+            isDeactivated: graph.object(of: node, IRIKit.IRI(of: SHACL.deactivated)!)?.literal?.isTrue ?? false,
             prefixes: prefixes
         )
     }

@@ -57,7 +57,7 @@ struct ValidatorTests {
               sh:minInclusive 18 ;
               sh:maxInclusive 90 .
             """))
-        let type = RDF.type.iri!
+        let type = IRIKit.IRI(of: RDF.type)!
         let age = term("ex:age").iri!
         let person = term("ex:Person")
         let integer = term("25")
@@ -106,7 +106,7 @@ struct ValidatorTests {
         #expect(report.results.count == 2)
         let severity = try #require(report.results.first?.severity)
         #expect(![SHACL.Violation, SHACL.Warning, SHACL.Info, SHACL.Debug, SHACL.Trace].contains { $0 === severity })
-        #expect(report.graph.contains { $0.predicate == SHACL.resultSeverity.iri! && $0.object == term("ex:MySeverity") })
+        #expect(report.graph.contains { $0.predicate == IRIKit.IRI(of: SHACL.resultSeverity)! && $0.object == term("ex:MySeverity") })
         #expect(report.results.last?.severity === severity)
     }
 }

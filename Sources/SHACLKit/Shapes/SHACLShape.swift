@@ -1,5 +1,6 @@
 import IRIKit
 import RDFCore
+import RDFFormats
 import Synchronization
 import RDF
 import struct RDFCore.Literal
@@ -37,6 +38,9 @@ public final class SHACLShape: Sendable, Hashable, CustomStringConvertible {
         var isClass = false
         var isDeactivated = false
         var severity: any SHACL.Severity = SHACL.Violation
+        /// The node `sh:severity` names, which the report writes for a
+        /// severity of the shapes graph's own.
+        var severityNode: ObjectTerm?
         var messages: [Literal] = []
         var constraints: [SHACLConstraint] = []
         var rules: [SHACLTripleRule] = []
@@ -77,6 +81,9 @@ public final class SHACLShape: Sendable, Hashable, CustomStringConvertible {
     /// `sh:severity` (§2.1.4), `sh:Violation` when none is given.
     public var severity: any SHACL.Severity { definition.severity }
 
+    /// The `sh:severity` node of the shapes graph, when one is given.
+    var severityNode: ObjectTerm? { definition.severityNode }
+
     /// `sh:message` (§2.1.6): the messages each result of the shape carries.
     public var messages: [Literal] { definition.messages }
 
@@ -106,17 +113,17 @@ extension SHACLShape.Definition {
     ///   value is ill-formed.
     init(_ node: ObjectTerm, in nodes: SHACLShapesGraph.Nodes) throws {
         let graph = nodes.graph
-        let types = graph.objects(of: node, RDF.type.iri!)
-        let typedNodeShape = types.contains(.iri(SHACL.NodeShapeIndividual.iri!))
-        let typedPropertyShape = types.contains(.iri(SHACL.PropertyShapeIndividual.iri!))
+        let types = graph.objects(of: node, IRIKit.IRI(of: RDF.type)!)
+        let typedNodeShape = types.contains(.iri(IRIKit.IRI(of: SHACL.NodeShapeIndividual.self)!))
+        let typedPropertyShape = types.contains(.iri(IRIKit.IRI(of: SHACL.PropertyShapeIndividual.self)!))
 
-        if let pathNode = graph.object(of: node, SHACL.path.iri!) {
+        if let pathNode = graph.object(of: node, IRIKit.IRI(of: SHACL.path)!) {
             guard let path = SHACLPropertyPath(pathNode, in: graph) else {
                 throw SHACLError.invalidShapesGraph("Shape \(node) has an ill-formed sh:path \(pathNode)")
             }
             self.path = path
         }
-        let expression = graph.object(of: node, SHACL.expression.iri!).map { SHACLNodeExpression($0, in: nodes) }
+        let expression = graph.object(of: node, IRIKit.IRI(of: SHACL.expression)!).map { SHACLNodeExpression($0, in: nodes) }
         if path == nil, let expression, !typedNodeShape {
             valueExpression = expression
         }
@@ -125,20 +132,21 @@ extension SHACLShape.Definition {
         }
 
         targets = try SHACLTarget.targets(of: node, in: nodes)
-        isClass = graph.isInstance(node, of: .iri(RDF.ClassIndividual.iri!))
-            || types.contains(.iri(SHACL.ShapeClassIndividual.iri!))
-        isDeactivated = graph.object(of: node, SHACL.deactivated.iri!)?.literal?.isTrue ?? false
-        if let value = graph.object(of: node, SHACL.severity.iri!) {
+        isClass = graph.isInstance(node, of: .iri(IRIKit.IRI(of: RDF.ClassIndividual.self)!))
+            || types.contains(.iri(IRIKit.IRI(of: SHACL.ShapeClassIndividual.self)!))
+        isDeactivated = graph.object(of: node, IRIKit.IRI(of: SHACL.deactivated)!)?.literal?.isTrue ?? false
+        if let value = graph.object(of: node, IRIKit.IRI(of: SHACL.severity)!) {
             severity = try nodes.severity(value)
+            severityNode = value
         }
-        messages = graph.objects(of: node, SHACL.message.iri!).compactMap(\.literal)
+        messages = graph.objects(of: node, IRIKit.IRI(of: SHACL.message)!).compactMap(\.literal)
         constraints = try SHACLConstraint.constraints(
             of: node,
             in: nodes,
             isPropertyShape: path != nil || valueExpression != nil,
             expression: valueExpression == nil ? expression : nil
         )
-        rules = try graph.objects(of: node, SHACL.rule.iri!)
+        rules = try graph.objects(of: node, IRIKit.IRI(of: SHACL.rule)!)
             .flatMap(graph.listOrValue)
             .map { try SHACLTripleRule($0, in: nodes) }
     }

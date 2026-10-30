@@ -3,6 +3,7 @@ import IRIKit
 import RDFCore
 import RDFKit
 import Testing
+import TestManifest
 @testable import SHACLKit
 
 @Suite("W3C data-shapes test suites", .tags(.w3c))
@@ -72,16 +73,15 @@ struct W3CSuiteTests {
             guard visited.insert(manifest.standardizedFileURL).inserted else { continue }
             #expect(FileManager.default.fileExists(atPath: manifest.path))
             let graph = try Fixtures.graph(at: manifest)
-            for include in graph.compactMap({ $0.predicate == W3CManifest.include ? W3CManifest.file($0.object) : nil }) {
+            for include in graph.includedManifests {
                 #expect(FileManager.default.fileExists(atPath: include.path))
                 pending.append(include)
             }
-            for entry in W3CManifest.entries(of: W3CManifest.validate, in: graph) {
-                let action = try #require(graph.object(of: entry, W3CManifest.action))
-                _ = try #require(graph.object(of: entry, W3CManifest.result))
-                let graphs = graph.objects(of: action, W3CManifest.dataGraph) + graph.objects(of: action, W3CManifest.shapesGraph)
+            for test in W3CValidateTest.entries(in: graph) {
+                _ = try #require(test.result)
+                let graphs = test.dataGraph + test.shapesGraph
                 #expect(graphs.count == 2)
-                for file in graphs.compactMap(W3CManifest.file) {
+                for file in graphs.compactMap(\.file) {
                     #expect(FileManager.default.fileExists(atPath: file.path), "Missing SPARQL manifest graph artifact: \(file.path)")
                 }
             }
@@ -103,17 +103,11 @@ struct W3CSuiteTests {
 
     @Test func w3cRulesEvalManifestReferencesExistingArtifacts() throws {
         let graph = try Fixtures.graph(at: Self.suite.appendingPathComponent("rules/eval/manifest.ttl"))
-        let entries = W3CManifest.entries(of: W3CManifest.rulesEvalTest, in: graph)
+        let entries = W3CRulesEvalTest.entries(in: graph)
         #expect(!entries.isEmpty)
         for entry in entries {
-            let action = try #require(graph.object(of: entry, W3CManifest.action))
-            let files = [
-                graph.object(of: action, W3CManifest.ruleset),
-                graph.object(of: action, W3CManifest.data),
-                graph.object(of: entry, W3CManifest.result),
-            ]
-            for file in files {
-                let url = try #require(file.flatMap(W3CManifest.file))
+            for file in [entry.ruleset, entry.data, entry.result] {
+                let url = try #require(file?.file)
                 #expect(FileManager.default.fileExists(atPath: url.path))
             }
         }
@@ -122,8 +116,7 @@ struct W3CSuiteTests {
     @Test func w3cRulesSyntaxAndWellformedManifestsReferenceExistingRulesetArtifacts() throws {
         for manifest in ["syntax/manifest.ttl", "wellformed/manifest.ttl", "stratification/manifest.ttl"] {
             let graph = try Fixtures.graph(at: Self.suite.appendingPathComponent("rules/\(manifest)"))
-            let rulesets = Set(graph.compactMap { $0.predicate == W3CManifest.action ? W3CManifest.file($0.object) : nil }
-                .filter { $0.pathExtension == "srl" })
+            let rulesets = Set(graph.actionFiles.filter { $0.pathExtension == "srl" })
             #expect(!rulesets.isEmpty)
             for ruleset in rulesets {
                 #expect(FileManager.default.fileExists(atPath: ruleset.path))
@@ -132,26 +125,18 @@ struct W3CSuiteTests {
     }
 
     @Test(arguments: [
-        ("syntax/manifest.ttl", SrlPreflightSuite.syntax, "RulesPositiveSyntaxTest", "RulesNegativeSyntaxTest"),
-        ("wellformed/manifest.ttl", .wellformed, "RulesPositiveWellFormednessTest", "RulesNegativeWellFormednessTest"),
-        ("stratification/manifest.ttl", .stratification, "RulesPositiveStratificationTest", "RulesNegativeStratificationTest"),
+        ("syntax/manifest.ttl", SrlPreflightSuite.syntax),
+        ("wellformed/manifest.ttl", .wellformed),
+        ("stratification/manifest.ttl", .stratification),
     ])
-    func w3cRulesSrlSuitesMatchPositiveAndNegativeManifestExpectations(
-        manifest: String,
-        suite: SrlPreflightSuite,
-        positive: String,
-        negative: String
-    ) throws {
-        let namespace = "http://www.w3.org/ns/shacl-rules-test#"
-        let positiveType = ObjectTerm.iri(IRI(rawValue: namespace + positive)!)
-        let negativeType = ObjectTerm.iri(IRI(rawValue: namespace + negative)!)
+    func w3cRulesSrlSuitesMatchPositiveAndNegativeManifestExpectations(manifest: String, suite: SrlPreflightSuite) throws {
         let graph = try Fixtures.graph(at: Self.suite.appendingPathComponent("rules/\(manifest)"))
-        let entries = W3CManifest.entries(of: positiveType, in: graph) + W3CManifest.entries(of: negativeType, in: graph)
+        let entries = W3CRulesSrlTest.entries(in: graph)
         #expect(!entries.isEmpty)
         for entry in entries {
-            let ruleset = try #require(graph.object(of: entry, W3CManifest.action).flatMap(W3CManifest.file))
+            let ruleset = try #require(entry.ruleset)
             var preflight = SrlRulesetPreflight(source: try String(contentsOf: ruleset, encoding: .utf8))
-            let expectedValid = graph.objects(of: entry, W3CManifest.type).contains(positiveType)
+            let expectedValid = entry.expectedValid
             #expect(
                 preflight.validate(suite: suite) == expectedValid,
                 "SRL suite mismatch for \(manifest): \(ruleset.lastPathComponent) expected \(expectedValid ? "valid" : "invalid")"

@@ -1,42 +1,124 @@
 import Foundation
 import IRIKit
 import RDFCore
+import RDFFormats
 import Testing
 import RDF
 import SHACL
+import TestManifest
 import struct RDFCore.Literal
 import struct RDFCore.Graph
 @testable import SHACLKit
 
-/// The terms of the W3C test manifest vocabularies the suites use, read
-/// from manifests as RDF graphs.
-enum W3CManifest {
-    static var type: IRI { RDF.type.iri! }
-    static var first: IRI { RDF.first.iri! }
-    static var rest: IRI { RDF.rest.iri! }
-    static let action: IRI = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action"
-    static let result: IRI = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result"
-    static let include: IRI = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include"
-    static let validate: ObjectTerm = .iri("http://www.w3.org/ns/shacl-test#Validate")
-    static let dataGraph: IRI = "http://www.w3.org/ns/shacl-test#dataGraph"
-    static let shapesGraph: IRI = "http://www.w3.org/ns/shacl-test#shapesGraph"
-    static let evalNodeExpr: ObjectTerm = .iri("http://www.w3.org/ns/shacl-test#EvalNodeExpr")
-    static let nodeExpr: IRI = "http://www.w3.org/ns/shacl-test#nodeExpr"
-    static let focusNode: IRI = "http://www.w3.org/ns/shacl-test#focusNode"
-    static let ignoreOrder: IRI = "http://www.w3.org/ns/shacl-test#ignoreOrder"
-    static let scopePrefix = "http://www.w3.org/ns/shacl-test#scope-"
-    static let rulesEvalTest: ObjectTerm = .iri("http://www.w3.org/ns/shacl-rules-test#RulesEvalTest")
-    static let ruleset: IRI = "http://www.w3.org/ns/shacl-rules-test#ruleset"
-    static let data: IRI = "http://www.w3.org/ns/shacl-rules-test#data"
+// W3C test manifests are Turtle, decoded into an RDFCore graph. The `mf:`
+// terms they are written in come from the DAWG test-manifest.ttl, which
+// SPARQLKit's TestManifest target translates. The SHACL suites' own `sht:`
+// (shacl-test#) and `srt:` (shacl-rules-test#) terms have no published
+// vocabulary document in w3c/data-shapes, so each decoder below names the
+// ones it reads at the boundary, where it turns an entry into its case.
 
-    /// The file a manifest's IRI names, when it is a `file:` IRI.
-    static func file(_ term: ObjectTerm) -> URL? {
-        term.iri.flatMap { URL(string: $0.rawValue) }.flatMap { $0.isFileURL ? $0 : nil }
+extension Graph {
+    /// The objects of `node`'s `property`, a property a translated
+    /// vocabulary declares.
+    func objects(of node: ObjectTerm, _ property: any RDFCore.Resource) -> [ObjectTerm] {
+        objects(of: node, IRIKit.IRI(of: property)!)
     }
 
-    /// The subjects typed `type` in `graph`, in a stable order.
-    static func entries(of type: ObjectTerm, in graph: Graph) -> [ObjectTerm] {
-        graph.subjects(Self.type, type).sorted()
+    /// The object of `node`'s `property`, a property a translated
+    /// vocabulary declares.
+    func object(of node: ObjectTerm, _ property: any RDFCore.Resource) -> ObjectTerm? {
+        object(of: node, IRIKit.IRI(of: property)!)
+    }
+
+    /// The manifest entries whose `rdf:type` is `type`, in a stable order.
+    func entries(typed type: ObjectTerm) -> [ObjectTerm] {
+        subjects(IRIKit.IRI(of: RDF.type)!, type).sorted()
+    }
+
+    /// The manifests an `mf:include` names.
+    var includedManifests: [URL] {
+        compactMap { $0.predicate == IRIKit.IRI(of: TestManifest.include) ? $0.object.file : nil }
+    }
+
+    /// The files an `mf:action` names.
+    var actionFiles: [URL] {
+        compactMap { $0.predicate == IRIKit.IRI(of: TestManifest.action) ? $0.object.file : nil }
+    }
+}
+
+extension ObjectTerm {
+    /// The file a manifest names, when it is a `file:` IRI.
+    var file: URL? {
+        iri.flatMap { URL(string: $0.rawValue) }.flatMap { $0.isFileURL ? $0 : nil }
+    }
+}
+
+/// One `sht:Validate` entry of a SHACL test manifest: its `mf:action` names
+/// a data graph and a shapes graph, and its `mf:result` is the report.
+struct W3CValidateTest {
+    let entry: ObjectTerm
+    let dataGraph: [ObjectTerm]
+    let shapesGraph: [ObjectTerm]
+    let result: ObjectTerm?
+
+    /// The `sht:Validate` entries of the manifest graph `graph`.
+    static func entries(in graph: Graph) -> [W3CValidateTest] {
+        graph.entries(typed: .iri("http://www.w3.org/ns/shacl-test#Validate")).compactMap { entry in
+            guard let action = graph.object(of: entry, TestManifest.action) else { return nil }
+            return W3CValidateTest(
+                entry: entry,
+                dataGraph: graph.objects(of: action, "http://www.w3.org/ns/shacl-test#dataGraph"),
+                shapesGraph: graph.objects(of: action, "http://www.w3.org/ns/shacl-test#shapesGraph"),
+                result: graph.object(of: entry, TestManifest.result)
+            )
+        }
+    }
+}
+
+/// One `srt:RulesEvalTest` entry of a SHACL rules manifest: its `mf:action`
+/// names a ruleset and a data graph, and its `mf:result` the inferred graph.
+struct W3CRulesEvalTest {
+    let ruleset: ObjectTerm?
+    let data: ObjectTerm?
+    let result: ObjectTerm?
+
+    /// The `srt:RulesEvalTest` entries of the manifest graph `graph`.
+    static func entries(in graph: Graph) -> [W3CRulesEvalTest] {
+        graph.entries(typed: .iri("http://www.w3.org/ns/shacl-rules-test#RulesEvalTest")).compactMap { entry in
+            guard let action = graph.object(of: entry, TestManifest.action) else { return nil }
+            return W3CRulesEvalTest(
+                ruleset: graph.object(of: action, "http://www.w3.org/ns/shacl-rules-test#ruleset"),
+                data: graph.object(of: action, "http://www.w3.org/ns/shacl-rules-test#data"),
+                result: graph.object(of: entry, TestManifest.result)
+            )
+        }
+    }
+}
+
+/// One positive or negative SRL syntax, well-formedness or stratification
+/// entry of a SHACL rules manifest: the ruleset its `mf:action` names, and
+/// whether the entry's `rdf:type` says the ruleset is valid.
+struct W3CRulesSrlTest {
+    let ruleset: URL?
+    let expectedValid: Bool
+
+    /// The positive and negative SRL entries of the manifest graph `graph`.
+    static func entries(in graph: Graph) -> [W3CRulesSrlTest] {
+        let positive: [ObjectTerm] = [
+            .iri("http://www.w3.org/ns/shacl-rules-test#RulesPositiveSyntaxTest"),
+            .iri("http://www.w3.org/ns/shacl-rules-test#RulesPositiveWellFormednessTest"),
+            .iri("http://www.w3.org/ns/shacl-rules-test#RulesPositiveStratificationTest"),
+        ]
+        let negative: [ObjectTerm] = [
+            .iri("http://www.w3.org/ns/shacl-rules-test#RulesNegativeSyntaxTest"),
+            .iri("http://www.w3.org/ns/shacl-rules-test#RulesNegativeWellFormednessTest"),
+            .iri("http://www.w3.org/ns/shacl-rules-test#RulesNegativeStratificationTest"),
+        ]
+        let typed = positive.flatMap { graph.entries(typed: $0).map { ($0, true) } }
+            + negative.flatMap { graph.entries(typed: $0).map { ($0, false) } }
+        return typed.map { entry, valid in
+            W3CRulesSrlTest(ruleset: graph.object(of: entry, TestManifest.action)?.file, expectedValid: valid)
+        }
     }
 }
 
@@ -51,19 +133,21 @@ struct W3CNodeExprEvalCase {
 
     /// The entries of the manifest graph `graph`.
     static func cases(in graph: Graph, manifest: String) -> [W3CNodeExprEvalCase] {
-        W3CManifest.entries(of: W3CManifest.evalNodeExpr, in: graph).compactMap { entry in
-            guard let action = graph.object(of: entry, W3CManifest.action),
-                  let expression = graph.object(of: action, W3CManifest.nodeExpr),
-                  let result = graph.object(of: entry, W3CManifest.result) else { return nil }
+        // `sht:scope-<name>` binds the variable `<name>` of the expression.
+        let scope = "http://www.w3.org/ns/shacl-test#scope-"
+        return graph.entries(typed: .iri("http://www.w3.org/ns/shacl-test#EvalNodeExpr")).compactMap { entry in
+            guard let action = graph.object(of: entry, TestManifest.action),
+                  let expression = graph.object(of: action, "http://www.w3.org/ns/shacl-test#nodeExpr"),
+                  let result = graph.object(of: entry, TestManifest.result) else { return nil }
             var variables: [String: [ObjectTerm]] = [:]
-            for triple in graph.triples(of: action) where triple.predicate.rawValue.hasPrefix(W3CManifest.scopePrefix) {
-                variables[String(triple.predicate.rawValue.dropFirst(W3CManifest.scopePrefix.count)), default: []].append(triple.object)
+            for triple in graph.triples(of: action) where triple.predicate.rawValue.hasPrefix(scope) {
+                variables[String(triple.predicate.rawValue.dropFirst(scope.count)), default: []].append(triple.object)
             }
             return W3CNodeExprEvalCase(
                 caseID: "\(manifest)#\(entry)",
                 expression: expression,
-                focusNode: graph.object(of: action, W3CManifest.focusNode),
-                ignoreOrder: graph.object(of: action, W3CManifest.ignoreOrder)?.literal?.isTrue ?? false,
+                focusNode: graph.object(of: action, "http://www.w3.org/ns/shacl-test#focusNode"),
+                ignoreOrder: graph.object(of: action, "http://www.w3.org/ns/shacl-test#ignoreOrder")?.literal?.isTrue ?? false,
                 variables: variables,
                 expected: graph.list(result) ?? []
             )
@@ -109,10 +193,8 @@ struct W3CCuratedConformanceCase: CustomTestStringConvertible, Sendable {
         let shapes = Fixtures.url("W3CDataShapes/\(shapesGraph)")
         guard dataGraph == shapesGraph else { return (data, shapes) }
         let graph = try Fixtures.graph("W3CDataShapes/\(dataGraph)")
-        for entry in W3CManifest.entries(of: W3CManifest.validate, in: graph) {
-            guard let action = graph.object(of: entry, W3CManifest.action),
-                  let dataFile = graph.object(of: action, W3CManifest.dataGraph).flatMap(W3CManifest.file),
-                  let shapesFile = graph.object(of: action, W3CManifest.shapesGraph).flatMap(W3CManifest.file) else { continue }
+        for test in W3CValidateTest.entries(in: graph) {
+            guard let dataFile = test.dataGraph.first?.file, let shapesFile = test.shapesGraph.first?.file else { continue }
             return (dataFile, shapesFile)
         }
         return (data, shapes)

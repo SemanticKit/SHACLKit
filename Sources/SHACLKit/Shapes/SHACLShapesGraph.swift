@@ -1,5 +1,6 @@
 import IRIKit
 import RDFCore
+import RDFFormats
 import RDF
 import struct RDFCore.Literal
 import SHACL
@@ -58,12 +59,12 @@ public struct SHACLShapesGraph: Sendable {
 
     /// The nodes of `graph` that are shapes (§2.1), in first order.
     private static func shapeNodes(in graph: Graph) -> [ObjectTerm] {
-        let type = RDF.type.iri!
+        let type = IRIKit.IRI(of: RDF.type)!
         let shapeClasses: Set<ObjectTerm> = [
-            .iri(SHACL.NodeShapeIndividual.iri!),
-            .iri(SHACL.PropertyShapeIndividual.iri!),
-            .iri(SHACL.ShapeIndividual.iri!),
-            .iri(SHACL.ShapeClassIndividual.iri!),
+            .iri(IRIKit.IRI(of: SHACL.NodeShapeIndividual.self)!),
+            .iri(IRIKit.IRI(of: SHACL.PropertyShapeIndividual.self)!),
+            .iri(IRIKit.IRI(of: SHACL.ShapeIndividual.self)!),
+            .iri(IRIKit.IRI(of: SHACL.ShapeClassIndividual.self)!),
         ]
         let parameters = SHACLConstraint.parameters.union(SHACLTarget.parameters)
         var nodes: [ObjectTerm] = []
@@ -128,14 +129,14 @@ extension SHACLShapesGraph {
         /// graph's own when it is any other IRI.
         func severity(_ node: ObjectTerm) throws -> any SHACL.Severity {
             if let severity = [SHACL.Violation, SHACL.Warning, SHACL.Info, SHACL.Debug, SHACL.Trace]
-                .first(where: { node == .iri($0.iri!) }) {
+                .first(where: { node == .iri(IRIKit.IRI(of: $0)!) }) {
                 return severity
             }
             guard let iri = node.iri else {
                 throw SHACLError.invalidShapesGraph("The severity \(node) is not an IRI")
             }
             if let severity = severities[iri] { return severity }
-            let severity = SHACL.SeverityIndividual(iri: iri)
+            let severity = SHACL.SeverityIndividual()
             severities[iri] = severity
             return severity
         }

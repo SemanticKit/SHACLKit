@@ -1,3 +1,4 @@
+import RDFFormats
 import Foundation
 import IRIKit
 import RDFCore
@@ -56,7 +57,7 @@ extension SHACLConstraint {
         case .nodeKind(let kinds):
             return each { value in
                 kinds.contains { $0.admits(value) }
-                    ? nil : "Value \(value) does not have node kind \(kinds.compactMap { $0.iri.map { "<\($0)>" } }.joined(separator: " or "))"
+                    ? nil : "Value \(value) does not have node kind \(kinds.compactMap { IRIKit.IRI(of: $0).map { "<\($0)>" } }.joined(separator: " or "))"
             }
 
         case .minCount(let minimum):

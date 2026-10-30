@@ -1,5 +1,6 @@
 import IRIKit
 import RDFCore
+import RDFFormats
 import SHACL
 import struct RDFCore.Literal
 import struct RDFCore.Graph
@@ -74,7 +75,7 @@ final class Validation {
         if shape.isClass {
             nodes += dataGraph.instances(of: shape.id)
         }
-        nodes += dataGraph.subjects(SHACL.shape.iri!, shape.id)
+        nodes += dataGraph.subjects(IRIKit.IRI(of: SHACL.shape)!, shape.id)
         return nodes.uniqued().sorted()
     }
 

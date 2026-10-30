@@ -1,4 +1,6 @@
+import IRIKit
 import RDFCore
+import RDFFormats
 import SHACL
 import struct RDFCore.Literal
 import struct RDFCore.Graph
@@ -88,7 +90,7 @@ public struct SHACLValidationResult: Sendable, Equatable, CustomStringConvertibl
     private var sortKey: [String] {
         [
             sourceShape.id.description, focusNode.description, resultPath?.sparql ?? "",
-            sourceConstraintComponent.iri?.rawValue ?? "", value?.description ?? "", message,
+            IRIKit.IRI(of: sourceConstraintComponent)?.rawValue ?? "", value?.description ?? "", message,
         ]
     }
 }

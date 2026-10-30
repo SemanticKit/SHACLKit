@@ -1,3 +1,4 @@
+import RDFFormats
 import IRIKit
 import RDF
 import struct RDFCore.Literal
@@ -8,15 +9,15 @@ import struct RDFCore.Graph
 extension SHACL.NodeKindIndividual {
     /// The node kinds SHACL 1.2 Core §4.1.3 declares, as shacl.ttl's
     /// individuals.
-    static var declared: [SHACL.NodeKindIndividual] {
+    static var declared: [any SHACL.NodeKindStoring] {
         [SHACL.IRI, SHACL.Literal, SHACL.BlankNode, SHACL.BlankNodeOrIRI, SHACL.BlankNodeOrLiteral, SHACL.IRIOrLiteral, SHACL.TripleTerm]
     }
 
     /// The node kind the node `term` of a shapes graph denotes, read where
     /// the shapes graph is decoded: the individual whose IRI it is.
-    static func named(_ term: ObjectTerm) -> SHACL.NodeKindIndividual? {
+    static func named(_ term: ObjectTerm) -> (any SHACL.NodeKindStoring)? {
         guard let iri = term.iri else { return nil }
-        return declared.first { $0.iri == iri }
+        return declared.first { IRIKit.IRI(of: $0) == iri }
     }
 }
 

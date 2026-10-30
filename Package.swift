@@ -21,6 +21,9 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/SemanticKit/RDFKit.git", branch: "wp/integration"),
         .package(url: "https://github.com/SemanticKit/IRIKit.git", branch: "main"),
+        // The W3C test manifest vocabulary (test-manifest.ttl), translated
+        // once by SPARQLKit's TestManifest target and shared from there.
+        .package(url: "https://github.com/SemanticKit/SPARQLKit.git", branch: "wp/07a-sparql-translator"),
     ],
     targets: [
         // The vocabularies, translated from the documents SHACL 1.2
@@ -46,6 +49,7 @@ let package = Package(
                 .product(name: "IRIKit", package: "IRIKit"),
                 .product(name: "RDF", package: "RDFKit"),
                 .product(name: "RDFCore", package: "RDFKit"),
+                .product(name: "RDFFormats", package: "RDFKit"),
                 .product(name: "RDFKit", package: "RDFKit"),
             ]
         ),
@@ -60,6 +64,7 @@ let package = Package(
                 .product(name: "RDFCore", package: "RDFKit"),
                 .product(name: "RDFFormats", package: "RDFKit"),
                 .product(name: "RDFKit", package: "RDFKit"),
+                .product(name: "SPARQLConformance", package: "SPARQLKit"),
             ],
             resources: [
                 .copy("Fixtures")
