@@ -9,14 +9,18 @@ extension SHACLNodeExpression {
     /// Expressions that test shapes (`shnex:filterShape`, `shnex:matchAll`,
     /// `shnex:findFirst`, `shnex:nodesMatching`) validate against the shapes
     /// of `shapesGraph`.
+    ///
+    /// - Throws: ``SHACLError/sparqlNotExecuted(_:)`` when a shape the
+    ///   expression tests has a SPARQL-based constraint, which needs a
+    ///   validator's SPARQL executor.
     public func evaluate(
         focusNode: ObjectTerm?,
         dataGraph: Graph,
         shapesGraph: SHACLShapesGraph,
         variables: [String: [ObjectTerm]] = [:]
-    ) -> [ObjectTerm] {
+    ) throws -> [ObjectTerm] {
         let validation = Validation(dataGraph: dataGraph, shapesGraph: shapesGraph)
-        return evaluate(focusNode: focusNode, variables: variables, in: validation)
+        return try evaluate(focusNode: focusNode, variables: variables, in: validation)
     }
 
     /// Whether the output is exactly the `xsd:boolean` value true, which is
@@ -25,12 +29,12 @@ extension SHACLNodeExpression {
         output.count == 1 && output[0].literal?.isTrue == true
     }
 
-    func evaluate(focusNode: ObjectTerm?, variables: [String: [ObjectTerm]] = [:], in validation: Validation) -> [ObjectTerm] {
-        func run(_ expression: SHACLNodeExpression, focus: ObjectTerm? = focusNode) -> [ObjectTerm] {
-            expression.evaluate(focusNode: focus, variables: variables, in: validation)
+    func evaluate(focusNode: ObjectTerm?, variables: [String: [ObjectTerm]] = [:], in validation: Validation) throws -> [ObjectTerm] {
+        func run(_ expression: SHACLNodeExpression, focus: ObjectTerm? = focusNode) throws -> [ObjectTerm] {
+            try expression.evaluate(focusNode: focus, variables: variables, in: validation)
         }
-        func conforming(_ nodes: [ObjectTerm], _ shape: ObjectTerm) -> [ObjectTerm] {
-            nodes.filter { validation.conforms($0, to: shape) }
+        func conforming(_ nodes: [ObjectTerm], _ shape: SHACLShape) throws -> [ObjectTerm] {
+            try nodes.filter { try validation.conforms($0, to: shape) }
         }
 
         switch self {
@@ -41,59 +45,59 @@ extension SHACLNodeExpression {
         case .focusNode:
             return focusNode.map { [$0] } ?? []
         case .list(let members):
-            return members.flatMap { run($0) }
+            return try members.flatMap { try run($0) }
         case .nodes(let input), .concat(let input):
-            return run(input)
+            return try run(input)
         case .union(let members):
-            return members.flatMap { run($0) }.uniqued()
+            return try members.flatMap { try run($0) }.uniqued()
         case .intersection(let members):
             guard let first = members.first else { return [] }
-            let others = members.dropFirst().map { Set(run($0)) }
-            return run(first).uniqued().filter { node in others.allSatisfy { $0.contains(node) } }
+            let others = try members.dropFirst().map { Set(try run($0)) }
+            return try run(first).uniqued().filter { node in others.allSatisfy { $0.contains(node) } }
         case .exists(let input):
-            return [.literal(Literal(!run(input).isEmpty))]
+            return [.literal(Literal(try !run(input).isEmpty))]
         case .count(let input):
-            return [.literal(Literal(run(input).count))]
+            return [.literal(Literal(try run(input).count))]
         case .variable(let name):
             if let bound = variables[name] { return bound }
             if name == "focusNode", let focusNode { return [focusNode] }
             return []
         case .distinct(let input):
-            return run(input).uniqued()
+            return try run(input).uniqued()
         case .matchAll(let input, let shape):
-            let nodes = run(input)
-            return [.literal(Literal(conforming(nodes, shape).count == nodes.count))]
+            let nodes = try run(input)
+            return [.literal(Literal(try conforming(nodes, shape).count == nodes.count))]
         case .filterShape(let input, let shape):
-            return conforming(run(input).uniqued(), shape)
+            return try conforming(try run(input).uniqued(), shape)
         case .findFirst(let input, let shape):
-            return run(input).first { validation.conforms($0, to: shape) }.map { [$0] } ?? []
+            return try run(input).first { try validation.conforms($0, to: shape) }.map { [$0] } ?? []
         case .instancesOf(let cls):
             return validation.dataGraph.instances(of: cls).sorted()
         case .nodesMatching(let shape):
-            return conforming(validation.dataGraph.nodes, shape).sorted()
+            return try conforming(validation.dataGraph.nodes, shape).sorted()
         case .min(let input):
-            return Self.extreme(of: run(input), greatest: false).map { [$0] } ?? []
+            return Self.extreme(of: try run(input), greatest: false).map { [$0] } ?? []
         case .max(let input):
-            return Self.extreme(of: run(input), greatest: true).map { [$0] } ?? []
+            return Self.extreme(of: try run(input), greatest: true).map { [$0] } ?? []
         case .sum(let input):
-            return [.literal(Self.sum(of: run(input)))]
+            return [.literal(Self.sum(of: try run(input)))]
         case .conditional(let condition, let then, let otherwise):
-            if Self.isTrue(run(condition)) { return run(then) }
-            return otherwise.map { run($0) } ?? []
+            if Self.isTrue(try run(condition)) { return try run(then) }
+            return try otherwise.map { try run($0) } ?? []
         case .pathValues(let path, let start):
-            let starts = start.map { run($0) } ?? focusNode.map { [$0] } ?? []
+            let starts = try start.map { try run($0) } ?? focusNode.map { [$0] } ?? []
             return starts.flatMap { path.values(from: $0, in: validation.dataGraph) }.uniqued().sorted()
         case .remove(let input, let removed):
-            let removedNodes = Set(run(removed))
-            return run(input).filter { !removedNodes.contains($0) }
+            let removedNodes = Set(try run(removed))
+            return try run(input).filter { !removedNodes.contains($0) }
         case .flatMap(let input, let map):
-            return run(input).flatMap { run(map, focus: $0) }
+            return try run(input).flatMap { try run(map, focus: $0) }
         case .limit(let input, let count):
-            return Array(run(input).prefix(Swift.max(0, count)))
+            return Array(try run(input).prefix(Swift.max(0, count)))
         case .offset(let input, let count):
-            return Array(run(input).dropFirst(Swift.max(0, count)))
+            return Array(try run(input).dropFirst(Swift.max(0, count)))
         case .orderBy(let input, let key, let descending):
-            let keyed = run(input).map { node in (node: node, key: run(key, focus: node).sorted().first) }
+            let keyed = try run(input).map { node in (node: node, key: try run(key, focus: node).sorted().first) }
             return keyed.sorted { lhs, rhs in
                 let order = Self.order(lhs.key, rhs.key) ?? Self.order(lhs.node, rhs.node) ?? .orderedSame
                 return descending ? order == .orderedDescending : order == .orderedAscending

@@ -1,5 +1,6 @@
 import IRIKit
 import RDFCore
+import RDFKit
 
 /// A SHACL property path (SHACL 1.2 Core §2.3.1).
 ///
@@ -105,5 +106,62 @@ public indirect enum SHACLPropertyPath: Sendable, Hashable {
             frontier = next
         }
         return reached
+    }
+}
+
+extension SHACLPropertyPath {
+    /// The path in SPARQL 1.2 property path syntax (§18.1.7), as a
+    /// SPARQL-based constraint's `$PATH` is replaced by it (SHACL 1.2
+    /// SPARQL Extensions §5.3.1).
+    public var sparql: String {
+        switch self {
+        case .predicate(let iri): "<\(iri)>"
+        case .inverse(let path): "^(\(path.sparql))"
+        case .sequence(let paths): "(\(paths.map(\.sparql).joined(separator: "/")))"
+        case .alternative(let paths): "(\(paths.map(\.sparql).joined(separator: "|")))"
+        case .zeroOrMore(let path): "(\(path.sparql))*"
+        case .oneOrMore(let path): "(\(path.sparql))+"
+        case .zeroOrOne(let path): "(\(path.sparql))?"
+        }
+    }
+
+    /// Writes the path into `graph` as SHACL 1.2 Core §2.3.1 describes it,
+    /// and gives the node that is the path: the IRI of a predicate path, or
+    /// a blank node from `blankNode` for any other path.
+    func encode(into graph: inout Graph, blankNode: () -> BlankNode) -> ObjectTerm {
+        func node(_ predicate: IRI, _ path: SHACLPropertyPath) -> ObjectTerm {
+            let subject = blankNode()
+            let object = path.encode(into: &graph, blankNode: blankNode)
+            graph.insert(Graph.Element(subject: .blankNode(subject), predicate: predicate, object: object))
+            return .blankNode(subject)
+        }
+        func list(_ paths: [SHACLPropertyPath]) -> ObjectTerm {
+            var head = ObjectTerm.iri(type(of: RDF.nil).metadata.id)
+            for path in paths.reversed() {
+                let cell = blankNode()
+                graph.insert(Graph.Element(subject: .blankNode(cell), predicate: RDF.first.metadata.id, object: path.encode(into: &graph, blankNode: blankNode)))
+                graph.insert(Graph.Element(subject: .blankNode(cell), predicate: RDF.rest.metadata.id, object: head))
+                head = .blankNode(cell)
+            }
+            return head
+        }
+        switch self {
+        case .predicate(let iri):
+            return .iri(iri)
+        case .inverse(let path):
+            return node(SHACL.inversePath.metadata.id, path)
+        case .sequence(let paths):
+            return list(paths)
+        case .alternative(let paths):
+            let subject = blankNode()
+            graph.insert(Graph.Element(subject: .blankNode(subject), predicate: SHACL.alternativePath.metadata.id, object: list(paths)))
+            return .blankNode(subject)
+        case .zeroOrMore(let path):
+            return node(SHACL.zeroOrMorePath.metadata.id, path)
+        case .oneOrMore(let path):
+            return node(SHACL.oneOrMorePath.metadata.id, path)
+        case .zeroOrOne(let path):
+            return node(SHACL.zeroOrOnePath.metadata.id, path)
+        }
     }
 }

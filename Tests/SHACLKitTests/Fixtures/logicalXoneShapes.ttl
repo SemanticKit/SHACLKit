@@ -7,7 +7,7 @@ ex:EntryShape a sh:NodeShape ;
 
 ex:ProfileShape a sh:PropertyShape ;
   sh:path ex:profile ;
-  sh:xone ex:GoldShape , ex:SilverShape .
+  sh:xone ( ex:GoldShape ex:SilverShape ) .
 
 ex:GoldShape a sh:NodeShape ;
   sh:property ex:GoldTypeShape .

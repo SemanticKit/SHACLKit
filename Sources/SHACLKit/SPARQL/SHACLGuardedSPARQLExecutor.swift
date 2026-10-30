@@ -5,7 +5,6 @@ import RDFCore
 /// the executor it wraps: queries with a disallowed keyword, queries that
 /// rebind a pre-bound variable, `SELECT` queries that do not use `$this`,
 /// and queries over a length limit.
-
 public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
     public let wrappedExecutor: any SHACLSPARQLExecutor
     public let disallowedKeywords: [String]
@@ -23,22 +22,22 @@ public struct SHACLGuardedSPARQLExecutor: SHACLSPARQLExecutor {
 
     public func select(
         query: String,
-        focusNode: ObjectTerm?,
+        bindings: SHACLSPARQLSolution,
         dataGraph: Graph,
         shapesGraph: SHACLShapesGraph
-    ) throws -> [ObjectTerm] {
+    ) throws -> [SHACLSPARQLSolution] {
         try enforcePolicy(query: query, requirePreboundThisReference: true)
-        return try wrappedExecutor.select(query: query, focusNode: focusNode, dataGraph: dataGraph, shapesGraph: shapesGraph)
+        return try wrappedExecutor.select(query: query, bindings: bindings, dataGraph: dataGraph, shapesGraph: shapesGraph)
     }
 
     public func ask(
         query: String,
-        focusNode: ObjectTerm?,
+        bindings: SHACLSPARQLSolution,
         dataGraph: Graph,
         shapesGraph: SHACLShapesGraph
     ) throws -> Bool {
         try enforcePolicy(query: query, requirePreboundThisReference: false)
-        return try wrappedExecutor.ask(query: query, focusNode: focusNode, dataGraph: dataGraph, shapesGraph: shapesGraph)
+        return try wrappedExecutor.ask(query: query, bindings: bindings, dataGraph: dataGraph, shapesGraph: shapesGraph)
     }
 
     private func enforcePolicy(query: String, requirePreboundThisReference: Bool) throws {

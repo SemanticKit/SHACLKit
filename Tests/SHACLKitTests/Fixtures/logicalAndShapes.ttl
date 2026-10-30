@@ -7,7 +7,7 @@ ex:EntryShape a sh:NodeShape ;
 
 ex:MemberShape a sh:PropertyShape ;
   sh:path ex:member ;
-  sh:and ex:HasIdShape , ex:HasLabelShape .
+  sh:and ( ex:HasIdShape ex:HasLabelShape ) .
 
 ex:HasIdShape a sh:NodeShape ;
   sh:property ex:IdPropShape .

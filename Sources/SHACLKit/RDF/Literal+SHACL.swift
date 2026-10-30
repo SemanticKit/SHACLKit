@@ -27,8 +27,10 @@ extension Literal {
         }
     }
 
-    /// Whether the literal is the `xsd:boolean` value true.
-    var isTrue: Bool { booleanValue == true }
+    /// Whether the literal is `true` of `xsd:boolean`: SHACL's boolean
+    /// parameters are activated by `true` only, not by the other lexical
+    /// form `1` of the same value.
+    var isTrue: Bool { datatypeIRI == XSD.boolean.metadata.id && lexicalForm == "true" }
 
     /// The value of a literal of an integer datatype.
     var integerValue: Int? {

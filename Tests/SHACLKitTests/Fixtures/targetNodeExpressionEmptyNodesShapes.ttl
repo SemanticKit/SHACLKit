@@ -7,4 +7,4 @@ ex:EmptyNodesTargetShape
     sh:targetNode ex:ExprEmptyNodesTarget .
 
 ex:ExprEmptyNodesTarget
-    shnex:nodes () .
+    shnex:nodes [] .

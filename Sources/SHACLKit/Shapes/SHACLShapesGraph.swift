@@ -6,8 +6,9 @@ import RDFKit
 /// describes.
 ///
 /// A shapes graph is read with a format's decoder into an RDFCore
-/// ``RDFCore/Graph`` and decoded here, which is where its SHACL terms are
-/// read by their IRIs:
+/// ``RDFCore/Graph`` and decoded here. This is the boundary where its SHACL
+/// terms are read by their IRIs and each shape node becomes a
+/// ``SHACLShape`` object:
 ///
 ///     let shapes = try SHACLShapesGraph(TurtleDecoder().decode(turtle))
 public struct SHACLShapesGraph: Sendable {
@@ -17,9 +18,6 @@ public struct SHACLShapesGraph: Sendable {
     /// The shapes, in the order of their nodes' first triples.
     public let shapes: [SHACLShape]
 
-    /// The shapes by their nodes, which is how shapes name each other.
-    private let byNode: [ObjectTerm: Int]
-
     /// Decodes the shapes of `graph`.
     ///
     /// The shapes are the nodes §2.1 names: SHACL instances of
@@ -27,28 +25,32 @@ public struct SHACLShapesGraph: Sendable {
     /// constraint parameters, and values of shape-expecting parameters.
     ///
     /// - Throws: ``SHACLError/invalidShapesGraph(_:)`` when a shape is
-    ///   ill-formed, or a value of `sh:node` or `sh:property` is not a node
-    ///   shape or a property shape.
+    ///   ill-formed, or a value of `sh:property` is not a property shape.
     public init(_ graph: Graph) throws {
-        self.graph = graph
-        var shapes: [SHACLShape] = []
-        var byNode: [ObjectTerm: Int] = [:]
+        let nodes = Nodes(graph)
         for node in Self.shapeNodes(in: graph) {
-            byNode[node] = shapes.count
-            shapes.append(try SHACLShape(node, in: graph))
+            _ = nodes.shape(node)
         }
-        self.shapes = shapes
-        self.byNode = byNode
+        try nodes.decodeShapes()
+        self.graph = graph
+        self.shapes = nodes.shapes
         try checkReferences()
     }
 
-    /// The shape whose node is `node`. A node the shapes graph does not
-    /// describe as a shape is decoded on the spot: §2.1 makes any value of a
-    /// shape-expecting parameter a shape, and one with no parameters is
-    /// the empty shape every node conforms to.
+    /// The shape whose node is `node`, read where a caller names a shape by
+    /// the IRI or blank node a document gives it.
     public func shape(_ node: ObjectTerm) -> SHACLShape? {
-        if let index = byNode[node] { return shapes[index] }
-        return try? SHACLShape(node, in: graph)
+        shapes.first { $0.id == node }
+    }
+
+    /// Decodes the node expression whose node is `node` (SHACL 1.2 Node
+    /// Expressions), with the shapes of this graph as the shapes its
+    /// shape-expecting parameters name.
+    public func expression(_ node: ObjectTerm) -> SHACLNodeExpression {
+        let nodes = Nodes(graph, shapes: shapes)
+        let expression = SHACLNodeExpression(node, in: nodes)
+        try? nodes.decodeShapes()
+        return expression
     }
 
     /// The nodes of `graph` that are shapes (§2.1), in first order.
@@ -60,9 +62,7 @@ public struct SHACLShapesGraph: Sendable {
             .iri(SHACL.ShapeIndividual.metadata.id),
             .iri(SHACL.ShapeClassIndividual.metadata.id),
         ]
-        let parameters = Self.parameters
-        let shapeExpecting = Self.shapeExpecting
-        let listOfShapes = Self.listOfShapes
+        let parameters = SHACLConstraint.parameters.union(SHACLTarget.parameters)
         var nodes: [ObjectTerm] = []
         for triple in graph {
             if triple.predicate == type, shapeClasses.contains(triple.object) {
@@ -70,67 +70,79 @@ public struct SHACLShapesGraph: Sendable {
             } else if parameters.contains(triple.predicate) {
                 nodes.append(triple.subject.object)
             }
-            if shapeExpecting.contains(triple.predicate) {
-                nodes.append(triple.object)
-            } else if listOfShapes.contains(triple.predicate) {
-                nodes += graph.listOrValue(triple.object)
-            }
         }
         return nodes.filter { !$0.isLiteral }.uniqued()
     }
 
-    /// Targets and the parameters of the constraint components (§2.1.3, §4).
-    private static var parameters: Set<IRI> {
-        [
-            SHACL.targetNode.metadata.id, SHACL.targetClass.metadata.id, SHACL.targetSubjectsOf.metadata.id,
-            SHACL.targetObjectsOf.metadata.id, SHACL.targetWhere.metadata.id, SHACL.target.metadata.id,
-            SHACL.path.metadata.id, SHACL.class.metadata.id, SHACL.datatype.metadata.id,
-            SHACL.nodeKind.metadata.id, SHACL.minCount.metadata.id, SHACL.maxCount.metadata.id,
-            SHACL.minExclusive.metadata.id, SHACL.minInclusive.metadata.id, SHACL.maxExclusive.metadata.id,
-            SHACL.maxInclusive.metadata.id, SHACL.minLength.metadata.id, SHACL.maxLength.metadata.id,
-            SHACL.pattern.metadata.id, SHACL.singleLine.metadata.id, SHACL.languageIn.metadata.id,
-            SHACL.uniqueLang.metadata.id, SHACL.equals.metadata.id, SHACL.disjoint.metadata.id,
-            SHACL.lessThan.metadata.id, SHACL.lessThanOrEquals.metadata.id, SHACL.not.metadata.id,
-            SHACL.and.metadata.id, SHACL.or.metadata.id, SHACL.xone.metadata.id,
-            SHACL.node.metadata.id, SHACL.property.metadata.id, SHACL.qualifiedValueShape.metadata.id,
-            SHACL.someValue.metadata.id, SHACL.closed.metadata.id, SHACL.hasValue.metadata.id,
-            SHACL.in.metadata.id, SHACL.expression.metadata.id, SHACL.nodeByExpression.metadata.id,
-            SHACL.reifierShape.metadata.id, SHACL.reificationRequired.metadata.id, SHACL.memberShape.metadata.id,
-            SHACL.minListLength.metadata.id, SHACL.maxListLength.metadata.id, SHACL.uniqueMembers.metadata.id,
-            SHACL.rule.metadata.id, SHACL.sparql.metadata.id, SHACL.deactivated.metadata.id,
-            SHACL.severity.metadata.id,
-        ]
-    }
-
-    /// The parameters whose values are shapes (§2.1).
-    private static var shapeExpecting: Set<IRI> {
-        [
-            SHACL.node.metadata.id, SHACL.property.metadata.id, SHACL.not.metadata.id,
-            SHACL.qualifiedValueShape.metadata.id, SHACL.someValue.metadata.id, SHACL.memberShape.metadata.id,
-            SHACL.reifierShape.metadata.id, SHACL.targetWhere.metadata.id, SHACL.condition.metadata.id,
-            SHNEX.filterShape.metadata.id, SHNEX.matchAll.metadata.id, SHNEX.findFirst.metadata.id,
-            SHNEX.nodesMatching.metadata.id,
-        ]
-    }
-
-    /// The parameters whose values are SHACL lists of shapes (§2.1).
-    private static var listOfShapes: Set<IRI> {
-        [SHACL.and.metadata.id, SHACL.or.metadata.id, SHACL.xone.metadata.id]
-    }
-
-    /// Checks that each value of `sh:node` is a node shape and each value of
-    /// `sh:property` a property shape (§4.7.1, §4.7.2).
+    /// Checks that each value of `sh:property` is a property shape (§4.7.2:
+    /// "Each value of sh:property in a shape must be a well-formed property
+    /// shape").
     private func checkReferences() throws {
         for shape in shapes {
-            for node in shape.nodes {
-                guard let referenced = self.shape(node), !referenced.isPropertyShape else {
-                    throw SHACLError.invalidShapesGraph("Shape \(shape.id) references non-node shape \(node) with sh:node")
-                }
+            for case .property(let property) in shape.constraints where !property.isPropertyShape {
+                throw SHACLError.invalidShapesGraph("Shape \(shape) references missing or non-property shape \(property)")
             }
-            for node in shape.properties {
-                guard let referenced = self.shape(node), referenced.isPropertyShape else {
-                    throw SHACLError.invalidShapesGraph("Shape \(shape.id) references missing or non-property shape \(node)")
-                }
+        }
+    }
+}
+
+extension SHACLShapesGraph {
+    /// The objects the nodes of a shapes graph decode into, while it is
+    /// decoded: one ``SHACLShape`` for each shape node, and one
+    /// ``SHACLDeclaredSeverity`` for each severity SHACL does not declare.
+    ///
+    /// A shape is made the first time a node is read as one, so shapes that
+    /// refer to each other in a cycle are each made once, and decoded after
+    /// all of them exist.
+    final class Nodes {
+        let graph: Graph
+
+        /// Every shape made so far, in the order they were made.
+        private(set) var shapes: [SHACLShape]
+
+        private var shapesByNode: [ObjectTerm: SHACLShape] = [:]
+        private var pending: [SHACLShape] = []
+        private var severities: [ObjectTerm: SHACLDeclaredSeverity] = [:]
+
+        init(_ graph: Graph, shapes: [SHACLShape] = []) {
+            self.graph = graph
+            self.shapes = shapes
+            for shape in shapes { shapesByNode[shape.id] = shape }
+        }
+
+        /// The shape whose node is `node`, made on first use.
+        func shape(_ node: ObjectTerm) -> SHACLShape {
+            if let shape = shapesByNode[node] { return shape }
+            let shape = SHACLShape(node)
+            shapesByNode[node] = shape
+            shapes.append(shape)
+            pending.append(shape)
+            return shape
+        }
+
+        /// The severity `node` names (§2.1.4): `sh:Violation`, `sh:Warning`,
+        /// `sh:Info`, `sh:Debug` or `sh:Trace`, or a severity of the shapes
+        /// graph's own when it is any other IRI.
+        func severity(_ node: ObjectTerm) throws -> any SHACL.Severity {
+            if let severity = [SHACL.Violation, SHACL.Warning, SHACL.Info, SHACL.Debug, SHACL.Trace]
+                .first(where: { node == .iri(type(of: $0).metadata.id) }) {
+                return severity
+            }
+            guard node.isIRI else {
+                throw SHACLError.invalidShapesGraph("The severity \(node) is not an IRI")
+            }
+            if let severity = severities[node] { return severity }
+            let severity = SHACLDeclaredSeverity(node)
+            severities[node] = severity
+            return severity
+        }
+
+        /// Decodes every shape that has been made but not decoded, including
+        /// the ones decoding them makes.
+        func decodeShapes() throws {
+            while !pending.isEmpty {
+                let shape = pending.removeFirst()
+                shape.define(try SHACLShape.Definition(shape.id, in: self))
             }
         }
     }

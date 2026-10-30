@@ -65,6 +65,18 @@ public struct SHACL: Ontology {
             Comment("A rule that infers triples from a subject, predicate and object node expression.")
         }
 
+        Class("ValidationReport") {
+            Type(RDFS.Class)
+            Label("ValidationReport")
+            Comment("The class of SHACL validation reports.")
+        }
+
+        Class("ValidationResult") {
+            Type(RDFS.Class)
+            Label("ValidationResult")
+            Comment("The class of validation results.")
+        }
+
         Individual("Violation") {
             Type(SHACL.Severity)
             Label("Violation")
@@ -81,6 +93,18 @@ public struct SHACL: Ontology {
             Type(SHACL.Severity)
             Label("Info")
             Comment("The severity of an informational result.")
+        }
+
+        Individual("Debug") {
+            Type(SHACL.Severity)
+            Label("Debug")
+            Comment("The severity of a result that helps to debug a shapes graph.")
+        }
+
+        Individual("Trace") {
+            Type(SHACL.Severity)
+            Label("Trace")
+            Comment("The severity of a result that traces the validation.")
         }
 
         Individual("IRI") {
@@ -266,6 +290,18 @@ public struct SHACL: Ontology {
             Type(SHACL.ConstraintComponent)
             Label("NodeConstraintComponent")
             Comment("The constraint component of sh:node.")
+        }
+
+        Individual("PropertyConstraintComponent") {
+            Type(SHACL.ConstraintComponent)
+            Label("PropertyConstraintComponent")
+            Comment("The constraint component of sh:property.")
+        }
+
+        Individual("SomeValueConstraintComponent") {
+            Type(SHACL.ConstraintComponent)
+            Label("SomeValueConstraintComponent")
+            Comment("The constraint component of sh:someValue.")
         }
 
         Individual("QualifiedMinCountConstraintComponent") {
@@ -788,6 +824,72 @@ public struct SHACL: Ontology {
             Type(RDF.Property)
             Label("intersection")
             Comment("The intersection of the outputs of the node expressions of the list.")
+        }
+
+        Property("conforms") {
+            Type(RDF.Property)
+            Label("conforms")
+            Comment("True if the validation did not produce any validation results, and false otherwise.")
+        }
+
+        Property("result") {
+            Type(RDF.Property)
+            Label("result")
+            Comment("The validation results contained in a validation report.")
+        }
+
+        Property("focusNode") {
+            Type(RDF.Property)
+            Label("focusNode")
+            Comment("The focus node that was validated when the result was produced.")
+        }
+
+        Property("resultPath") {
+            Type(RDF.Property)
+            Label("resultPath")
+            Comment("The path of a validation result, based on the path of the validated property shape.")
+        }
+
+        Property("value") {
+            Type(RDF.Property)
+            Label("value")
+            Comment("An RDF node that has caused the result.")
+        }
+
+        Property("sourceShape") {
+            Type(RDF.Property)
+            Label("sourceShape")
+            Comment("The shape that was validated when the result was produced.")
+        }
+
+        Property("sourceConstraintComponent") {
+            Type(RDF.Property)
+            Label("sourceConstraintComponent")
+            Comment("The constraint component that is the source of the result.")
+        }
+
+        Property("sourceConstraint") {
+            Type(RDF.Property)
+            Label("sourceConstraint")
+            Comment("The constraint that was validated when the result was produced.")
+        }
+
+        Property("resultSeverity") {
+            Type(RDF.Property)
+            Label("resultSeverity")
+            Comment("The severity of the result, e.g. warning.")
+        }
+
+        Property("resultMessage") {
+            Type(RDF.Property)
+            Label("resultMessage")
+            Comment("Human-readable messages explaining the cause of the result.")
+        }
+
+        Property("detail") {
+            Type(RDF.Property)
+            Label("detail")
+            Comment("The causes of a validation result, as validation results themselves.")
         }
     }
 }

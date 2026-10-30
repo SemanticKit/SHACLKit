@@ -34,15 +34,15 @@ public indirect enum SHACLNodeExpression: Sendable, Hashable {
     /// `shnex:distinct`: the input's output without repeats.
     case distinct(SHACLNodeExpression)
     /// `shnex:matchAll`: true when every input node conforms to the shape.
-    case matchAll(SHACLNodeExpression, shape: ObjectTerm)
+    case matchAll(SHACLNodeExpression, shape: SHACLShape)
     /// `shnex:filterShape`: the input nodes that conform to the shape.
-    case filterShape(SHACLNodeExpression, shape: ObjectTerm)
+    case filterShape(SHACLNodeExpression, shape: SHACLShape)
     /// `shnex:findFirst`: the first input node that conforms to the shape.
-    case findFirst(SHACLNodeExpression, shape: ObjectTerm)
+    case findFirst(SHACLNodeExpression, shape: SHACLShape)
     /// `shnex:instancesOf`: the SHACL instances of the class.
     case instancesOf(ObjectTerm)
     /// `shnex:nodesMatching`: the nodes of the data graph that conform to the shape.
-    case nodesMatching(ObjectTerm)
+    case nodesMatching(SHACLShape)
     /// `shnex:min`: the least numeric output node of the input.
     case min(SHACLNodeExpression)
     /// `shnex:max`: the greatest numeric output node of the input.
@@ -67,10 +67,11 @@ public indirect enum SHACLNodeExpression: Sendable, Hashable {
     /// `shnex:orderBy`: the input nodes ordered by the key expression's output.
     case orderBy(SHACLNodeExpression, key: SHACLNodeExpression, descending: Bool)
 
-    /// Decodes the expression whose node is `node` in `graph`.
-    public init(_ node: ObjectTerm, in graph: Graph) {
+    /// Decodes the expression whose node is `node`, with the shapes its
+    /// shape-expecting parameters name made by `nodes`.
+    init(_ node: ObjectTerm, in nodes: SHACLShapesGraph.Nodes) {
         var visiting: Set<ObjectTerm> = []
-        self = Self.decode(node, in: graph, visiting: &visiting)
+        self = Self.decode(node, in: nodes, visiting: &visiting)
     }
 
     /// Whether `node` is more than a constant in `graph`: a SHACL list, or
@@ -97,24 +98,29 @@ public indirect enum SHACLNodeExpression: Sendable, Hashable {
         ]
     }
 
-    private static func decode(_ node: ObjectTerm, in graph: Graph, visiting: inout Set<ObjectTerm>) -> SHACLNodeExpression {
+    private static func decode(_ node: ObjectTerm, in nodes: SHACLShapesGraph.Nodes, visiting: inout Set<ObjectTerm>) -> SHACLNodeExpression {
+        let graph = nodes.graph
         if node == .iri(type(of: SHACL.this).metadata.id) { return .focusNode }
         if node.isLiteral { return .constant(node) }
         guard visiting.insert(node).inserted else { return .empty }
         defer { visiting.remove(node) }
 
-        if graph.isList(node) {
-            return .list((graph.list(node) ?? []).map { decode($0, in: graph, visiting: &visiting) })
+        // An empty list is the constant rdf:nil, not an expression.
+        if graph.isList(node), node != .iri(type(of: RDF.nil).metadata.id) {
+            return .list((graph.list(node) ?? []).map { decode($0, in: nodes, visiting: &visiting) })
         }
         func operand(_ predicate: IRI) -> SHACLNodeExpression? {
-            graph.object(of: node, predicate).map { decode($0, in: graph, visiting: &visiting) }
+            graph.object(of: node, predicate).map { decode($0, in: nodes, visiting: &visiting) }
         }
         func value(_ predicate: IRI) -> ObjectTerm? {
             graph.object(of: node, predicate)
         }
+        func shape(_ predicate: IRI) -> SHACLShape? {
+            value(predicate).map(nodes.shape)
+        }
         func members(_ predicate: IRI) -> [SHACLNodeExpression]? {
             guard let list = value(predicate) else { return nil }
-            return graph.listOrValue(list).map { decode($0, in: graph, visiting: &visiting) }
+            return graph.listOrValue(list).map { decode($0, in: nodes, visiting: &visiting) }
         }
         func count(_ predicate: IRI) -> Int? {
             value(predicate)?.literal?.integerValue
@@ -127,13 +133,13 @@ public indirect enum SHACLNodeExpression: Sendable, Hashable {
             return .intersection(members)
         }
         if let input = operand(SHNEX.nodes.metadata.id) {
-            if let shape = value(SHNEX.matchAll.metadata.id) { return .matchAll(input, shape: shape) }
-            if let shape = value(SHNEX.filterShape.metadata.id) { return .filterShape(input, shape: shape) }
+            if let shape = shape(SHNEX.matchAll.metadata.id) { return .matchAll(input, shape: shape) }
+            if let shape = shape(SHNEX.filterShape.metadata.id) { return .filterShape(input, shape: shape) }
             if let removed = operand(SHNEX.remove.metadata.id) { return .remove(input, removed) }
             if let map = operand(SHNEX.flatMap.metadata.id) { return .flatMap(input, map) }
             if let limit = count(SHNEX.limit.metadata.id) { return .limit(input, limit) }
             if let offset = count(SHNEX.offset.metadata.id) { return .offset(input, offset) }
-            if let shape = value(SHNEX.findFirst.metadata.id) { return .findFirst(input, shape: shape) }
+            if let shape = shape(SHNEX.findFirst.metadata.id) { return .findFirst(input, shape: shape) }
             if let key = operand(SHNEX.orderBy.metadata.id) {
                 let descending = value(SHNEX.desc.metadata.id)?.literal?.isTrue ?? false
                 return .orderBy(input, key: key, descending: descending)
@@ -146,7 +152,7 @@ public indirect enum SHACLNodeExpression: Sendable, Hashable {
         if let name = value(SHNEX.var.metadata.id) { return .variable(name.stringValue ?? name.description) }
         if let input = operand(SHNEX.distinct.metadata.id) { return .distinct(input) }
         if let cls = value(SHNEX.instancesOf.metadata.id) { return .instancesOf(cls) }
-        if let shape = value(SHNEX.nodesMatching.metadata.id) { return .nodesMatching(shape) }
+        if let shape = shape(SHNEX.nodesMatching.metadata.id) { return .nodesMatching(shape) }
         if let input = operand(SHNEX.min.metadata.id) { return .min(input) }
         if let input = operand(SHNEX.max.metadata.id) { return .max(input) }
         if let input = operand(SHNEX.sum.metadata.id) { return .sum(input) }

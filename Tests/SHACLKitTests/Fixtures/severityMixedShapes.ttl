@@ -14,7 +14,7 @@ ex:NameRequiredShape a sh:PropertyShape ;
 
 ex:StatusAllowedShape a sh:PropertyShape ;
   sh:path ex:status ;
-  sh:in ex:Active ;
+  sh:in ( ex:Active ) ;
   sh:severity sh:Warning .
 
 ex:NickHintShape a sh:PropertyShape ;

@@ -2,5 +2,5 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
 ex:alice a ex:Person ;
-  rdfs:label "Invalid\\nlabel" ;
-  rdfs:comment "Line one\\nLine two" .
+  rdfs:label "Invalid\nlabel" ;
+  rdfs:comment "Line one\nLine two" .

@@ -6,11 +6,11 @@ import RDFCore
 public struct SHACLDeniedSPARQLExecutor: SHACLSPARQLExecutor {
     public init() {}
 
-    public func select(query: String, focusNode: ObjectTerm?, dataGraph: Graph, shapesGraph: SHACLShapesGraph) throws -> [ObjectTerm] {
+    public func select(query: String, bindings: SHACLSPARQLSolution, dataGraph: Graph, shapesGraph: SHACLShapesGraph) throws -> [SHACLSPARQLSolution] {
         throw SHACLError.sparqlNotExecuted("SPARQL execution requires an explicit sandboxed SHACLSPARQLExecutor.")
     }
 
-    public func ask(query: String, focusNode: ObjectTerm?, dataGraph: Graph, shapesGraph: SHACLShapesGraph) throws -> Bool {
+    public func ask(query: String, bindings: SHACLSPARQLSolution, dataGraph: Graph, shapesGraph: SHACLShapesGraph) throws -> Bool {
         throw SHACLError.sparqlNotExecuted("SPARQL execution requires an explicit sandboxed SHACLSPARQLExecutor.")
     }
 }

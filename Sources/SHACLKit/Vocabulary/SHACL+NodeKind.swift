@@ -1,4 +1,14 @@
 import RDFCore
+import RDFKit
+
+extension SHACL {
+    /// The node kind an IRI of a shapes graph names (SHACL 1.2 Core §4.1.3),
+    /// read where the shapes graph is decoded.
+    static func namedNodeKind(_ term: ObjectTerm) -> (any SHACL.NodeKind)? {
+        [SHACL.IRI, SHACL.Literal, SHACL.BlankNode, SHACL.BlankNodeOrIRI, SHACL.BlankNodeOrLiteral, SHACL.IRIOrLiteral]
+            .first { term == .iri(type(of: $0).metadata.id) }
+    }
+}
 
 extension SHACL.NodeKind {
     /// Whether `node` has this node kind (SHACL 1.2 Core §4.1.3:
