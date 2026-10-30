@@ -59,7 +59,7 @@ public struct SHACLShapesGraph: Sendable {
 
     /// The nodes of `graph` that are shapes (§2.1), in first order.
     private static func shapeNodes(in graph: Graph) -> [ObjectTerm] {
-        let type = IRIKit.IRI(of: RDF.type)!
+        let type = IRIKit.IRI(of: RDF.type.self)!
         let shapeClasses: Set<ObjectTerm> = [
             .iri(IRIKit.IRI(of: SHACL.NodeShapeIndividual.self)!),
             .iri(IRIKit.IRI(of: SHACL.PropertyShapeIndividual.self)!),

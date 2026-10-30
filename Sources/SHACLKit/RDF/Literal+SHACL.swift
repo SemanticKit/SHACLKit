@@ -1,19 +1,31 @@
 import Foundation
 import IRIKit
+import RDF
 import RDFCore
 import RDFFormats
+import struct RDFCore.Literal
 
 /// The values of literals, as SHACL's constraints compare them.
 extension Literal {
     /// A literal of `xsd:boolean`.
     init(_ value: Bool) {
-        // xsd:boolean is never xsd:string or a language-tagged datatype.
-        self = try! Literal(value ? "true" : "false", datatype: IRIKit.IRI(of: XSDDatatypes.booleanIndividual.self)!)
+        self = Literal(value ? "true" : "false", datatype: IRIKit.IRI(of: XSDDatatypes.booleanIndividual.self)!)
     }
 
     /// A literal of `xsd:integer`.
     init(_ value: Int) {
-        self = try! Literal(String(value), datatype: IRIKit.IRI(of: XSDDatatypes.integerIndividual.self)!)
+        self = Literal(String(value), datatype: IRIKit.IRI(of: XSDDatatypes.integerIndividual.self)!)
+    }
+
+    /// The literal's datatype IRI as RDF 1.2 Concepts §3.4 gives it:
+    /// `rdf:dirLangString` for a directional language-tagged string,
+    /// `rdf:langString` for any other language-tagged string, `xsd:string`
+    /// for a simple literal, and ``datatype`` otherwise.
+    private var datatypeIRI: IRI {
+        if languageTag != nil {
+            return IRIKit.IRI(of: baseDirection == nil ? RDF.langStringIndividual.self : RDF.dirLangStringIndividual.self)!
+        }
+        return datatype ?? IRIKit.IRI(of: XSDDatatypes.stringIndividual.self)!
     }
 
     /// The value of an `xsd:boolean` literal: its lexical space is `true`,

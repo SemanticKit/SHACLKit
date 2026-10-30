@@ -52,20 +52,20 @@ public struct SHACLSPARQLQuery: Sendable, Hashable {
     /// Decodes the SPARQL-based constraint or target whose node is `node`.
     init(_ node: ObjectTerm, in graph: Graph) {
         var prefixes: [String: IRI] = [:]
-        for declarations in graph.objects(of: node, IRIKit.IRI(of: SHACL.prefixes)!) {
-            for declaration in graph.objects(of: declarations, IRIKit.IRI(of: SHACL.declare)!) {
-                guard let prefix = graph.object(of: declaration, IRIKit.IRI(of: SHACL.prefix)!)?.stringValue,
-                      let namespace = graph.object(of: declaration, IRIKit.IRI(of: SHACL.namespace)!)?.stringValue,
+        for declarations in graph.objects(of: node, IRIKit.IRI(of: SHACL.prefixes.self)!) {
+            for declaration in graph.objects(of: declarations, IRIKit.IRI(of: SHACL.declare.self)!) {
+                guard let prefix = graph.object(of: declaration, IRIKit.IRI(of: SHACL.prefix.self)!)?.stringValue,
+                      let namespace = graph.object(of: declaration, IRIKit.IRI(of: SHACL.namespace.self)!)?.stringValue,
                       let iri = IRI(rawValue: namespace) else { continue }
                 prefixes[prefix] = iri
             }
         }
         self.init(
             node: node,
-            select: graph.object(of: node, IRIKit.IRI(of: SHACL.select)!)?.stringValue,
-            ask: graph.object(of: node, IRIKit.IRI(of: SHACL.ask)!)?.stringValue,
-            message: graph.object(of: node, IRIKit.IRI(of: SHACL.message)!)?.stringValue,
-            isDeactivated: graph.object(of: node, IRIKit.IRI(of: SHACL.deactivated)!)?.literal?.isTrue ?? false,
+            select: graph.object(of: node, IRIKit.IRI(of: SHACL.select.self)!)?.stringValue,
+            ask: graph.object(of: node, IRIKit.IRI(of: SHACL.ask.self)!)?.stringValue,
+            message: graph.object(of: node, IRIKit.IRI(of: SHACL.message.self)!)?.stringValue,
+            isDeactivated: graph.object(of: node, IRIKit.IRI(of: SHACL.deactivated.self)!)?.literal?.isTrue ?? false,
             prefixes: prefixes
         )
     }

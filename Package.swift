@@ -19,11 +19,11 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/SemanticKit/RDFKit.git", branch: "wp/integration"),
+        .package(url: "https://github.com/SemanticKit/RDFKit.git", branch: "main"),
         .package(url: "https://github.com/SemanticKit/IRIKit.git", branch: "main"),
         // The W3C test manifest vocabulary (test-manifest.ttl), translated
         // once by SPARQLKit's TestManifest target and shared from there.
-        .package(url: "https://github.com/SemanticKit/SPARQLKit.git", branch: "wp/07a-sparql-translator"),
+        .package(url: "https://github.com/SemanticKit/SPARQLKit.git", branch: "main"),
     ],
     targets: [
         // The vocabularies, translated from the documents SHACL 1.2

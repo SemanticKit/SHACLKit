@@ -47,7 +47,7 @@ public struct SHACLTripleRule: Sendable, Hashable {
     ///   `sh:object`, or has a non-numeric `sh:order`.
     init(_ node: ObjectTerm, in nodes: SHACLShapesGraph.Nodes) throws {
         let graph = nodes.graph
-        guard graph.objects(of: node, IRIKit.IRI(of: RDF.type)!).contains(.iri(IRIKit.IRI(of: SHACL.TripleRuleIndividual.self)!)) else {
+        guard graph.objects(of: node, IRIKit.IRI(of: RDF.type.self)!).contains(.iri(IRIKit.IRI(of: SHACL.TripleRuleIndividual.self)!)) else {
             throw SHACLError.invalidShapesGraph("Rule \(node) is missing rdf:type sh:TripleRule")
         }
         func expression(_ parameter: IRI, _ name: String) throws -> SHACLNodeExpression {
@@ -57,7 +57,7 @@ public struct SHACLTripleRule: Sendable, Hashable {
             return SHACLNodeExpression(value, in: nodes)
         }
         var order: Double?
-        if let value = graph.object(of: node, IRIKit.IRI(of: SHACL.order)!) {
+        if let value = graph.object(of: node, IRIKit.IRI(of: SHACL.order.self)!) {
             guard let number = value.literal?.numericValue else {
                 throw SHACLError.invalidShapesGraph("Rule \(node) has invalid sh:order value \(value)")
             }
@@ -66,10 +66,10 @@ public struct SHACLTripleRule: Sendable, Hashable {
         self.init(
             node: node,
             order: order,
-            conditions: graph.objects(of: node, IRIKit.IRI(of: SHACL.condition)!).flatMap(graph.listOrValue).map(nodes.shape),
-            subject: try expression(IRIKit.IRI(of: SHACL.subject)!, "sh:subject"),
-            predicate: try expression(IRIKit.IRI(of: SHACL.predicate)!, "sh:predicate"),
-            object: try expression(IRIKit.IRI(of: SHACL.object)!, "sh:object")
+            conditions: graph.objects(of: node, IRIKit.IRI(of: SHACL.condition.self)!).flatMap(graph.listOrValue).map(nodes.shape),
+            subject: try expression(IRIKit.IRI(of: SHACL.subject.self)!, "sh:subject"),
+            predicate: try expression(IRIKit.IRI(of: SHACL.predicate.self)!, "sh:predicate"),
+            object: try expression(IRIKit.IRI(of: SHACL.object.self)!, "sh:object")
         )
     }
 

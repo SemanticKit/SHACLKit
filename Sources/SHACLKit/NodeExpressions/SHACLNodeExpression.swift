@@ -92,14 +92,14 @@ public indirect enum SHACLNodeExpression: Sendable, Hashable {
     private static var parameters: Set<IRI> {
         [
             IRIKit.IRI(of: SHACL.union)!, IRIKit.IRI(of: SHACL.intersection)!,
-            IRIKit.IRI(of: SHNEX.intersection)!, IRIKit.IRI(of: SHNEX.nodes)!,
-            IRIKit.IRI(of: SHNEX.exists)!, IRIKit.IRI(of: SHNEX.count)!, IRIKit.IRI(of: SHNEX.var)!,
-            IRIKit.IRI(of: SHNEX.distinct)!, IRIKit.IRI(of: SHNEX.matchAll)!, IRIKit.IRI(of: SHNEX.filterShape)!,
-            IRIKit.IRI(of: SHNEX.instancesOf)!, IRIKit.IRI(of: SHNEX.nodesMatching)!, IRIKit.IRI(of: SHNEX.min)!,
-            IRIKit.IRI(of: SHNEX.max)!, IRIKit.IRI(of: SHNEX.sum)!, IRIKit.IRI(of: SHNEX.if)!,
-            IRIKit.IRI(of: SHNEX.pathValues)!, IRIKit.IRI(of: SHNEX.concat)!, IRIKit.IRI(of: SHNEX.remove)!,
-            IRIKit.IRI(of: SHNEX.flatMap)!, IRIKit.IRI(of: SHNEX.limit)!, IRIKit.IRI(of: SHNEX.offset)!,
-            IRIKit.IRI(of: SHNEX.findFirst)!, IRIKit.IRI(of: SHNEX.orderBy)!,
+            IRIKit.IRI(of: SHNEX.intersection.self)!, IRIKit.IRI(of: SHNEX.nodes.self)!,
+            IRIKit.IRI(of: SHNEX.exists.self)!, IRIKit.IRI(of: SHNEX.count.self)!, IRIKit.IRI(of: SHNEX.var.self)!,
+            IRIKit.IRI(of: SHNEX.distinct.self)!, IRIKit.IRI(of: SHNEX.matchAll.self)!, IRIKit.IRI(of: SHNEX.filterShape.self)!,
+            IRIKit.IRI(of: SHNEX.instancesOf.self)!, IRIKit.IRI(of: SHNEX.nodesMatching.self)!, IRIKit.IRI(of: SHNEX.min.self)!,
+            IRIKit.IRI(of: SHNEX.max.self)!, IRIKit.IRI(of: SHNEX.sum.self)!, IRIKit.IRI(of: SHNEX.if.self)!,
+            IRIKit.IRI(of: SHNEX.pathValues.self)!, IRIKit.IRI(of: SHNEX.concat.self)!, IRIKit.IRI(of: SHNEX.remove.self)!,
+            IRIKit.IRI(of: SHNEX.flatMap.self)!, IRIKit.IRI(of: SHNEX.limit.self)!, IRIKit.IRI(of: SHNEX.offset.self)!,
+            IRIKit.IRI(of: SHNEX.findFirst.self)!, IRIKit.IRI(of: SHNEX.orderBy.self)!,
         ]
     }
 
@@ -143,37 +143,37 @@ public indirect enum SHACLNodeExpression: Sendable, Hashable {
         if let members = members(IRIKit.IRI(of: SHACL.union)!) {
             return .union(members)
         }
-        if let members = members(IRIKit.IRI(of: SHACL.intersection)!) ?? members(IRIKit.IRI(of: SHNEX.intersection)!) {
+        if let members = members(IRIKit.IRI(of: SHACL.intersection)!) ?? members(IRIKit.IRI(of: SHNEX.intersection.self)!) {
             return .intersection(members)
         }
-        if let input = operand(IRIKit.IRI(of: SHNEX.nodes)!) {
-            if let shape = shape(IRIKit.IRI(of: SHNEX.matchAll)!) { return .matchAll(input, shape: shape) }
-            if let shape = shape(IRIKit.IRI(of: SHNEX.filterShape)!) { return .filterShape(input, shape: shape) }
-            if let removed = operand(IRIKit.IRI(of: SHNEX.remove)!) { return .remove(input, removed) }
-            if let map = operand(IRIKit.IRI(of: SHNEX.flatMap)!) { return .flatMap(input, map) }
-            if let limit = count(IRIKit.IRI(of: SHNEX.limit)!) { return .limit(input, limit) }
-            if let offset = count(IRIKit.IRI(of: SHNEX.offset)!) { return .offset(input, offset) }
-            if let shape = shape(IRIKit.IRI(of: SHNEX.findFirst)!) { return .findFirst(input, shape: shape) }
-            if let key = operand(IRIKit.IRI(of: SHNEX.orderBy)!) {
-                let descending = value(IRIKit.IRI(of: SHNEX.desc)!)?.literal?.isTrue ?? false
+        if let input = operand(IRIKit.IRI(of: SHNEX.nodes.self)!) {
+            if let shape = shape(IRIKit.IRI(of: SHNEX.matchAll.self)!) { return .matchAll(input, shape: shape) }
+            if let shape = shape(IRIKit.IRI(of: SHNEX.filterShape.self)!) { return .filterShape(input, shape: shape) }
+            if let removed = operand(IRIKit.IRI(of: SHNEX.remove.self)!) { return .remove(input, removed) }
+            if let map = operand(IRIKit.IRI(of: SHNEX.flatMap.self)!) { return .flatMap(input, map) }
+            if let limit = count(IRIKit.IRI(of: SHNEX.limit.self)!) { return .limit(input, limit) }
+            if let offset = count(IRIKit.IRI(of: SHNEX.offset.self)!) { return .offset(input, offset) }
+            if let shape = shape(IRIKit.IRI(of: SHNEX.findFirst.self)!) { return .findFirst(input, shape: shape) }
+            if let key = operand(IRIKit.IRI(of: SHNEX.orderBy.self)!) {
+                let descending = value(IRIKit.IRI(of: SHNEX.desc.self)!)?.literal?.isTrue ?? false
                 return .orderBy(input, key: key, descending: descending)
             }
             return .nodes(input)
         }
-        if let input = operand(IRIKit.IRI(of: SHNEX.concat)!) { return .concat(input) }
-        if let input = operand(IRIKit.IRI(of: SHNEX.exists)!) { return .exists(input) }
-        if let input = operand(IRIKit.IRI(of: SHNEX.count)!) { return .count(input) }
-        if let name = value(IRIKit.IRI(of: SHNEX.var)!) { return .variable(name.stringValue ?? name.description) }
-        if let input = operand(IRIKit.IRI(of: SHNEX.distinct)!) { return .distinct(input) }
-        if let cls = value(IRIKit.IRI(of: SHNEX.instancesOf)!) { return .instancesOf(cls) }
-        if let shape = shape(IRIKit.IRI(of: SHNEX.nodesMatching)!) { return .nodesMatching(shape) }
-        if let input = operand(IRIKit.IRI(of: SHNEX.min)!) { return .min(input) }
-        if let input = operand(IRIKit.IRI(of: SHNEX.max)!) { return .max(input) }
-        if let input = operand(IRIKit.IRI(of: SHNEX.sum)!) { return .sum(input) }
-        if let condition = operand(IRIKit.IRI(of: SHNEX.if)!), let then = operand(IRIKit.IRI(of: SHNEX.then)!) {
-            return .conditional(if: condition, then: then, else: operand(IRIKit.IRI(of: SHNEX.else)!))
+        if let input = operand(IRIKit.IRI(of: SHNEX.concat.self)!) { return .concat(input) }
+        if let input = operand(IRIKit.IRI(of: SHNEX.exists.self)!) { return .exists(input) }
+        if let input = operand(IRIKit.IRI(of: SHNEX.count.self)!) { return .count(input) }
+        if let name = value(IRIKit.IRI(of: SHNEX.var.self)!) { return .variable(name.stringValue ?? name.description) }
+        if let input = operand(IRIKit.IRI(of: SHNEX.distinct.self)!) { return .distinct(input) }
+        if let cls = value(IRIKit.IRI(of: SHNEX.instancesOf.self)!) { return .instancesOf(cls) }
+        if let shape = shape(IRIKit.IRI(of: SHNEX.nodesMatching.self)!) { return .nodesMatching(shape) }
+        if let input = operand(IRIKit.IRI(of: SHNEX.min.self)!) { return .min(input) }
+        if let input = operand(IRIKit.IRI(of: SHNEX.max.self)!) { return .max(input) }
+        if let input = operand(IRIKit.IRI(of: SHNEX.sum.self)!) { return .sum(input) }
+        if let condition = operand(IRIKit.IRI(of: SHNEX.if.self)!), let then = operand(IRIKit.IRI(of: SHNEX.then.self)!) {
+            return .conditional(if: condition, then: then, else: operand(IRIKit.IRI(of: SHNEX.else.self)!))
         }
-        if let pathNode = value(IRIKit.IRI(of: SHNEX.pathValues)!), let path = SHACLPropertyPath(pathNode, in: graph) {
+        if let pathNode = value(IRIKit.IRI(of: SHNEX.pathValues.self)!), let path = SHACLPropertyPath(pathNode, in: graph) {
             return .pathValues(path, focusNode: operand(Self.focusNodeParameter))
         }
         return node.isBlankNode ? .empty : .constant(node)

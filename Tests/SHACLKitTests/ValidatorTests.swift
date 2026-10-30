@@ -99,7 +99,7 @@ struct ValidatorTests {
         #expect(report.results.count == 2)
         let severity = try #require(report.results.first?.severity)
         #expect(![SHACL.Violation, SHACL.Warning, SHACL.Info, SHACL.Debug, SHACL.Trace].contains { $0 === severity })
-        #expect(report.graph.contains { $0.predicate == IRIKit.IRI(of: SHACL.resultSeverity)! && $0.object == term("ex:MySeverity") })
+        #expect(report.graph.contains { $0.predicate == IRIKit.IRI(of: SHACL.resultSeverity.self)! && $0.object == term("ex:MySeverity") })
         #expect(report.results.last?.severity === severity)
     }
 }

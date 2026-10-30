@@ -20,29 +20,29 @@ import struct RDFCore.Graph
 extension Graph {
     /// The objects of `node`'s `property`, a property a translated
     /// vocabulary declares.
-    func objects(of node: ObjectTerm, _ property: any RDFCore.Resource) -> [ObjectTerm] {
+    func objects(of node: ObjectTerm, _ property: any RDFCore.PropertyTerm.Type) -> [ObjectTerm] {
         objects(of: node, IRIKit.IRI(of: property)!)
     }
 
     /// The object of `node`'s `property`, a property a translated
     /// vocabulary declares.
-    func object(of node: ObjectTerm, _ property: any RDFCore.Resource) -> ObjectTerm? {
+    func object(of node: ObjectTerm, _ property: any RDFCore.PropertyTerm.Type) -> ObjectTerm? {
         object(of: node, IRIKit.IRI(of: property)!)
     }
 
     /// The manifest entries whose `rdf:type` is `type`, in a stable order.
     func entries(typed type: ObjectTerm) -> [ObjectTerm] {
-        subjects(IRIKit.IRI(of: RDF.type)!, type).sorted()
+        subjects(IRIKit.IRI(of: RDF.type.self)!, type).sorted()
     }
 
     /// The manifests an `mf:include` names.
     var includedManifests: [URL] {
-        compactMap { $0.predicate == IRIKit.IRI(of: TestManifest.include) ? $0.object.file : nil }
+        compactMap { $0.predicate == IRIKit.IRI(of: TestManifest.include.self) ? $0.object.file : nil }
     }
 
     /// The files an `mf:action` names.
     var actionFiles: [URL] {
-        compactMap { $0.predicate == IRIKit.IRI(of: TestManifest.action) ? $0.object.file : nil }
+        compactMap { $0.predicate == IRIKit.IRI(of: TestManifest.action.self) ? $0.object.file : nil }
     }
 }
 
@@ -64,12 +64,12 @@ struct W3CValidateTest {
     /// The `sht:Validate` entries of the manifest graph `graph`.
     static func entries(in graph: Graph) -> [W3CValidateTest] {
         graph.entries(typed: .iri("http://www.w3.org/ns/shacl-test#Validate")).compactMap { entry in
-            guard let action = graph.object(of: entry, TestManifest.action) else { return nil }
+            guard let action = graph.object(of: entry, TestManifest.action.self) else { return nil }
             return W3CValidateTest(
                 entry: entry,
                 dataGraph: graph.objects(of: action, "http://www.w3.org/ns/shacl-test#dataGraph"),
                 shapesGraph: graph.objects(of: action, "http://www.w3.org/ns/shacl-test#shapesGraph"),
-                result: graph.object(of: entry, TestManifest.result)
+                result: graph.object(of: entry, TestManifest.result.self)
             )
         }
     }
@@ -85,11 +85,11 @@ struct W3CRulesEvalTest {
     /// The `srt:RulesEvalTest` entries of the manifest graph `graph`.
     static func entries(in graph: Graph) -> [W3CRulesEvalTest] {
         graph.entries(typed: .iri("http://www.w3.org/ns/shacl-rules-test#RulesEvalTest")).compactMap { entry in
-            guard let action = graph.object(of: entry, TestManifest.action) else { return nil }
+            guard let action = graph.object(of: entry, TestManifest.action.self) else { return nil }
             return W3CRulesEvalTest(
                 ruleset: graph.object(of: action, "http://www.w3.org/ns/shacl-rules-test#ruleset"),
                 data: graph.object(of: action, "http://www.w3.org/ns/shacl-rules-test#data"),
-                result: graph.object(of: entry, TestManifest.result)
+                result: graph.object(of: entry, TestManifest.result.self)
             )
         }
     }
@@ -117,7 +117,7 @@ struct W3CRulesSrlTest {
         let typed = positive.flatMap { graph.entries(typed: $0).map { ($0, true) } }
             + negative.flatMap { graph.entries(typed: $0).map { ($0, false) } }
         return typed.map { entry, valid in
-            W3CRulesSrlTest(ruleset: graph.object(of: entry, TestManifest.action)?.file, expectedValid: valid)
+            W3CRulesSrlTest(ruleset: graph.object(of: entry, TestManifest.action.self)?.file, expectedValid: valid)
         }
     }
 }
@@ -136,9 +136,9 @@ struct W3CNodeExprEvalCase {
         // `sht:scope-<name>` binds the variable `<name>` of the expression.
         let scope = "http://www.w3.org/ns/shacl-test#scope-"
         return graph.entries(typed: .iri("http://www.w3.org/ns/shacl-test#EvalNodeExpr")).compactMap { entry in
-            guard let action = graph.object(of: entry, TestManifest.action),
+            guard let action = graph.object(of: entry, TestManifest.action.self),
                   let expression = graph.object(of: action, "http://www.w3.org/ns/shacl-test#nodeExpr"),
-                  let result = graph.object(of: entry, TestManifest.result) else { return nil }
+                  let result = graph.object(of: entry, TestManifest.result.self) else { return nil }
             var variables: [String: [ObjectTerm]] = [:]
             for triple in graph.triples(of: action) where triple.predicate.rawValue.hasPrefix(scope) {
                 variables[String(triple.predicate.rawValue.dropFirst(scope.count)), default: []].append(triple.object)

@@ -46,8 +46,8 @@ struct ReportTests {
     func reportGraphMatchesExpectedResult(fixture: String) throws {
         let graph = try Fixtures.graph("W3CDataShapes/\(fixture)")
         let report = try SHACLValidator().validate(graph, against: SHACLShapesGraph(graph))
-        let written = Graph(report.graph.filter { $0.predicate != IRIKit.IRI(of: SHACL.resultMessage)! })
-        let expected = Graph(try expectedReport(in: graph).filter { $0.predicate != IRIKit.IRI(of: SHACL.resultMessage)! })
+        let written = Graph(report.graph.filter { $0.predicate != IRIKit.IRI(of: SHACL.resultMessage.self)! })
+        let expected = Graph(try expectedReport(in: graph).filter { $0.predicate != IRIKit.IRI(of: SHACL.resultMessage.self)! })
         #expect(written.isIsomorphic(to: expected), "Report of \(fixture):\n\(written)\nexpected:\n\(expected)")
     }
 
@@ -78,7 +78,7 @@ struct ReportTests {
             message: result.message
         )
         let report = SHACLValidationReport(conforms: false, results: [undeclared, undeclared])
-        let severities = Set(report.graph.filter { $0.predicate == IRIKit.IRI(of: SHACL.resultSeverity)! }.map(\.object))
+        let severities = Set(report.graph.filter { $0.predicate == IRIKit.IRI(of: SHACL.resultSeverity.self)! }.map(\.object))
         #expect(severities.count == 1)
         #expect(severities.first?.isBlankNode == true)
     }

@@ -41,7 +41,7 @@ extension Graph {
     /// Whether `node` is `rdf:nil` or the subject of an `rdf:first` triple:
     /// the head of an RDF collection (RDF 1.2 Schema §5.2).
     func isList(_ node: ObjectTerm) -> Bool {
-        node == .iri(IRIKit.IRI(of: RDF.nil)!) || object(of: node, IRIKit.IRI(of: RDF.first)!) != nil
+        node == .iri(IRIKit.IRI(of: RDF.nil)!) || object(of: node, IRIKit.IRI(of: RDF.first.self)!) != nil
     }
 
     /// The members of the SHACL list whose head is `node` (SHACL 1.2 Core
@@ -56,8 +56,8 @@ extension Graph {
         var visited: Set<ObjectTerm> = []
         while current != nilList {
             guard visited.insert(current).inserted else { return nil }
-            let first = objects(of: current, IRIKit.IRI(of: RDF.first)!)
-            let rest = objects(of: current, IRIKit.IRI(of: RDF.rest)!)
+            let first = objects(of: current, IRIKit.IRI(of: RDF.first.self)!)
+            let rest = objects(of: current, IRIKit.IRI(of: RDF.rest.self)!)
             guard first.count == 1, rest.count == 1 else { return nil }
             members.append(first[0])
             current = rest[0]
@@ -73,7 +73,7 @@ extension Graph {
 
     /// `cls` and the classes that are `rdfs:subClassOf` it, directly or not.
     func subclasses(of cls: ObjectTerm) -> Set<ObjectTerm> {
-        let subClassOf = IRIKit.IRI(of: RDF.subClassOf)!
+        let subClassOf = IRIKit.IRI(of: RDF.subClassOf.self)!
         var closure: Set<ObjectTerm> = [cls]
         var pending = [cls]
         while let next = pending.popLast() {
@@ -90,13 +90,13 @@ extension Graph {
     /// the `rdf:type` values and their `rdfs:subClassOf` superclasses.
     func isInstance(_ node: ObjectTerm, of cls: ObjectTerm) -> Bool {
         let classes = subclasses(of: cls)
-        return objects(of: node, IRIKit.IRI(of: RDF.type)!).contains(where: classes.contains)
+        return objects(of: node, IRIKit.IRI(of: RDF.type.self)!).contains(where: classes.contains)
     }
 
     /// The SHACL instances of `cls`, in graph order.
     func instances(of cls: ObjectTerm) -> [ObjectTerm] {
         let classes = subclasses(of: cls)
-        let type = IRIKit.IRI(of: RDF.type)!
+        let type = IRIKit.IRI(of: RDF.type.self)!
         return compactMap { $0.predicate == type && classes.contains($0.object) ? $0.subject.object : nil }.uniqued()
     }
 
@@ -106,6 +106,6 @@ extension Graph {
     func reifiers(of subject: ObjectTerm, _ predicate: IRI, _ object: ObjectTerm) -> [ObjectTerm] {
         guard let subject = subject.subject else { return [] }
         let triple = ObjectTerm.tripleTerm(Element(subject: subject, predicate: predicate, object: object))
-        return subjects(IRIKit.IRI(of: RDF.reifies)!, triple)
+        return subjects(IRIKit.IRI(of: RDF.reifies.self)!, triple)
     }
 }

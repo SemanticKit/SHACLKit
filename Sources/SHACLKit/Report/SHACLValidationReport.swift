@@ -56,32 +56,32 @@ public struct SHACLValidationReport: Sendable, Equatable {
         }
         func encode(_ result: SHACLValidationResult) -> BlankNode {
             let node = blankNode("result")
-            insert(node, IRIKit.IRI(of: RDF.type)!, .iri(IRIKit.IRI(of: SHACL.ValidationResultIndividual.self)!))
-            insert(node, IRIKit.IRI(of: SHACL.resultSeverity)!, severityTerm(result.severity, in: result.sourceShape))
-            insert(node, IRIKit.IRI(of: SHACL.sourceShape)!, result.sourceShape.id)
-            insert(node, IRIKit.IRI(of: SHACL.focusNode)!, result.focusNode)
+            insert(node, IRIKit.IRI(of: RDF.type.self)!, .iri(IRIKit.IRI(of: SHACL.ValidationResultIndividual.self)!))
+            insert(node, IRIKit.IRI(of: SHACL.resultSeverity.self)!, severityTerm(result.severity, in: result.sourceShape))
+            insert(node, IRIKit.IRI(of: SHACL.sourceShape.self)!, result.sourceShape.id)
+            insert(node, IRIKit.IRI(of: SHACL.focusNode.self)!, result.focusNode)
             if let path = result.resultPath {
-                insert(node, IRIKit.IRI(of: SHACL.resultPath)!, path.encode(into: &graph) { blankNode("path") })
+                insert(node, IRIKit.IRI(of: SHACL.resultPath.self)!, path.encode(into: &graph) { blankNode("path") })
             }
             if let value = result.value {
-                insert(node, IRIKit.IRI(of: SHACL.value)!, value)
+                insert(node, IRIKit.IRI(of: SHACL.value.self)!, value)
             }
-            insert(node, IRIKit.IRI(of: SHACL.sourceConstraintComponent)!, .iri(IRIKit.IRI(of: result.sourceConstraintComponent)!))
+            insert(node, IRIKit.IRI(of: SHACL.sourceConstraintComponent.self)!, .iri(IRIKit.IRI(of: result.sourceConstraintComponent)!))
             if let constraint = result.sourceConstraint {
-                insert(node, IRIKit.IRI(of: SHACL.sourceConstraint)!, constraint)
+                insert(node, IRIKit.IRI(of: SHACL.sourceConstraint.self)!, constraint)
             }
-            insert(node, IRIKit.IRI(of: SHACL.resultMessage)!, .literal(Literal(result.message)))
+            insert(node, IRIKit.IRI(of: SHACL.resultMessage.self)!, .literal(Literal(result.message)))
             for detail in result.details {
-                insert(node, IRIKit.IRI(of: SHACL.detail)!, .blankNode(encode(detail)))
+                insert(node, IRIKit.IRI(of: SHACL.detail.self)!, .blankNode(encode(detail)))
             }
             return node
         }
         // A non-empty identifier is always a blank node.
         let report = try! BlankNode("report")
-        insert(report, IRIKit.IRI(of: RDF.type)!, .iri(IRIKit.IRI(of: SHACL.ValidationReportIndividual.self)!))
-        insert(report, IRIKit.IRI(of: SHACL.conforms)!, .literal(Literal(conforms)))
+        insert(report, IRIKit.IRI(of: RDF.type.self)!, .iri(IRIKit.IRI(of: SHACL.ValidationReportIndividual.self)!))
+        insert(report, IRIKit.IRI(of: SHACL.conforms.self)!, .literal(Literal(conforms)))
         for result in results {
-            insert(report, IRIKit.IRI(of: SHACL.result)!, .blankNode(encode(result)))
+            insert(report, IRIKit.IRI(of: SHACL.result.self)!, .blankNode(encode(result)))
         }
         return graph
     }

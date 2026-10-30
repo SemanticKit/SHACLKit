@@ -74,7 +74,7 @@ struct W3CSPARQLFixtureSubsetExecutor: SHACLSPARQLExecutor {
 
     func select(query: String, bindings: SHACLSPARQLSolution, dataGraph: Graph, shapesGraph: SHACLShapesGraph) throws -> [SHACLSPARQLSolution] {
         let query = query.lowercased()
-        let label = IRIKit.IRI(of: RDF.label)!
+        let label = IRIKit.IRI(of: RDF.label.self)!
         if query.contains("filter (?path = <http://www.w3.org/2000/01/rdf-schema#label>)"), let this = bindings["this"], let subject = this.subject {
             return dataGraph.triples(subject: subject, predicate: label).map { ["this": this, "path": .iri(label), "value": $0.object] }
         }

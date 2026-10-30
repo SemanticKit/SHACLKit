@@ -75,7 +75,7 @@ final class Validation {
         if shape.isClass {
             nodes += dataGraph.instances(of: shape.id)
         }
-        nodes += dataGraph.subjects(IRIKit.IRI(of: SHACL.shape)!, shape.id)
+        nodes += dataGraph.subjects(IRIKit.IRI(of: SHACL.shape.self)!, shape.id)
         return nodes.uniqued().sorted()
     }
 

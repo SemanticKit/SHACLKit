@@ -29,8 +29,8 @@ extension SHACLTarget {
     /// The parameters that declare targets.
     static var parameters: Set<IRI> {
         [
-            IRIKit.IRI(of: SHACL.targetNode)!, IRIKit.IRI(of: SHACL.targetClass)!, IRIKit.IRI(of: SHACL.targetSubjectsOf)!,
-            IRIKit.IRI(of: SHACL.targetObjectsOf)!, IRIKit.IRI(of: SHACL.targetWhere)!, IRIKit.IRI(of: SHACL.target)!,
+            IRIKit.IRI(of: SHACL.targetNode.self)!, IRIKit.IRI(of: SHACL.targetClass.self)!, IRIKit.IRI(of: SHACL.targetSubjectsOf.self)!,
+            IRIKit.IRI(of: SHACL.targetObjectsOf.self)!, IRIKit.IRI(of: SHACL.targetWhere.self)!, IRIKit.IRI(of: SHACL.target.self)!,
         ]
     }
 
@@ -41,8 +41,8 @@ extension SHACLTarget {
     static func targets(of node: ObjectTerm, in nodes: SHACLShapesGraph.Nodes) throws -> [SHACLTarget] {
         let graph = nodes.graph
         var targets: [SHACLTarget] = []
-        for value in graph.objects(of: node, IRIKit.IRI(of: SHACL.targetNode)!) {
-            if graph.object(of: value, IRIKit.IRI(of: SHACL.select)!) != nil || graph.object(of: value, IRIKit.IRI(of: SHACL.ask)!) != nil {
+        for value in graph.objects(of: node, IRIKit.IRI(of: SHACL.targetNode.self)!) {
+            if graph.object(of: value, IRIKit.IRI(of: SHACL.select.self)!) != nil || graph.object(of: value, IRIKit.IRI(of: SHACL.ask.self)!) != nil {
                 targets.append(try .sparql(value, in: graph))
             } else if SHACLNodeExpression.isExpression(value, in: graph) {
                 targets.append(.nodeExpression(SHACLNodeExpression(value, in: nodes)))
@@ -50,11 +50,11 @@ extension SHACLTarget {
                 targets.append(.node(value))
             }
         }
-        targets += graph.objects(of: node, IRIKit.IRI(of: SHACL.targetClass)!).map(SHACLTarget.class)
-        targets += graph.objects(of: node, IRIKit.IRI(of: SHACL.targetSubjectsOf)!).compactMap(\.iri).map(SHACLTarget.subjectsOf)
-        targets += graph.objects(of: node, IRIKit.IRI(of: SHACL.targetObjectsOf)!).compactMap(\.iri).map(SHACLTarget.objectsOf)
-        targets += graph.objects(of: node, IRIKit.IRI(of: SHACL.targetWhere)!).map { .where(nodes.shape($0)) }
-        for value in graph.objects(of: node, IRIKit.IRI(of: SHACL.target)!) {
+        targets += graph.objects(of: node, IRIKit.IRI(of: SHACL.targetClass.self)!).map(SHACLTarget.class)
+        targets += graph.objects(of: node, IRIKit.IRI(of: SHACL.targetSubjectsOf.self)!).compactMap(\.iri).map(SHACLTarget.subjectsOf)
+        targets += graph.objects(of: node, IRIKit.IRI(of: SHACL.targetObjectsOf.self)!).compactMap(\.iri).map(SHACLTarget.objectsOf)
+        targets += graph.objects(of: node, IRIKit.IRI(of: SHACL.targetWhere.self)!).map { .where(nodes.shape($0)) }
+        for value in graph.objects(of: node, IRIKit.IRI(of: SHACL.target.self)!) {
             targets.append(try .sparql(value, in: graph))
         }
         return targets

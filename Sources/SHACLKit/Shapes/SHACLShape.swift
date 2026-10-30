@@ -113,17 +113,17 @@ extension SHACLShape.Definition {
     ///   value is ill-formed.
     init(_ node: ObjectTerm, in nodes: SHACLShapesGraph.Nodes) throws {
         let graph = nodes.graph
-        let types = graph.objects(of: node, IRIKit.IRI(of: RDF.type)!)
+        let types = graph.objects(of: node, IRIKit.IRI(of: RDF.type.self)!)
         let typedNodeShape = types.contains(.iri(IRIKit.IRI(of: SHACL.NodeShapeIndividual.self)!))
         let typedPropertyShape = types.contains(.iri(IRIKit.IRI(of: SHACL.PropertyShapeIndividual.self)!))
 
-        if let pathNode = graph.object(of: node, IRIKit.IRI(of: SHACL.path)!) {
+        if let pathNode = graph.object(of: node, IRIKit.IRI(of: SHACL.path.self)!) {
             guard let path = SHACLPropertyPath(pathNode, in: graph) else {
                 throw SHACLError.invalidShapesGraph("Shape \(node) has an ill-formed sh:path \(pathNode)")
             }
             self.path = path
         }
-        let expression = graph.object(of: node, IRIKit.IRI(of: SHACL.expression)!).map { SHACLNodeExpression($0, in: nodes) }
+        let expression = graph.object(of: node, IRIKit.IRI(of: SHACL.expression.self)!).map { SHACLNodeExpression($0, in: nodes) }
         if path == nil, let expression, !typedNodeShape {
             valueExpression = expression
         }
@@ -134,19 +134,19 @@ extension SHACLShape.Definition {
         targets = try SHACLTarget.targets(of: node, in: nodes)
         isClass = graph.isInstance(node, of: .iri(IRIKit.IRI(of: RDF.ClassIndividual.self)!))
             || types.contains(.iri(IRIKit.IRI(of: SHACL.ShapeClassIndividual.self)!))
-        isDeactivated = graph.object(of: node, IRIKit.IRI(of: SHACL.deactivated)!)?.literal?.isTrue ?? false
-        if let value = graph.object(of: node, IRIKit.IRI(of: SHACL.severity)!) {
+        isDeactivated = graph.object(of: node, IRIKit.IRI(of: SHACL.deactivated.self)!)?.literal?.isTrue ?? false
+        if let value = graph.object(of: node, IRIKit.IRI(of: SHACL.severity.self)!) {
             severity = try nodes.severity(value)
             severityNode = value
         }
-        messages = graph.objects(of: node, IRIKit.IRI(of: SHACL.message)!).compactMap(\.literal)
+        messages = graph.objects(of: node, IRIKit.IRI(of: SHACL.message.self)!).compactMap(\.literal)
         constraints = try SHACLConstraint.constraints(
             of: node,
             in: nodes,
             isPropertyShape: path != nil || valueExpression != nil,
             expression: valueExpression == nil ? expression : nil
         )
-        rules = try graph.objects(of: node, IRIKit.IRI(of: SHACL.rule)!)
+        rules = try graph.objects(of: node, IRIKit.IRI(of: SHACL.rule.self)!)
             .flatMap(graph.listOrValue)
             .map { try SHACLTripleRule($0, in: nodes) }
     }

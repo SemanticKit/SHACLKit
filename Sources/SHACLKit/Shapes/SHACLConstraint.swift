@@ -155,21 +155,21 @@ extension SHACLConstraint {
     /// of a triple with one of them a shape (§2.1).
     static var parameters: Set<IRI> {
         [
-            IRIKit.IRI(of: SHACL.path)!, IRIKit.IRI(of: SHACL.class)!, IRIKit.IRI(of: SHACL.datatype)!,
-            IRIKit.IRI(of: SHACL.nodeKind)!, IRIKit.IRI(of: SHACL.minCount)!, IRIKit.IRI(of: SHACL.maxCount)!,
-            IRIKit.IRI(of: SHACL.minExclusive)!, IRIKit.IRI(of: SHACL.minInclusive)!, IRIKit.IRI(of: SHACL.maxExclusive)!,
-            IRIKit.IRI(of: SHACL.maxInclusive)!, IRIKit.IRI(of: SHACL.minLength)!, IRIKit.IRI(of: SHACL.maxLength)!,
-            IRIKit.IRI(of: SHACL.pattern)!, IRIKit.IRI(of: SHACL.singleLine)!, IRIKit.IRI(of: SHACL.languageIn)!,
-            IRIKit.IRI(of: SHACL.uniqueLang)!, IRIKit.IRI(of: SHACL.equals)!, IRIKit.IRI(of: SHACL.disjoint)!,
-            IRIKit.IRI(of: SHACL.lessThan)!, IRIKit.IRI(of: SHACL.lessThanOrEquals)!, IRIKit.IRI(of: SHACL.not)!,
-            IRIKit.IRI(of: SHACL.and)!, IRIKit.IRI(of: SHACL.or)!, IRIKit.IRI(of: SHACL.xone)!,
-            IRIKit.IRI(of: SHACL.node)!, IRIKit.IRI(of: SHACL.property)!, IRIKit.IRI(of: SHACL.qualifiedValueShape)!,
-            IRIKit.IRI(of: SHACL.someValue)!, IRIKit.IRI(of: SHACL.closed)!, IRIKit.IRI(of: SHACL.hasValue)!,
-            IRIKit.IRI(of: SHACL.in)!, IRIKit.IRI(of: SHACL.expression)!, IRIKit.IRI(of: SHACL.nodeByExpression)!,
-            IRIKit.IRI(of: SHACL.reifierShape)!, IRIKit.IRI(of: SHACL.reificationRequired)!, IRIKit.IRI(of: SHACL.memberShape)!,
-            IRIKit.IRI(of: SHACL.minListLength)!, IRIKit.IRI(of: SHACL.maxListLength)!, IRIKit.IRI(of: SHACL.uniqueMembers)!,
-            IRIKit.IRI(of: SHACL.rule)!, IRIKit.IRI(of: SHACL.sparql)!, IRIKit.IRI(of: SHACL.deactivated)!,
-            IRIKit.IRI(of: SHACL.severity)!,
+            IRIKit.IRI(of: SHACL.path.self)!, IRIKit.IRI(of: SHACL.class.self)!, IRIKit.IRI(of: SHACL.datatype.self)!,
+            IRIKit.IRI(of: SHACL.nodeKind.self)!, IRIKit.IRI(of: SHACL.minCount.self)!, IRIKit.IRI(of: SHACL.maxCount.self)!,
+            IRIKit.IRI(of: SHACL.minExclusive.self)!, IRIKit.IRI(of: SHACL.minInclusive.self)!, IRIKit.IRI(of: SHACL.maxExclusive.self)!,
+            IRIKit.IRI(of: SHACL.maxInclusive.self)!, IRIKit.IRI(of: SHACL.minLength.self)!, IRIKit.IRI(of: SHACL.maxLength.self)!,
+            IRIKit.IRI(of: SHACL.pattern.self)!, IRIKit.IRI(of: SHACL.singleLine.self)!, IRIKit.IRI(of: SHACL.languageIn.self)!,
+            IRIKit.IRI(of: SHACL.uniqueLang.self)!, IRIKit.IRI(of: SHACL.equals.self)!, IRIKit.IRI(of: SHACL.disjoint.self)!,
+            IRIKit.IRI(of: SHACL.lessThan.self)!, IRIKit.IRI(of: SHACL.lessThanOrEquals.self)!, IRIKit.IRI(of: SHACL.not.self)!,
+            IRIKit.IRI(of: SHACL.and.self)!, IRIKit.IRI(of: SHACL.or.self)!, IRIKit.IRI(of: SHACL.xone.self)!,
+            IRIKit.IRI(of: SHACL.node.self)!, IRIKit.IRI(of: SHACL.property.self)!, IRIKit.IRI(of: SHACL.qualifiedValueShape.self)!,
+            IRIKit.IRI(of: SHACL.someValue.self)!, IRIKit.IRI(of: SHACL.closed.self)!, IRIKit.IRI(of: SHACL.hasValue.self)!,
+            IRIKit.IRI(of: SHACL.in.self)!, IRIKit.IRI(of: SHACL.expression.self)!, IRIKit.IRI(of: SHACL.nodeByExpression.self)!,
+            IRIKit.IRI(of: SHACL.reifierShape.self)!, IRIKit.IRI(of: SHACL.reificationRequired.self)!, IRIKit.IRI(of: SHACL.memberShape.self)!,
+            IRIKit.IRI(of: SHACL.minListLength.self)!, IRIKit.IRI(of: SHACL.maxListLength.self)!, IRIKit.IRI(of: SHACL.uniqueMembers.self)!,
+            IRIKit.IRI(of: SHACL.rule.self)!, IRIKit.IRI(of: SHACL.sparql.self)!, IRIKit.IRI(of: SHACL.deactivated.self)!,
+            IRIKit.IRI(of: SHACL.severity.self)!,
         ]
     }
 
@@ -192,7 +192,7 @@ extension SHACLConstraint {
         func values(_ parameter: IRI) -> [ObjectTerm] {
             graph.objects(of: node, parameter).filter { value in
                 !graph.reifiers(of: node, parameter, value).contains { reifier in
-                    graph.object(of: reifier, IRIKit.IRI(of: SHACL.deactivated)!)?.literal?.isTrue ?? false
+                    graph.object(of: reifier, IRIKit.IRI(of: SHACL.deactivated.self)!)?.literal?.isTrue ?? false
                 }
             }
         }
@@ -232,8 +232,8 @@ extension SHACLConstraint {
         }
 
         var constraints: [SHACLConstraint] = []
-        constraints += values(IRIKit.IRI(of: SHACL.class)!).map(SHACLConstraint.class)
-        constraints += try values(IRIKit.IRI(of: SHACL.datatype)!).map { value in
+        constraints += values(IRIKit.IRI(of: SHACL.class.self)!).map(SHACLConstraint.class)
+        constraints += try values(IRIKit.IRI(of: SHACL.datatype.self)!).map { value in
             .datatype(try graph.listOrValue(value).map { datatype in
                 guard let datatype = datatype.iri else {
                     throw SHACLError.invalidShapesGraph("Shape \(node) has a sh:datatype \(datatype) that is not an IRI")
@@ -241,7 +241,7 @@ extension SHACLConstraint {
                 return datatype
             })
         }
-        constraints += try values(IRIKit.IRI(of: SHACL.nodeKind)!).map { value in
+        constraints += try values(IRIKit.IRI(of: SHACL.nodeKind.self)!).map { value in
             .nodeKind(try graph.listOrValue(value).map { kind in
                 guard let kind = SHACL.NodeKindIndividual.named(kind) else {
                     throw SHACLError.invalidShapesGraph("Shape \(node) has an unknown sh:nodeKind \(kind)")
@@ -250,42 +250,42 @@ extension SHACLConstraint {
             })
         }
         if isPropertyShape {
-            constraints += try integers(IRIKit.IRI(of: SHACL.minCount)!).map(SHACLConstraint.minCount)
-            constraints += try integers(IRIKit.IRI(of: SHACL.maxCount)!).map(SHACLConstraint.maxCount)
+            constraints += try integers(IRIKit.IRI(of: SHACL.minCount.self)!).map(SHACLConstraint.minCount)
+            constraints += try integers(IRIKit.IRI(of: SHACL.maxCount.self)!).map(SHACLConstraint.maxCount)
         }
-        constraints += try literals(IRIKit.IRI(of: SHACL.minExclusive)!).map(SHACLConstraint.minExclusive)
-        constraints += try literals(IRIKit.IRI(of: SHACL.minInclusive)!).map(SHACLConstraint.minInclusive)
-        constraints += try literals(IRIKit.IRI(of: SHACL.maxExclusive)!).map(SHACLConstraint.maxExclusive)
-        constraints += try literals(IRIKit.IRI(of: SHACL.maxInclusive)!).map(SHACLConstraint.maxInclusive)
-        constraints += try integers(IRIKit.IRI(of: SHACL.minLength)!).map(SHACLConstraint.minLength)
-        constraints += try integers(IRIKit.IRI(of: SHACL.maxLength)!).map(SHACLConstraint.maxLength)
+        constraints += try literals(IRIKit.IRI(of: SHACL.minExclusive.self)!).map(SHACLConstraint.minExclusive)
+        constraints += try literals(IRIKit.IRI(of: SHACL.minInclusive.self)!).map(SHACLConstraint.minInclusive)
+        constraints += try literals(IRIKit.IRI(of: SHACL.maxExclusive.self)!).map(SHACLConstraint.maxExclusive)
+        constraints += try literals(IRIKit.IRI(of: SHACL.maxInclusive.self)!).map(SHACLConstraint.maxInclusive)
+        constraints += try integers(IRIKit.IRI(of: SHACL.minLength.self)!).map(SHACLConstraint.minLength)
+        constraints += try integers(IRIKit.IRI(of: SHACL.maxLength.self)!).map(SHACLConstraint.maxLength)
         constraints += try patterns(of: node, in: graph).map(SHACLConstraint.pattern)
-        if isTrue(IRIKit.IRI(of: SHACL.singleLine)!) { constraints.append(.singleLine) }
-        constraints += values(IRIKit.IRI(of: SHACL.languageIn)!).map { list in
+        if isTrue(IRIKit.IRI(of: SHACL.singleLine.self)!) { constraints.append(.singleLine) }
+        constraints += values(IRIKit.IRI(of: SHACL.languageIn.self)!).map { list in
             .languageIn(graph.listOrValue(list).compactMap { $0.literal?.lexicalForm.lowercased() })
         }
-        if isPropertyShape, isTrue(IRIKit.IRI(of: SHACL.uniqueLang)!) { constraints.append(.uniqueLang) }
+        if isPropertyShape, isTrue(IRIKit.IRI(of: SHACL.uniqueLang.self)!) { constraints.append(.uniqueLang) }
 
-        constraints += try paths(IRIKit.IRI(of: SHACL.equals)!).map(SHACLConstraint.equals)
-        constraints += try paths(IRIKit.IRI(of: SHACL.disjoint)!).map(SHACLConstraint.disjoint)
+        constraints += try paths(IRIKit.IRI(of: SHACL.equals.self)!).map(SHACLConstraint.equals)
+        constraints += try paths(IRIKit.IRI(of: SHACL.disjoint.self)!).map(SHACLConstraint.disjoint)
         if isPropertyShape {
-            constraints += try paths(IRIKit.IRI(of: SHACL.lessThan)!).map(SHACLConstraint.lessThan)
-            constraints += try paths(IRIKit.IRI(of: SHACL.lessThanOrEquals)!).map(SHACLConstraint.lessThanOrEquals)
+            constraints += try paths(IRIKit.IRI(of: SHACL.lessThan.self)!).map(SHACLConstraint.lessThan)
+            constraints += try paths(IRIKit.IRI(of: SHACL.lessThanOrEquals.self)!).map(SHACLConstraint.lessThanOrEquals)
         }
 
-        constraints += values(IRIKit.IRI(of: SHACL.not)!).map { .not(nodes.shape($0)) }
-        constraints += try shapeLists(IRIKit.IRI(of: SHACL.and)!).map(SHACLConstraint.and)
-        constraints += try shapeLists(IRIKit.IRI(of: SHACL.or)!).map(SHACLConstraint.or)
-        constraints += try shapeLists(IRIKit.IRI(of: SHACL.xone)!).map(SHACLConstraint.xone)
-        constraints += values(IRIKit.IRI(of: SHACL.node)!).map { .node(nodes.shape($0)) }
-        constraints += values(IRIKit.IRI(of: SHACL.property)!).map { .property(nodes.shape($0)) }
+        constraints += values(IRIKit.IRI(of: SHACL.not.self)!).map { .not(nodes.shape($0)) }
+        constraints += try shapeLists(IRIKit.IRI(of: SHACL.and.self)!).map(SHACLConstraint.and)
+        constraints += try shapeLists(IRIKit.IRI(of: SHACL.or.self)!).map(SHACLConstraint.or)
+        constraints += try shapeLists(IRIKit.IRI(of: SHACL.xone.self)!).map(SHACLConstraint.xone)
+        constraints += values(IRIKit.IRI(of: SHACL.node.self)!).map { .node(nodes.shape($0)) }
+        constraints += values(IRIKit.IRI(of: SHACL.property.self)!).map { .property(nodes.shape($0)) }
 
         if isPropertyShape {
-            let qualifiedShapes = values(IRIKit.IRI(of: SHACL.qualifiedValueShape)!)
+            let qualifiedShapes = values(IRIKit.IRI(of: SHACL.qualifiedValueShape.self)!)
             if !qualifiedShapes.isEmpty {
-                let minimum = try integers(IRIKit.IRI(of: SHACL.qualifiedMinCount)!).first
-                let maximum = try integers(IRIKit.IRI(of: SHACL.qualifiedMaxCount)!).first
-                let siblings = isTrue(IRIKit.IRI(of: SHACL.qualifiedValueShapesDisjoint)!)
+                let minimum = try integers(IRIKit.IRI(of: SHACL.qualifiedMinCount.self)!).first
+                let maximum = try integers(IRIKit.IRI(of: SHACL.qualifiedMaxCount.self)!).first
+                let siblings = isTrue(IRIKit.IRI(of: SHACL.qualifiedValueShapesDisjoint.self)!)
                     ? siblingShapes(of: node, in: graph) : []
                 constraints += qualifiedShapes.map { qualified in
                     .qualifiedValueShape(
@@ -296,48 +296,48 @@ extension SHACLConstraint {
                     )
                 }
             }
-            constraints += values(IRIKit.IRI(of: SHACL.someValue)!).map { .someValue(nodes.shape($0)) }
+            constraints += values(IRIKit.IRI(of: SHACL.someValue.self)!).map { .someValue(nodes.shape($0)) }
         }
 
-        if isTrue(IRIKit.IRI(of: SHACL.closed)!) {
-            var permitted = Set(graph.objects(of: node, IRIKit.IRI(of: SHACL.property)!).compactMap { property in
-                graph.object(of: property, IRIKit.IRI(of: SHACL.path)!)?.iri
+        if isTrue(IRIKit.IRI(of: SHACL.closed.self)!) {
+            var permitted = Set(graph.objects(of: node, IRIKit.IRI(of: SHACL.property.self)!).compactMap { property in
+                graph.object(of: property, IRIKit.IRI(of: SHACL.path.self)!)?.iri
             })
-            for list in values(IRIKit.IRI(of: SHACL.ignoredProperties)!) {
+            for list in values(IRIKit.IRI(of: SHACL.ignoredProperties.self)!) {
                 permitted.formUnion(graph.listOrValue(list).compactMap(\.iri))
             }
             constraints.append(.closed(permitted: permitted))
         }
-        constraints += values(IRIKit.IRI(of: SHACL.hasValue)!).map(SHACLConstraint.hasValue)
-        constraints += try values(IRIKit.IRI(of: SHACL.in)!).map { list in
+        constraints += values(IRIKit.IRI(of: SHACL.hasValue.self)!).map(SHACLConstraint.hasValue)
+        constraints += try values(IRIKit.IRI(of: SHACL.in.self)!).map { list in
             guard let members = graph.list(list) else {
                 throw SHACLError.invalidShapesGraph("Shape \(node) has a sh:in \(list) that is not a SHACL list")
             }
             return .in(members)
         }
 
-        if let expression, let expressionNode = value(IRIKit.IRI(of: SHACL.expression)!) {
+        if let expression, let expressionNode = value(IRIKit.IRI(of: SHACL.expression.self)!) {
             constraints.append(.expression(expression, node: expressionNode))
         }
-        constraints += values(IRIKit.IRI(of: SHACL.nodeByExpression)!).map {
+        constraints += values(IRIKit.IRI(of: SHACL.nodeByExpression.self)!).map {
             .nodeByExpression(SHACLNodeExpression($0, in: nodes))
         }
 
         if isPropertyShape {
-            let reifierShape = value(IRIKit.IRI(of: SHACL.reifierShape)!).map(nodes.shape)
-            let required = isTrue(IRIKit.IRI(of: SHACL.reificationRequired)!)
+            let reifierShape = value(IRIKit.IRI(of: SHACL.reifierShape.self)!).map(nodes.shape)
+            let required = isTrue(IRIKit.IRI(of: SHACL.reificationRequired.self)!)
             if reifierShape != nil || required {
                 constraints.append(.reifierShape(reifierShape, required: required))
             }
         }
         do {
-            constraints += values(IRIKit.IRI(of: SHACL.memberShape)!).map { .memberShape(nodes.shape($0)) }
-            constraints += try integers(IRIKit.IRI(of: SHACL.minListLength)!).map(SHACLConstraint.minListLength)
-            constraints += try integers(IRIKit.IRI(of: SHACL.maxListLength)!).map(SHACLConstraint.maxListLength)
-            if isTrue(IRIKit.IRI(of: SHACL.uniqueMembers)!) { constraints.append(.uniqueMembers) }
+            constraints += values(IRIKit.IRI(of: SHACL.memberShape.self)!).map { .memberShape(nodes.shape($0)) }
+            constraints += try integers(IRIKit.IRI(of: SHACL.minListLength.self)!).map(SHACLConstraint.minListLength)
+            constraints += try integers(IRIKit.IRI(of: SHACL.maxListLength.self)!).map(SHACLConstraint.maxListLength)
+            if isTrue(IRIKit.IRI(of: SHACL.uniqueMembers.self)!) { constraints.append(.uniqueMembers) }
         }
 
-        for constraint in values(IRIKit.IRI(of: SHACL.sparql)!).flatMap(graph.listOrValue) {
+        for constraint in values(IRIKit.IRI(of: SHACL.sparql.self)!).flatMap(graph.listOrValue) {
             let query = SHACLSPARQLQuery(constraint, in: graph)
             guard query.select != nil || query.ask != nil else {
                 throw SHACLError.invalidShapesGraph("SPARQL constraint \(constraint) is missing sh:select/sh:ask")
@@ -351,7 +351,7 @@ extension SHACLConstraint {
     /// SPARQL's `REGEX` function, with its flags `i`, `m`, `s` and `x`.
     private static func patterns(of node: ObjectTerm, in graph: Graph) throws -> [NSRegularExpression] {
         var options: NSRegularExpression.Options = []
-        for flag in graph.object(of: node, IRIKit.IRI(of: SHACL.flags)!)?.stringValue ?? "" {
+        for flag in graph.object(of: node, IRIKit.IRI(of: SHACL.flags.self)!)?.stringValue ?? "" {
             switch flag {
             case "i": options.insert(.caseInsensitive)
             case "m": options.insert(.anchorsMatchLines)
@@ -360,7 +360,7 @@ extension SHACLConstraint {
             default: break
             }
         }
-        return try graph.objects(of: node, IRIKit.IRI(of: SHACL.pattern)!).map { value in
+        return try graph.objects(of: node, IRIKit.IRI(of: SHACL.pattern.self)!).map { value in
             guard let pattern = value.stringValue, let expression = try? NSRegularExpression(pattern: pattern, options: options) else {
                 throw SHACLError.invalidShapesGraph("Shape \(node) has an ill-formed sh:pattern \(value)")
             }
@@ -373,8 +373,8 @@ extension SHACLConstraint {
     /// `node` as a value of `sh:property` also has as values of
     /// `sh:property`.
     private static func siblingShapes(of node: ObjectTerm, in graph: Graph) -> [ObjectTerm] {
-        let property = IRIKit.IRI(of: SHACL.property)!
-        let qualifiedValueShape = IRIKit.IRI(of: SHACL.qualifiedValueShape)!
+        let property = IRIKit.IRI(of: SHACL.property.self)!
+        let qualifiedValueShape = IRIKit.IRI(of: SHACL.qualifiedValueShape.self)!
         return graph.subjects(property, node)
             .flatMap { graph.objects(of: $0, property) }
             .flatMap { graph.objects(of: $0, qualifiedValueShape) }
