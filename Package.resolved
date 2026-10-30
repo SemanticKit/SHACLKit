@@ -1,5 +1,5 @@
 {
-  "originHash" : "d227841d3f4c33442c5d4da1b8db4da4d0c837c581148b06947c95dbcc6946a4",
+  "originHash" : "d15fac18a938c72c4ee43a82855f4d08d639213770bc7bf544d66df6ce229c19",
   "pins" : [
     {
       "identity" : "irikit",
@@ -16,7 +16,7 @@
       "location" : "https://github.com/SemanticKit/RDFKit.git",
       "state" : {
         "branch" : "wp/integration",
-        "revision" : "b1221f0e22c51c1877437e00cb5c35cc99e6ad3c"
+        "revision" : "f2cf8614568ef4b76877f068b4b8a750410747fb"
       }
     },
     {
@@ -25,7 +25,7 @@
       "location" : "https://github.com/SemanticKit/SPARQLKit.git",
       "state" : {
         "branch" : "wp/07a-sparql-translator",
-        "revision" : "bc807ad45de85e1d59caafed22fd6a502c3f844c"
+        "revision" : "91130ac5d7b67f3cf2b44154fc4eb5b30b94de79"
       }
     },
     {
