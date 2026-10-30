@@ -51,6 +51,7 @@ let package = Package(
                 .product(name: "RDFCore", package: "RDFKit"),
                 .product(name: "RDFFormats", package: "RDFKit"),
                 .product(name: "RDFKit", package: "RDFKit"),
+                .product(name: "XSD", package: "RDFKit"),
             ]
         ),
         .testTarget(

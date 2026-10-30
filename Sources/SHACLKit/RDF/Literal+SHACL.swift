@@ -4,17 +4,27 @@ import RDF
 import RDFCore
 import RDFFormats
 import struct RDFCore.Literal
+import XSD
 
 /// The values of literals, as SHACL's constraints compare them.
 extension Literal {
-    /// A literal of `xsd:boolean`.
-    init(_ value: Bool) {
-        self = Literal(value ? "true" : "false", datatype: IRIKit.IRI(of: XSDDatatypes.booleanIndividual.self)!)
-    }
-
-    /// A literal of `xsd:integer`.
-    init(_ value: Int) {
-        self = Literal(String(value), datatype: IRIKit.IRI(of: XSDDatatypes.integerIndividual.self)!)
+    /// The literal a datatype's value is written as, where a node
+    /// expression's output or a validation report is written as RDF terms:
+    /// the lexical form of the value's literal form, and the datatype IRI its
+    /// declared key gives, derived here, at the boundary, as `GraphEncoder`
+    /// derives it (RDF 1.2 Concepts §3.4: "a literal ... consists of ... a
+    /// lexical form ... a datatype IRI"). Inside Swift the value is its
+    /// datatype's Swift type, `XSD.boolean`, `XSD.integer` or `XSD.decimal`.
+    init(_ value: some DatatypeValue) {
+        let form = value.literalForm
+        // `^^xsd:string` is the simple literal (RDF 1.2 Concepts §3.4).
+        guard form.datatype != XSD.string.datatype else {
+            self = Literal(form.lexicalForm)
+            return
+        }
+        // A datatype's declared name in its vocabulary's namespace is its
+        // datatype IRI (RDF 1.2 Concepts §5).
+        self = Literal(form.lexicalForm, datatype: IRIKit.IRI(form.datatype)!)
     }
 
     /// The literal's datatype IRI as RDF 1.2 Concepts §3.4 gives it:
@@ -25,13 +35,13 @@ extension Literal {
         if languageTag != nil {
             return IRIKit.IRI(of: baseDirection == nil ? RDF.langStringIndividual.self : RDF.dirLangStringIndividual.self)!
         }
-        return datatype ?? IRIKit.IRI(of: XSDDatatypes.stringIndividual.self)!
+        return datatype ?? Self.iri(of: XSD.string.self)
     }
 
     /// The value of an `xsd:boolean` literal: its lexical space is `true`,
     /// `false`, `1` and `0` (XML Schema 1.1 Part 2 §3.3.2.1).
     var booleanValue: Bool? {
-        guard datatypeIRI == IRIKit.IRI(of: XSDDatatypes.booleanIndividual.self)! else { return nil }
+        guard datatypeIRI == Self.iri(of: XSD.boolean.self) else { return nil }
         switch lexicalForm {
         case "true", "1": return true
         case "false", "0": return false
@@ -42,7 +52,7 @@ extension Literal {
     /// Whether the literal is `true` of `xsd:boolean`: SHACL's boolean
     /// parameters are activated by `true` only, not by the other lexical
     /// form `1` of the same value.
-    var isTrue: Bool { datatypeIRI == IRIKit.IRI(of: XSDDatatypes.booleanIndividual.self)! && lexicalForm == "true" }
+    var isTrue: Bool { datatypeIRI == Self.iri(of: XSD.boolean.self) && lexicalForm == "true" }
 
     /// The value of a literal of an integer datatype.
     var integerValue: Int? {
@@ -55,8 +65,8 @@ extension Literal {
     /// `xsd:decimal`), as a binary floating-point number.
     var numericValue: Double? {
         let datatype = datatypeIRI
-        guard Self.integerDatatypes.contains(datatype) || datatype == IRIKit.IRI(of: XSDDatatypes.decimalIndividual.self)!
-            || datatype == IRIKit.IRI(of: XSDDatatypes.doubleIndividual.self)! || datatype == IRIKit.IRI(of: XSDDatatypes.floatIndividual.self)! else { return nil }
+        guard Self.integerDatatypes.contains(datatype) || datatype == Self.iri(of: XSD.decimal.self)
+            || datatype == Self.iri(of: XSD.double.self) || datatype == Self.iri(of: XSD.float.self) else { return nil }
         let lexical = lexicalForm.trimmingCharacters(in: .whitespaces)
         switch lexical {
         case "INF", "+INF": return .infinity
@@ -74,7 +84,7 @@ extension Literal {
     /// zone and one without only when they are far apart, so they are not
     /// compared here.
     var dateTimeValue: (date: Date, hasTimezone: Bool)? {
-        guard datatypeIRI == IRIKit.IRI(of: XSDDatatypes.dateTimeIndividual.self)! else { return nil }
+        guard datatypeIRI == Self.iri(of: XSD.dateTime.self) else { return nil }
         return Self.dateTime(lexicalForm)
     }
 
@@ -86,13 +96,13 @@ extension Literal {
     func isWellFormed(as datatype: IRI) -> Bool {
         guard datatypeIRI == datatype else { return false }
         let lexical = lexicalForm
-        if datatype == IRIKit.IRI(of: XSDDatatypes.booleanIndividual.self)! { return booleanValue != nil }
-        if datatype == IRIKit.IRI(of: XSDDatatypes.decimalIndividual.self)! { return lexical.wholeMatch(of: /[+-]?(\d+(\.\d*)?|\.\d+)/) != nil }
-        if datatype == IRIKit.IRI(of: XSDDatatypes.doubleIndividual.self)! || datatype == IRIKit.IRI(of: XSDDatatypes.floatIndividual.self)! {
+        if datatype == Self.iri(of: XSD.boolean.self) { return booleanValue != nil }
+        if datatype == Self.iri(of: XSD.decimal.self) { return lexical.wholeMatch(of: /[+-]?(\d+(\.\d*)?|\.\d+)/) != nil }
+        if datatype == Self.iri(of: XSD.double.self) || datatype == Self.iri(of: XSD.float.self) {
             return lexical.wholeMatch(of: /[+-]?((\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?|INF)|NaN/) != nil
         }
-        if datatype == IRIKit.IRI(of: XSDDatatypes.dateTimeIndividual.self)! { return Self.dateTime(lexical) != nil }
-        if datatype == IRIKit.IRI(of: XSDDatatypes.dateIndividual.self)! {
+        if datatype == Self.iri(of: XSD.dateTime.self) { return Self.dateTime(lexical) != nil }
+        if datatype == Self.iri(of: XSD.date.self) {
             return lexical.wholeMatch(of: /-?\d{4,}-\d{2}-\d{2}(Z|[+-]\d{2}:\d{2})?/) != nil
         }
         if let bounds = Self.integerBounds(of: datatype) {
@@ -120,16 +130,22 @@ extension Literal {
 
     // MARK: - Datatypes
 
+    /// The datatype IRI the declared key of an XSD datatype's Swift type
+    /// gives.
+    private static func iri(of datatype: any DatatypeValue.Type) -> IRI {
+        IRIKit.IRI(datatype.datatype)!
+    }
+
     /// `xsd:integer` and the datatypes derived from it (XML Schema 1.1 Part
     /// 2 §3.4.13 to §3.4.25).
     private static var integerDatatypes: Set<IRI> {
         [
-            IRIKit.IRI(of: XSDDatatypes.integerIndividual.self)!, IRIKit.IRI(of: XSDDatatypes.nonNegativeIntegerIndividual.self)!,
-            IRIKit.IRI(of: XSDDatatypes.longIndividual.self)!, IRIKit.IRI(of: XSDDatatypes.intIndividual.self)!, IRIKit.IRI(of: XSDDatatypes.shortIndividual.self)!,
-            IRIKit.IRI(of: XSDDatatypes.byteIndividual.self)!, IRIKit.IRI(of: XSDDatatypes.nonPositiveIntegerIndividual.self)!,
-            IRIKit.IRI(of: XSDDatatypes.negativeIntegerIndividual.self)!, IRIKit.IRI(of: XSDDatatypes.positiveIntegerIndividual.self)!,
-            IRIKit.IRI(of: XSDDatatypes.unsignedLongIndividual.self)!, IRIKit.IRI(of: XSDDatatypes.unsignedIntIndividual.self)!,
-            IRIKit.IRI(of: XSDDatatypes.unsignedShortIndividual.self)!, IRIKit.IRI(of: XSDDatatypes.unsignedByteIndividual.self)!,
+            Self.iri(of: XSD.integer.self), Self.iri(of: XSD.nonNegativeInteger.self),
+            Self.iri(of: XSD.long.self), Self.iri(of: XSD.int.self), Self.iri(of: XSD.short.self),
+            Self.iri(of: XSD.byte.self), Self.iri(of: XSD.nonPositiveInteger.self),
+            Self.iri(of: XSD.negativeInteger.self), Self.iri(of: XSD.positiveInteger.self),
+            Self.iri(of: XSD.unsignedLong.self), Self.iri(of: XSD.unsignedInt.self),
+            Self.iri(of: XSD.unsignedShort.self), Self.iri(of: XSD.unsignedByte.self),
         ]
     }
 
@@ -137,19 +153,19 @@ extension Literal {
     /// unbounded one, `nil` for a datatype that is not an integer datatype.
     private static func integerBounds(of datatype: IRI) -> ClosedRange<Int>?? {
         switch datatype {
-        case IRIKit.IRI(of: XSDDatatypes.integerIndividual.self)!: .some(nil)
-        case IRIKit.IRI(of: XSDDatatypes.nonNegativeIntegerIndividual.self)!: 0...Int.max
-        case IRIKit.IRI(of: XSDDatatypes.longIndividual.self)!: Int.min...Int.max
-        case IRIKit.IRI(of: XSDDatatypes.intIndividual.self)!: -2_147_483_648...2_147_483_647
-        case IRIKit.IRI(of: XSDDatatypes.shortIndividual.self)!: -32_768...32_767
-        case IRIKit.IRI(of: XSDDatatypes.byteIndividual.self)!: -128...127
-        case IRIKit.IRI(of: XSDDatatypes.nonPositiveIntegerIndividual.self)!: Int.min...0
-        case IRIKit.IRI(of: XSDDatatypes.negativeIntegerIndividual.self)!: Int.min...(-1)
-        case IRIKit.IRI(of: XSDDatatypes.positiveIntegerIndividual.self)!: 1...Int.max
-        case IRIKit.IRI(of: XSDDatatypes.unsignedLongIndividual.self)!: 0...Int.max
-        case IRIKit.IRI(of: XSDDatatypes.unsignedIntIndividual.self)!: 0...4_294_967_295
-        case IRIKit.IRI(of: XSDDatatypes.unsignedShortIndividual.self)!: 0...65_535
-        case IRIKit.IRI(of: XSDDatatypes.unsignedByteIndividual.self)!: 0...255
+        case Self.iri(of: XSD.integer.self): .some(nil)
+        case Self.iri(of: XSD.nonNegativeInteger.self): 0...Int.max
+        case Self.iri(of: XSD.long.self): Int.min...Int.max
+        case Self.iri(of: XSD.int.self): -2_147_483_648...2_147_483_647
+        case Self.iri(of: XSD.short.self): -32_768...32_767
+        case Self.iri(of: XSD.byte.self): -128...127
+        case Self.iri(of: XSD.nonPositiveInteger.self): Int.min...0
+        case Self.iri(of: XSD.negativeInteger.self): Int.min...(-1)
+        case Self.iri(of: XSD.positiveInteger.self): 1...Int.max
+        case Self.iri(of: XSD.unsignedLong.self): 0...Int.max
+        case Self.iri(of: XSD.unsignedInt.self): 0...4_294_967_295
+        case Self.iri(of: XSD.unsignedShort.self): 0...65_535
+        case Self.iri(of: XSD.unsignedByte.self): 0...255
         default: nil
         }
     }

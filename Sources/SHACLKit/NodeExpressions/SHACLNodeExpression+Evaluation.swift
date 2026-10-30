@@ -2,6 +2,7 @@ import IRIKit
 import Foundation
 import RDFCore
 import RDFFormats
+import XSD
 
 extension SHACLNodeExpression {
     /// The output of the expression for `focusNode` over `dataGraph`, with
@@ -56,9 +57,9 @@ extension SHACLNodeExpression {
             let others = try members.dropFirst().map { Set(try run($0)) }
             return try run(first).uniqued().filter { node in others.allSatisfy { $0.contains(node) } }
         case .exists(let input):
-            return [.literal(Literal(try !run(input).isEmpty))]
+            return [.literal(Literal(XSD.boolean(booleanLiteral: try !run(input).isEmpty)))]
         case .count(let input):
-            return [.literal(Literal(try run(input).count))]
+            return [.literal(Literal(XSD.integer(integerLiteral: try run(input).count)))]
         case .variable(let name):
             if let bound = variables[name] { return bound }
             if name == "focusNode", let focusNode { return [focusNode] }
@@ -67,7 +68,7 @@ extension SHACLNodeExpression {
             return try run(input).uniqued()
         case .matchAll(let input, let shape):
             let nodes = try run(input)
-            return [.literal(Literal(try conforming(nodes, shape).count == nodes.count))]
+            return [.literal(Literal(XSD.boolean(booleanLiteral: try conforming(nodes, shape).count == nodes.count)))]
         case .filterShape(let input, let shape):
             return try conforming(try run(input).uniqued(), shape)
         case .findFirst(let input, let shape):
@@ -118,18 +119,25 @@ extension SHACLNodeExpression {
     }
 
     /// The sum of the numeric nodes: an `xsd:integer` when every addend is
-    /// an integer, otherwise an `xsd:decimal`.
+    /// an integer, otherwise an `xsd:decimal`, or an `xsd:double` for a sum
+    /// that has no decimal numeral (infinite, NaN, or one Swift writes in
+    /// exponent notation).
     private static func sum(of nodes: [ObjectTerm]) -> Literal {
         let addends = nodes.compactMap(\.literal).filter { $0.numericValue != nil }
         let total = addends.reduce(0) { $0 + ($1.numericValue ?? 0) }
-        if addends.allSatisfy(\.isInteger), total.rounded() == total {
-            return Literal(Int(total))
+        let whole = Int(exactly: total)
+        if addends.allSatisfy(\.isInteger), let whole {
+            return Literal(XSD.integer(integerLiteral: whole))
         }
-        var lexical = total.rounded() == total ? "\(Int(total)).0" : String(total)
+        var lexical = whole.map { "\($0).0" } ?? String(total)
         if lexical.contains("."), !lexical.hasSuffix(".0") {
             while lexical.last == "0" { lexical.removeLast() }
         }
-        return Literal(lexical, datatype: IRIKit.IRI(of: XSDDatatypes.decimalIndividual.self)!)
+        if let decimal = try? XSD.decimal(lexicalForm: lexical, writtenAs: XSD.decimal.self) {
+            return Literal(decimal)
+        }
+        // Every Double is in the value space of xsd:double.
+        return Literal(try! XSD.double(total))
     }
 
     /// Orders two keys: numbers by value, other terms by their string.

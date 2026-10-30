@@ -5,6 +5,7 @@ import RDF
 import struct RDFCore.Literal
 import SHACL
 import struct RDFCore.Graph
+import XSD
 
 /// A validation report (SHACL 1.2 Core §3.6.1): whether the data graph
 /// conforms to the shapes graph, and its results.
@@ -79,7 +80,7 @@ public struct SHACLValidationReport: Sendable, Equatable {
         // A non-empty identifier is always a blank node.
         let report = try! BlankNode("report")
         insert(report, IRIKit.IRI(of: RDF.type.self)!, .iri(IRIKit.IRI(of: SHACL.ValidationReportIndividual.self)!))
-        insert(report, IRIKit.IRI(of: SHACL.conforms.self)!, .literal(Literal(conforms)))
+        insert(report, IRIKit.IRI(of: SHACL.conforms.self)!, .literal(Literal(XSD.boolean(booleanLiteral: conforms))))
         for result in results {
             insert(report, IRIKit.IRI(of: SHACL.result.self)!, .blankNode(encode(result)))
         }
