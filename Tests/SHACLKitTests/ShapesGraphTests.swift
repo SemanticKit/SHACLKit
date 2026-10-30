@@ -20,8 +20,8 @@ struct ShapesGraphTests {
         let targets = Set(shape.targets)
         #expect(targets.contains(.class(term("ex:Person"))))
         #expect(targets.contains(.node(term("ex:alice"))))
-        #expect(targets.contains(.subjectsOf("http://example.com/knows")))
-        #expect(targets.contains(.objectsOf("http://example.com/memberOf")))
+        #expect(targets.contains(.subjectsOf(term("ex:knows").iri!)))
+        #expect(targets.contains(.objectsOf(term("ex:memberOf").iri!)))
     }
 
     @Test func shapesLoaderParsesMultipleShapesAndObjectLists() throws {
@@ -47,7 +47,7 @@ struct ShapesGraphTests {
 
     @Test func shapesLoaderParsesTargetWhereSelectors() throws {
         let graph = try Fixtures.shapes("W3CDataShapes/shacl12-test-suite/tests/core/targets/targetWhere-001.ttl")
-        let shape = try #require(graph.shape(.iri("http://example.com/ns#AdultShape")))
+        let shape = try #require(graph.shape(term("ns:AdultShape")))
         let whereShapes = shape.targets.compactMap { target -> SHACLShape? in
             if case .where(let shape) = target { return shape }
             return nil
@@ -96,13 +96,13 @@ struct ShapesGraphTests {
     @Test func shapesLoaderParsesSPARQLPrefixDeclarations() throws {
         let query = try #require(Self.sparqlConstraints(in: "sparqlConstraintWithPrefixesShapes.ttl").first)
         #expect(query.node == term("ex:NameConstraint"))
-        #expect(query.prefixes["ex"] == "http://example.com/")
+        #expect(query.prefixes["ex"] == term("ex:").iri)
     }
 
     @Test func shapesLoaderParsesSPARQLDefaultPrefixDeclarations() throws {
         let query = try #require(Self.sparqlConstraints(in: "sparqlConstraintWithDefaultPrefixShapes.ttl").first)
         #expect(query.node == term("ex:NameConstraint"))
-        #expect(query.prefixes[""] == "http://example.com/")
+        #expect(query.prefixes[""] == term("ex:").iri)
     }
 
     @Test("A shape refers to the shapes it names as the shape objects themselves")

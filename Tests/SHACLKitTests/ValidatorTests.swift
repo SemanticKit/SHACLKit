@@ -58,12 +58,12 @@ struct ValidatorTests {
               sh:maxInclusive 90 .
             """))
         let type = RDF.type.iri!
-        let age: IRI = "http://example.com/age"
+        let age = term("ex:age").iri!
         let person = term("ex:Person")
         let integer = term("25")
         var data = Graph()
         for index in 0..<500 {
-            let subject = SubjectTerm.iri(IRI(rawValue: "http://example.com/person\(index)")!)
+            let subject = term("ex:person\(index)").subject!
             data.insert(Graph.Element(subject: subject, predicate: type, object: person))
             data.insert(Graph.Element(subject: subject, predicate: age, object: integer))
         }

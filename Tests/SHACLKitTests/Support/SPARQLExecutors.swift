@@ -70,7 +70,6 @@ struct AlwaysFalseAskSPARQLExecutor: SHACLSPARQLExecutor {
 /// An executor that answers the queries of the W3C SPARQL fixtures the
 /// conformance subset runs, by recognising each query.
 struct W3CSPARQLFixtureSubsetExecutor: SHACLSPARQLExecutor {
-    private let ns = "http://example.com/ns#"
 
     func select(query: String, bindings: SHACLSPARQLSolution, dataGraph: Graph, shapesGraph: SHACLShapesGraph) throws -> [SHACLSPARQLSolution] {
         let query = query.lowercased()
@@ -78,11 +77,11 @@ struct W3CSPARQLFixtureSubsetExecutor: SHACLSPARQLExecutor {
         if query.contains("filter (?path = <http://www.w3.org/2000/01/rdf-schema#label>)"), let this = bindings["this"], let subject = this.subject {
             return dataGraph.triples(subject: subject, predicate: label).map { ["this": this, "path": .iri(label), "value": $0.object] }
         }
-        if query.contains("filter ($this = ex:invalidresource)"), let this = bindings["this"], this == .iri(IRI(rawValue: ns + "InvalidResource")!) {
+        if query.contains("filter ($this = ex:invalidresource)"), let this = bindings["this"], this == term("ns:InvalidResource") {
             return [["this": this]]
         }
         if query.contains("select ?person"), query.contains("?person ex:age ?age"), query.contains("?age < 18") {
-            return [["person": .iri(IRI(rawValue: ns + "Benjamin")!)]]
+            return [["person": term("ns:Benjamin")]]
         }
         return []
     }

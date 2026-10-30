@@ -14,21 +14,20 @@ struct TargetTests {
         return try SHACLValidator().focusNodes(of: target, in: Fixtures.graph(dataFixture), against: shapes)
     }
 
-    private let ns = "http://example.com/ns#"
 
     @Test func coreValidatorResolvesTargetWhereFocusNodes() throws {
         let fixture = "W3CDataShapes/shacl12-test-suite/tests/core/targets/targetWhere-001.ttl"
         let report = try Fixtures.validate(shapes: fixture, data: fixture)
         #expect(!report.conforms)
-        #expect(report.results.contains { $0.focusNode == .iri(IRI(rawValue: ns + "InvalidResource1")!) })
-        #expect(!report.results.contains { $0.focusNode == .iri(IRI(rawValue: ns + "InvalidResource2")!) })
+        #expect(report.results.contains { $0.focusNode == term("ns:InvalidResource1") })
+        #expect(!report.results.contains { $0.focusNode == term("ns:InvalidResource2") })
     }
 
     @Test func coreValidatorResolvesShapeClassImplicitTargets() throws {
         let fixture = "W3CDataShapes/shacl12-test-suite/tests/core/targets/targetClassImplicit-002.ttl"
         let report = try Fixtures.validate(shapes: fixture, data: fixture)
         #expect(!report.conforms)
-        #expect(report.results.contains { $0.focusNode == .iri(IRI(rawValue: ns + "InvalidInstance")!) })
+        #expect(report.results.contains { $0.focusNode == term("ns:InvalidInstance") })
     }
 
     @Test func coreValidatorResolvesShapeSelectorTargets() throws {
@@ -37,8 +36,8 @@ struct TargetTests {
             data: "W3CDataShapes/shacl12-test-suite/tests/core/targets/shape-001-data.ttl"
         )
         #expect(!report.conforms)
-        #expect(report.results.contains { $0.focusNode == .iri(IRI(rawValue: ns + "InvalidResource1")!) })
-        #expect(!report.results.contains { $0.focusNode == .iri(IRI(rawValue: ns + "ValidResource1")!) })
+        #expect(report.results.contains { $0.focusNode == term("ns:InvalidResource1") })
+        #expect(!report.results.contains { $0.focusNode == term("ns:ValidResource1") })
     }
 
     @Test func focusNodeResolverResolvesSelectorsAgainstDataGraph() throws {
