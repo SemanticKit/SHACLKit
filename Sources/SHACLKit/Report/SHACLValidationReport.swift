@@ -39,10 +39,25 @@ public struct SHACLValidationReport: Sendable, Equatable {
         func insert(_ subject: BlankNode, _ predicate: IRI, _ object: ObjectTerm) {
             graph.insert(Graph.Element(subject: .blankNode(subject), predicate: predicate, object: object))
         }
+        // The blank nodes of severities that have neither a declaration nor
+        // a node in the shapes graph, one for each severity object.
+        var undeclaredSeverities: [ObjectIdentifier: BlankNode] = [:]
+        /// The node a severity is written as: the IRI its declaration
+        /// derives, the `sh:severity` node of the shapes graph it came from,
+        /// or, for a severity made in Swift with neither, a blank node.
+        func severityTerm(_ severity: any SHACL.Severity, in shape: SHACLShape) -> ObjectTerm {
+            if let iri = IRIKit.IRI(of: severity) { return .iri(iri) }
+            if shape.severity === severity, let node = shape.severityNode { return node }
+            let key = ObjectIdentifier(severity)
+            if let node = undeclaredSeverities[key] { return .blankNode(node) }
+            let node = blankNode("severity")
+            undeclaredSeverities[key] = node
+            return .blankNode(node)
+        }
         func encode(_ result: SHACLValidationResult) -> BlankNode {
             let node = blankNode("result")
             insert(node, IRIKit.IRI(of: RDF.type)!, .iri(IRIKit.IRI(of: SHACL.ValidationResultIndividual.self)!))
-            insert(node, IRIKit.IRI(of: SHACL.resultSeverity)!, IRIKit.IRI(of: result.severity).map(ObjectTerm.iri) ?? result.sourceShape.severityNode!)
+            insert(node, IRIKit.IRI(of: SHACL.resultSeverity)!, severityTerm(result.severity, in: result.sourceShape))
             insert(node, IRIKit.IRI(of: SHACL.sourceShape)!, result.sourceShape.id)
             insert(node, IRIKit.IRI(of: SHACL.focusNode)!, result.focusNode)
             if let path = result.resultPath {
