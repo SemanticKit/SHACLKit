@@ -1,5 +1,7 @@
 import RDFCore
-import RDFKit
+import SHACL
+import struct RDFCore.Literal
+import struct RDFCore.Graph
 
 /// A validation result (SHACL 1.2 Core §3.6.2): one constraint that a focus
 /// node does not meet.
@@ -86,7 +88,7 @@ public struct SHACLValidationResult: Sendable, Equatable, CustomStringConvertibl
     private var sortKey: [String] {
         [
             sourceShape.id.description, focusNode.description, resultPath?.sparql ?? "",
-            type(of: sourceConstraintComponent).metadata.name, value?.description ?? "", message,
+            sourceConstraintComponent.iri?.rawValue ?? "", value?.description ?? "", message,
         ]
     }
 }

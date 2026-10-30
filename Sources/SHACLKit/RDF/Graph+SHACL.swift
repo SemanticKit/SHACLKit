@@ -1,6 +1,7 @@
 import IRIKit
 import RDFCore
-import RDFKit
+import RDF
+import struct RDFCore.Literal
 
 /// Reading a graph the way SHACL reads data and shapes graphs.
 extension Graph {
@@ -39,7 +40,7 @@ extension Graph {
     /// Whether `node` is `rdf:nil` or the subject of an `rdf:first` triple:
     /// the head of an RDF collection (RDF 1.2 Schema §5.2).
     func isList(_ node: ObjectTerm) -> Bool {
-        node == .iri(type(of: RDF.nil).metadata.id) || object(of: node, RDF.first.metadata.id) != nil
+        node == .iri(RDF.nil.iri!) || object(of: node, RDF.first.iri!) != nil
     }
 
     /// The members of the SHACL list whose head is `node` (SHACL 1.2 Core
@@ -48,14 +49,14 @@ extension Graph {
     /// `rdf:first` and exactly one value for the property `rdf:rest` that is
     /// also a SHACL list"), or `nil` when `node` is not one.
     func list(_ node: ObjectTerm) -> [ObjectTerm]? {
-        let nilList = ObjectTerm.iri(type(of: RDF.nil).metadata.id)
+        let nilList = ObjectTerm.iri(RDF.nil.iri!)
         var members: [ObjectTerm] = []
         var current = node
         var visited: Set<ObjectTerm> = []
         while current != nilList {
             guard visited.insert(current).inserted else { return nil }
-            let first = objects(of: current, RDF.first.metadata.id)
-            let rest = objects(of: current, RDF.rest.metadata.id)
+            let first = objects(of: current, RDF.first.iri!)
+            let rest = objects(of: current, RDF.rest.iri!)
             guard first.count == 1, rest.count == 1 else { return nil }
             members.append(first[0])
             current = rest[0]
@@ -71,7 +72,7 @@ extension Graph {
 
     /// `cls` and the classes that are `rdfs:subClassOf` it, directly or not.
     func subclasses(of cls: ObjectTerm) -> Set<ObjectTerm> {
-        let subClassOf = RDFS.subClassOf.metadata.id
+        let subClassOf = RDF.subClassOf.iri!
         var closure: Set<ObjectTerm> = [cls]
         var pending = [cls]
         while let next = pending.popLast() {
@@ -88,13 +89,13 @@ extension Graph {
     /// the `rdf:type` values and their `rdfs:subClassOf` superclasses.
     func isInstance(_ node: ObjectTerm, of cls: ObjectTerm) -> Bool {
         let classes = subclasses(of: cls)
-        return objects(of: node, RDF.type.metadata.id).contains(where: classes.contains)
+        return objects(of: node, RDF.type.iri!).contains(where: classes.contains)
     }
 
     /// The SHACL instances of `cls`, in graph order.
     func instances(of cls: ObjectTerm) -> [ObjectTerm] {
         let classes = subclasses(of: cls)
-        let type = RDF.type.metadata.id
+        let type = RDF.type.iri!
         return compactMap { $0.predicate == type && classes.contains($0.object) ? $0.subject.object : nil }.uniqued()
     }
 
@@ -104,6 +105,6 @@ extension Graph {
     func reifiers(of subject: ObjectTerm, _ predicate: IRI, _ object: ObjectTerm) -> [ObjectTerm] {
         guard let subject = subject.subject else { return [] }
         let triple = ObjectTerm.tripleTerm(Element(subject: subject, predicate: predicate, object: object))
-        return subjects(RDF.reifies.metadata.id, triple)
+        return subjects(RDF.reifies.iri!, triple)
     }
 }

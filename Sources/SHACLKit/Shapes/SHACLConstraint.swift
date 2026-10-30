@@ -1,7 +1,9 @@
 import Foundation
 import IRIKit
 import RDFCore
-import RDFKit
+import SHACL
+import struct RDFCore.Literal
+import struct RDFCore.Graph
 
 /// A constraint of a shape: one constraint component (SHACL 1.2 Core §4,
 /// SHACL 1.2 SPARQL Extensions, SHACL 1.2 Node Expressions) with the values
@@ -152,21 +154,21 @@ extension SHACLConstraint {
     /// of a triple with one of them a shape (§2.1).
     static var parameters: Set<IRI> {
         [
-            SHACL.path.metadata.id, SHACL.class.metadata.id, SHACL.datatype.metadata.id,
-            SHACL.nodeKind.metadata.id, SHACL.minCount.metadata.id, SHACL.maxCount.metadata.id,
-            SHACL.minExclusive.metadata.id, SHACL.minInclusive.metadata.id, SHACL.maxExclusive.metadata.id,
-            SHACL.maxInclusive.metadata.id, SHACL.minLength.metadata.id, SHACL.maxLength.metadata.id,
-            SHACL.pattern.metadata.id, SHACL.singleLine.metadata.id, SHACL.languageIn.metadata.id,
-            SHACL.uniqueLang.metadata.id, SHACL.equals.metadata.id, SHACL.disjoint.metadata.id,
-            SHACL.lessThan.metadata.id, SHACL.lessThanOrEquals.metadata.id, SHACL.not.metadata.id,
-            SHACL.and.metadata.id, SHACL.or.metadata.id, SHACL.xone.metadata.id,
-            SHACL.node.metadata.id, SHACL.property.metadata.id, SHACL.qualifiedValueShape.metadata.id,
-            SHACL.someValue.metadata.id, SHACL.closed.metadata.id, SHACL.hasValue.metadata.id,
-            SHACL.in.metadata.id, SHACL.expression.metadata.id, SHACL.nodeByExpression.metadata.id,
-            SHACL.reifierShape.metadata.id, SHACL.reificationRequired.metadata.id, SHACL.memberShape.metadata.id,
-            SHACL.minListLength.metadata.id, SHACL.maxListLength.metadata.id, SHACL.uniqueMembers.metadata.id,
-            SHACL.rule.metadata.id, SHACL.sparql.metadata.id, SHACL.deactivated.metadata.id,
-            SHACL.severity.metadata.id,
+            SHACL.path.iri!, SHACL.class.iri!, SHACL.datatype.iri!,
+            SHACL.nodeKind.iri!, SHACL.minCount.iri!, SHACL.maxCount.iri!,
+            SHACL.minExclusive.iri!, SHACL.minInclusive.iri!, SHACL.maxExclusive.iri!,
+            SHACL.maxInclusive.iri!, SHACL.minLength.iri!, SHACL.maxLength.iri!,
+            SHACL.pattern.iri!, SHACL.singleLine.iri!, SHACL.languageIn.iri!,
+            SHACL.uniqueLang.iri!, SHACL.equals.iri!, SHACL.disjoint.iri!,
+            SHACL.lessThan.iri!, SHACL.lessThanOrEquals.iri!, SHACL.not.iri!,
+            SHACL.and.iri!, SHACL.or.iri!, SHACL.xone.iri!,
+            SHACL.node.iri!, SHACL.property.iri!, SHACL.qualifiedValueShape.iri!,
+            SHACL.someValue.iri!, SHACL.closed.iri!, SHACL.hasValue.iri!,
+            SHACL.in.iri!, SHACL.expression.iri!, SHACL.nodeByExpression.iri!,
+            SHACL.reifierShape.iri!, SHACL.reificationRequired.iri!, SHACL.memberShape.iri!,
+            SHACL.minListLength.iri!, SHACL.maxListLength.iri!, SHACL.uniqueMembers.iri!,
+            SHACL.rule.iri!, SHACL.sparql.iri!, SHACL.deactivated.iri!,
+            SHACL.severity.iri!,
         ]
     }
 
@@ -189,7 +191,7 @@ extension SHACLConstraint {
         func values(_ parameter: IRI) -> [ObjectTerm] {
             graph.objects(of: node, parameter).filter { value in
                 !graph.reifiers(of: node, parameter, value).contains { reifier in
-                    graph.object(of: reifier, SHACL.deactivated.metadata.id)?.literal?.isTrue ?? false
+                    graph.object(of: reifier, SHACL.deactivated.iri!)?.literal?.isTrue ?? false
                 }
             }
         }
@@ -229,8 +231,8 @@ extension SHACLConstraint {
         }
 
         var constraints: [SHACLConstraint] = []
-        constraints += values(SHACL.class.metadata.id).map(SHACLConstraint.class)
-        constraints += try values(SHACL.datatype.metadata.id).map { value in
+        constraints += values(SHACL.class.iri!).map(SHACLConstraint.class)
+        constraints += try values(SHACL.datatype.iri!).map { value in
             .datatype(try graph.listOrValue(value).map { datatype in
                 guard let datatype = datatype.iri else {
                     throw SHACLError.invalidShapesGraph("Shape \(node) has a sh:datatype \(datatype) that is not an IRI")
@@ -238,51 +240,51 @@ extension SHACLConstraint {
                 return datatype
             })
         }
-        constraints += try values(SHACL.nodeKind.metadata.id).map { value in
+        constraints += try values(SHACL.nodeKind.iri!).map { value in
             .nodeKind(try graph.listOrValue(value).map { kind in
-                guard let kind = SHACL.namedNodeKind(kind) else {
+                guard let kind = SHACL.NodeKindIndividual.named(kind) else {
                     throw SHACLError.invalidShapesGraph("Shape \(node) has an unknown sh:nodeKind \(kind)")
                 }
                 return kind
             })
         }
         if isPropertyShape {
-            constraints += try integers(SHACL.minCount.metadata.id).map(SHACLConstraint.minCount)
-            constraints += try integers(SHACL.maxCount.metadata.id).map(SHACLConstraint.maxCount)
+            constraints += try integers(SHACL.minCount.iri!).map(SHACLConstraint.minCount)
+            constraints += try integers(SHACL.maxCount.iri!).map(SHACLConstraint.maxCount)
         }
-        constraints += try literals(SHACL.minExclusive.metadata.id).map(SHACLConstraint.minExclusive)
-        constraints += try literals(SHACL.minInclusive.metadata.id).map(SHACLConstraint.minInclusive)
-        constraints += try literals(SHACL.maxExclusive.metadata.id).map(SHACLConstraint.maxExclusive)
-        constraints += try literals(SHACL.maxInclusive.metadata.id).map(SHACLConstraint.maxInclusive)
-        constraints += try integers(SHACL.minLength.metadata.id).map(SHACLConstraint.minLength)
-        constraints += try integers(SHACL.maxLength.metadata.id).map(SHACLConstraint.maxLength)
+        constraints += try literals(SHACL.minExclusive.iri!).map(SHACLConstraint.minExclusive)
+        constraints += try literals(SHACL.minInclusive.iri!).map(SHACLConstraint.minInclusive)
+        constraints += try literals(SHACL.maxExclusive.iri!).map(SHACLConstraint.maxExclusive)
+        constraints += try literals(SHACL.maxInclusive.iri!).map(SHACLConstraint.maxInclusive)
+        constraints += try integers(SHACL.minLength.iri!).map(SHACLConstraint.minLength)
+        constraints += try integers(SHACL.maxLength.iri!).map(SHACLConstraint.maxLength)
         constraints += try patterns(of: node, in: graph).map(SHACLConstraint.pattern)
-        if isTrue(SHACL.singleLine.metadata.id) { constraints.append(.singleLine) }
-        constraints += values(SHACL.languageIn.metadata.id).map { list in
+        if isTrue(SHACL.singleLine.iri!) { constraints.append(.singleLine) }
+        constraints += values(SHACL.languageIn.iri!).map { list in
             .languageIn(graph.listOrValue(list).compactMap { $0.literal?.lexicalForm.lowercased() })
         }
-        if isPropertyShape, isTrue(SHACL.uniqueLang.metadata.id) { constraints.append(.uniqueLang) }
+        if isPropertyShape, isTrue(SHACL.uniqueLang.iri!) { constraints.append(.uniqueLang) }
 
-        constraints += try paths(SHACL.equals.metadata.id).map(SHACLConstraint.equals)
-        constraints += try paths(SHACL.disjoint.metadata.id).map(SHACLConstraint.disjoint)
+        constraints += try paths(SHACL.equals.iri!).map(SHACLConstraint.equals)
+        constraints += try paths(SHACL.disjoint.iri!).map(SHACLConstraint.disjoint)
         if isPropertyShape {
-            constraints += try paths(SHACL.lessThan.metadata.id).map(SHACLConstraint.lessThan)
-            constraints += try paths(SHACL.lessThanOrEquals.metadata.id).map(SHACLConstraint.lessThanOrEquals)
+            constraints += try paths(SHACL.lessThan.iri!).map(SHACLConstraint.lessThan)
+            constraints += try paths(SHACL.lessThanOrEquals.iri!).map(SHACLConstraint.lessThanOrEquals)
         }
 
-        constraints += values(SHACL.not.metadata.id).map { .not(nodes.shape($0)) }
-        constraints += try shapeLists(SHACL.and.metadata.id).map(SHACLConstraint.and)
-        constraints += try shapeLists(SHACL.or.metadata.id).map(SHACLConstraint.or)
-        constraints += try shapeLists(SHACL.xone.metadata.id).map(SHACLConstraint.xone)
-        constraints += values(SHACL.node.metadata.id).map { .node(nodes.shape($0)) }
-        constraints += values(SHACL.property.metadata.id).map { .property(nodes.shape($0)) }
+        constraints += values(SHACL.not.iri!).map { .not(nodes.shape($0)) }
+        constraints += try shapeLists(SHACL.and.iri!).map(SHACLConstraint.and)
+        constraints += try shapeLists(SHACL.or.iri!).map(SHACLConstraint.or)
+        constraints += try shapeLists(SHACL.xone.iri!).map(SHACLConstraint.xone)
+        constraints += values(SHACL.node.iri!).map { .node(nodes.shape($0)) }
+        constraints += values(SHACL.property.iri!).map { .property(nodes.shape($0)) }
 
         if isPropertyShape {
-            let qualifiedShapes = values(SHACL.qualifiedValueShape.metadata.id)
+            let qualifiedShapes = values(SHACL.qualifiedValueShape.iri!)
             if !qualifiedShapes.isEmpty {
-                let minimum = try integers(SHACL.qualifiedMinCount.metadata.id).first
-                let maximum = try integers(SHACL.qualifiedMaxCount.metadata.id).first
-                let siblings = isTrue(SHACL.qualifiedValueShapesDisjoint.metadata.id)
+                let minimum = try integers(SHACL.qualifiedMinCount.iri!).first
+                let maximum = try integers(SHACL.qualifiedMaxCount.iri!).first
+                let siblings = isTrue(SHACL.qualifiedValueShapesDisjoint.iri!)
                     ? siblingShapes(of: node, in: graph) : []
                 constraints += qualifiedShapes.map { qualified in
                     .qualifiedValueShape(
@@ -293,48 +295,48 @@ extension SHACLConstraint {
                     )
                 }
             }
-            constraints += values(SHACL.someValue.metadata.id).map { .someValue(nodes.shape($0)) }
+            constraints += values(SHACL.someValue.iri!).map { .someValue(nodes.shape($0)) }
         }
 
-        if isTrue(SHACL.closed.metadata.id) {
-            var permitted = Set(graph.objects(of: node, SHACL.property.metadata.id).compactMap { property in
-                graph.object(of: property, SHACL.path.metadata.id)?.iri
+        if isTrue(SHACL.closed.iri!) {
+            var permitted = Set(graph.objects(of: node, SHACL.property.iri!).compactMap { property in
+                graph.object(of: property, SHACL.path.iri!)?.iri
             })
-            for list in values(SHACL.ignoredProperties.metadata.id) {
+            for list in values(SHACL.ignoredProperties.iri!) {
                 permitted.formUnion(graph.listOrValue(list).compactMap(\.iri))
             }
             constraints.append(.closed(permitted: permitted))
         }
-        constraints += values(SHACL.hasValue.metadata.id).map(SHACLConstraint.hasValue)
-        constraints += try values(SHACL.in.metadata.id).map { list in
+        constraints += values(SHACL.hasValue.iri!).map(SHACLConstraint.hasValue)
+        constraints += try values(SHACL.in.iri!).map { list in
             guard let members = graph.list(list) else {
                 throw SHACLError.invalidShapesGraph("Shape \(node) has a sh:in \(list) that is not a SHACL list")
             }
             return .in(members)
         }
 
-        if let expression, let expressionNode = value(SHACL.expression.metadata.id) {
+        if let expression, let expressionNode = value(SHACL.expression.iri!) {
             constraints.append(.expression(expression, node: expressionNode))
         }
-        constraints += values(SHACL.nodeByExpression.metadata.id).map {
+        constraints += values(SHACL.nodeByExpression.iri!).map {
             .nodeByExpression(SHACLNodeExpression($0, in: nodes))
         }
 
         if isPropertyShape {
-            let reifierShape = value(SHACL.reifierShape.metadata.id).map(nodes.shape)
-            let required = isTrue(SHACL.reificationRequired.metadata.id)
+            let reifierShape = value(SHACL.reifierShape.iri!).map(nodes.shape)
+            let required = isTrue(SHACL.reificationRequired.iri!)
             if reifierShape != nil || required {
                 constraints.append(.reifierShape(reifierShape, required: required))
             }
         }
         do {
-            constraints += values(SHACL.memberShape.metadata.id).map { .memberShape(nodes.shape($0)) }
-            constraints += try integers(SHACL.minListLength.metadata.id).map(SHACLConstraint.minListLength)
-            constraints += try integers(SHACL.maxListLength.metadata.id).map(SHACLConstraint.maxListLength)
-            if isTrue(SHACL.uniqueMembers.metadata.id) { constraints.append(.uniqueMembers) }
+            constraints += values(SHACL.memberShape.iri!).map { .memberShape(nodes.shape($0)) }
+            constraints += try integers(SHACL.minListLength.iri!).map(SHACLConstraint.minListLength)
+            constraints += try integers(SHACL.maxListLength.iri!).map(SHACLConstraint.maxListLength)
+            if isTrue(SHACL.uniqueMembers.iri!) { constraints.append(.uniqueMembers) }
         }
 
-        for constraint in values(SHACL.sparql.metadata.id).flatMap(graph.listOrValue) {
+        for constraint in values(SHACL.sparql.iri!).flatMap(graph.listOrValue) {
             let query = SHACLSPARQLQuery(constraint, in: graph)
             guard query.select != nil || query.ask != nil else {
                 throw SHACLError.invalidShapesGraph("SPARQL constraint \(constraint) is missing sh:select/sh:ask")
@@ -348,7 +350,7 @@ extension SHACLConstraint {
     /// SPARQL's `REGEX` function, with its flags `i`, `m`, `s` and `x`.
     private static func patterns(of node: ObjectTerm, in graph: Graph) throws -> [NSRegularExpression] {
         var options: NSRegularExpression.Options = []
-        for flag in graph.object(of: node, SHACL.flags.metadata.id)?.stringValue ?? "" {
+        for flag in graph.object(of: node, SHACL.flags.iri!)?.stringValue ?? "" {
             switch flag {
             case "i": options.insert(.caseInsensitive)
             case "m": options.insert(.anchorsMatchLines)
@@ -357,7 +359,7 @@ extension SHACLConstraint {
             default: break
             }
         }
-        return try graph.objects(of: node, SHACL.pattern.metadata.id).map { value in
+        return try graph.objects(of: node, SHACL.pattern.iri!).map { value in
             guard let pattern = value.stringValue, let expression = try? NSRegularExpression(pattern: pattern, options: options) else {
                 throw SHACLError.invalidShapesGraph("Shape \(node) has an ill-formed sh:pattern \(value)")
             }
@@ -370,8 +372,8 @@ extension SHACLConstraint {
     /// `node` as a value of `sh:property` also has as values of
     /// `sh:property`.
     private static func siblingShapes(of node: ObjectTerm, in graph: Graph) -> [ObjectTerm] {
-        let property = SHACL.property.metadata.id
-        let qualifiedValueShape = SHACL.qualifiedValueShape.metadata.id
+        let property = SHACL.property.iri!
+        let qualifiedValueShape = SHACL.qualifiedValueShape.iri!
         return graph.subjects(property, node)
             .flatMap { graph.objects(of: $0, property) }
             .flatMap { graph.objects(of: $0, qualifiedValueShape) }

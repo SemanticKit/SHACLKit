@@ -44,14 +44,19 @@ let package = Package(
                 "SHACL",
                 "SHNEX",
                 .product(name: "IRIKit", package: "IRIKit"),
+                .product(name: "RDF", package: "RDFKit"),
                 .product(name: "RDFCore", package: "RDFKit"),
+                .product(name: "RDFKit", package: "RDFKit"),
             ]
         ),
         .testTarget(
             name: "SHACLKitTests",
             dependencies: [
                 "SHACLKit",
+                "SHACL",
+                "SHNEX",
                 .product(name: "IRIKit", package: "IRIKit"),
+                .product(name: "RDF", package: "RDFKit"),
                 .product(name: "RDFCore", package: "RDFKit"),
                 .product(name: "RDFFormats", package: "RDFKit"),
                 .product(name: "RDFKit", package: "RDFKit"),

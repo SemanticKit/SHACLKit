@@ -1,6 +1,9 @@
 import IRIKit
 import RDFCore
-import RDFKit
+import RDF
+import struct RDFCore.Literal
+import SHACL
+import struct RDFCore.Graph
 
 /// A `sh:TripleRule` of a shape (SHACL 1.2 Rules): for each focus node of
 /// the shape that conforms to its conditions, the triples whose subjects,
@@ -43,7 +46,7 @@ public struct SHACLTripleRule: Sendable, Hashable {
     ///   `sh:object`, or has a non-numeric `sh:order`.
     init(_ node: ObjectTerm, in nodes: SHACLShapesGraph.Nodes) throws {
         let graph = nodes.graph
-        guard graph.objects(of: node, RDF.type.metadata.id).contains(.iri(SHACL.TripleRuleIndividual.metadata.id)) else {
+        guard graph.objects(of: node, RDF.type.iri!).contains(.iri(SHACL.TripleRuleIndividual.iri!)) else {
             throw SHACLError.invalidShapesGraph("Rule \(node) is missing rdf:type sh:TripleRule")
         }
         func expression(_ parameter: IRI, _ name: String) throws -> SHACLNodeExpression {
@@ -53,7 +56,7 @@ public struct SHACLTripleRule: Sendable, Hashable {
             return SHACLNodeExpression(value, in: nodes)
         }
         var order: Double?
-        if let value = graph.object(of: node, SHACL.order.metadata.id) {
+        if let value = graph.object(of: node, SHACL.order.iri!) {
             guard let number = value.literal?.numericValue else {
                 throw SHACLError.invalidShapesGraph("Rule \(node) has invalid sh:order value \(value)")
             }
@@ -62,10 +65,10 @@ public struct SHACLTripleRule: Sendable, Hashable {
         self.init(
             node: node,
             order: order,
-            conditions: graph.objects(of: node, SHACL.condition.metadata.id).flatMap(graph.listOrValue).map(nodes.shape),
-            subject: try expression(SHACL.subject.metadata.id, "sh:subject"),
-            predicate: try expression(SHACL.predicate.metadata.id, "sh:predicate"),
-            object: try expression(SHACL.object.metadata.id, "sh:object")
+            conditions: graph.objects(of: node, SHACL.condition.iri!).flatMap(graph.listOrValue).map(nodes.shape),
+            subject: try expression(SHACL.subject.iri!, "sh:subject"),
+            predicate: try expression(SHACL.predicate.iri!, "sh:predicate"),
+            object: try expression(SHACL.object.iri!, "sh:object")
         )
     }
 

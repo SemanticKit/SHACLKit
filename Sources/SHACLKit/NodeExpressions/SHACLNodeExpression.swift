@@ -1,6 +1,10 @@
 import IRIKit
 import RDFCore
-import RDFKit
+import RDF
+import struct RDFCore.Literal
+import SHACL
+import struct RDFCore.Graph
+import SHNEX
 
 /// A SHACL 1.2 node expression: an expression in a shapes graph that a
 /// validator evaluates, for a focus node, to a list of nodes.
@@ -77,7 +81,7 @@ public indirect enum SHACLNodeExpression: Sendable, Hashable {
     /// Whether `node` is more than a constant in `graph`: a SHACL list, or
     /// a node with node expression parameters.
     public static func isExpression(_ node: ObjectTerm, in graph: Graph) -> Bool {
-        if node == .iri(type(of: SHACL.this).metadata.id) { return true }
+        if node == .iri(SHACL.this.iri!) { return true }
         if graph.isList(node) { return true }
         let parameters = Self.parameters
         return graph.triples(of: node).contains { parameters.contains($0.predicate) }
@@ -86,27 +90,36 @@ public indirect enum SHACLNodeExpression: Sendable, Hashable {
     /// The predicates that make a node a node expression.
     private static var parameters: Set<IRI> {
         [
-            SHACL.union.metadata.id, SHACL.intersection.metadata.id,
-            SHNEX.union.metadata.id, SHNEX.intersection.metadata.id, SHNEX.nodes.metadata.id,
-            SHNEX.exists.metadata.id, SHNEX.count.metadata.id, SHNEX.var.metadata.id,
-            SHNEX.distinct.metadata.id, SHNEX.matchAll.metadata.id, SHNEX.filterShape.metadata.id,
-            SHNEX.instancesOf.metadata.id, SHNEX.nodesMatching.metadata.id, SHNEX.min.metadata.id,
-            SHNEX.max.metadata.id, SHNEX.sum.metadata.id, SHNEX.if.metadata.id,
-            SHNEX.pathValues.metadata.id, SHNEX.concat.metadata.id, SHNEX.remove.metadata.id,
-            SHNEX.flatMap.metadata.id, SHNEX.limit.metadata.id, SHNEX.offset.metadata.id,
-            SHNEX.findFirst.metadata.id, SHNEX.orderBy.metadata.id,
+            SHACL.union.iri!, SHACL.intersection.iri!,
+            SHNEX.intersection.iri!, SHNEX.nodes.iri!,
+            SHNEX.exists.iri!, SHNEX.count.iri!, SHNEX.var.iri!,
+            SHNEX.distinct.iri!, SHNEX.matchAll.iri!, SHNEX.filterShape.iri!,
+            SHNEX.instancesOf.iri!, SHNEX.nodesMatching.iri!, SHNEX.min.iri!,
+            SHNEX.max.iri!, SHNEX.sum.iri!, SHNEX.if.iri!,
+            SHNEX.pathValues.iri!, SHNEX.concat.iri!, SHNEX.remove.iri!,
+            SHNEX.flatMap.iri!, SHNEX.limit.iri!, SHNEX.offset.iri!,
+            SHNEX.findFirst.iri!, SHNEX.orderBy.iri!,
         ]
+    }
+
+    /// `shnex:focusNode`, which shnex.ttl declares only as the path of the
+    /// `PathValuesExpression-focusNode` parameter.
+    private static var focusNodeParameter: IRI {
+        SHNEX.`PathValuesExpression-focusNode`.path.compactMap { value -> IRI? in
+            if case .individual(let property) = value { return property.iri }
+            return nil
+        }[0]
     }
 
     private static func decode(_ node: ObjectTerm, in nodes: SHACLShapesGraph.Nodes, visiting: inout Set<ObjectTerm>) -> SHACLNodeExpression {
         let graph = nodes.graph
-        if node == .iri(type(of: SHACL.this).metadata.id) { return .focusNode }
+        if node == .iri(SHACL.this.iri!) { return .focusNode }
         if node.isLiteral { return .constant(node) }
         guard visiting.insert(node).inserted else { return .empty }
         defer { visiting.remove(node) }
 
         // An empty list is the constant rdf:nil, not an expression.
-        if graph.isList(node), node != .iri(type(of: RDF.nil).metadata.id) {
+        if graph.isList(node), node != .iri(RDF.nil.iri!) {
             return .list((graph.list(node) ?? []).map { decode($0, in: nodes, visiting: &visiting) })
         }
         func operand(_ predicate: IRI) -> SHACLNodeExpression? {
@@ -126,41 +139,41 @@ public indirect enum SHACLNodeExpression: Sendable, Hashable {
             value(predicate)?.literal?.integerValue
         }
 
-        if let members = members(SHACL.union.metadata.id) ?? members(SHNEX.union.metadata.id) {
+        if let members = members(SHACL.union.iri!) {
             return .union(members)
         }
-        if let members = members(SHACL.intersection.metadata.id) ?? members(SHNEX.intersection.metadata.id) {
+        if let members = members(SHACL.intersection.iri!) ?? members(SHNEX.intersection.iri!) {
             return .intersection(members)
         }
-        if let input = operand(SHNEX.nodes.metadata.id) {
-            if let shape = shape(SHNEX.matchAll.metadata.id) { return .matchAll(input, shape: shape) }
-            if let shape = shape(SHNEX.filterShape.metadata.id) { return .filterShape(input, shape: shape) }
-            if let removed = operand(SHNEX.remove.metadata.id) { return .remove(input, removed) }
-            if let map = operand(SHNEX.flatMap.metadata.id) { return .flatMap(input, map) }
-            if let limit = count(SHNEX.limit.metadata.id) { return .limit(input, limit) }
-            if let offset = count(SHNEX.offset.metadata.id) { return .offset(input, offset) }
-            if let shape = shape(SHNEX.findFirst.metadata.id) { return .findFirst(input, shape: shape) }
-            if let key = operand(SHNEX.orderBy.metadata.id) {
-                let descending = value(SHNEX.desc.metadata.id)?.literal?.isTrue ?? false
+        if let input = operand(SHNEX.nodes.iri!) {
+            if let shape = shape(SHNEX.matchAll.iri!) { return .matchAll(input, shape: shape) }
+            if let shape = shape(SHNEX.filterShape.iri!) { return .filterShape(input, shape: shape) }
+            if let removed = operand(SHNEX.remove.iri!) { return .remove(input, removed) }
+            if let map = operand(SHNEX.flatMap.iri!) { return .flatMap(input, map) }
+            if let limit = count(SHNEX.limit.iri!) { return .limit(input, limit) }
+            if let offset = count(SHNEX.offset.iri!) { return .offset(input, offset) }
+            if let shape = shape(SHNEX.findFirst.iri!) { return .findFirst(input, shape: shape) }
+            if let key = operand(SHNEX.orderBy.iri!) {
+                let descending = value(SHNEX.desc.iri!)?.literal?.isTrue ?? false
                 return .orderBy(input, key: key, descending: descending)
             }
             return .nodes(input)
         }
-        if let input = operand(SHNEX.concat.metadata.id) { return .concat(input) }
-        if let input = operand(SHNEX.exists.metadata.id) { return .exists(input) }
-        if let input = operand(SHNEX.count.metadata.id) { return .count(input) }
-        if let name = value(SHNEX.var.metadata.id) { return .variable(name.stringValue ?? name.description) }
-        if let input = operand(SHNEX.distinct.metadata.id) { return .distinct(input) }
-        if let cls = value(SHNEX.instancesOf.metadata.id) { return .instancesOf(cls) }
-        if let shape = shape(SHNEX.nodesMatching.metadata.id) { return .nodesMatching(shape) }
-        if let input = operand(SHNEX.min.metadata.id) { return .min(input) }
-        if let input = operand(SHNEX.max.metadata.id) { return .max(input) }
-        if let input = operand(SHNEX.sum.metadata.id) { return .sum(input) }
-        if let condition = operand(SHNEX.if.metadata.id), let then = operand(SHNEX.then.metadata.id) {
-            return .conditional(if: condition, then: then, else: operand(SHNEX.else.metadata.id))
+        if let input = operand(SHNEX.concat.iri!) { return .concat(input) }
+        if let input = operand(SHNEX.exists.iri!) { return .exists(input) }
+        if let input = operand(SHNEX.count.iri!) { return .count(input) }
+        if let name = value(SHNEX.var.iri!) { return .variable(name.stringValue ?? name.description) }
+        if let input = operand(SHNEX.distinct.iri!) { return .distinct(input) }
+        if let cls = value(SHNEX.instancesOf.iri!) { return .instancesOf(cls) }
+        if let shape = shape(SHNEX.nodesMatching.iri!) { return .nodesMatching(shape) }
+        if let input = operand(SHNEX.min.iri!) { return .min(input) }
+        if let input = operand(SHNEX.max.iri!) { return .max(input) }
+        if let input = operand(SHNEX.sum.iri!) { return .sum(input) }
+        if let condition = operand(SHNEX.if.iri!), let then = operand(SHNEX.then.iri!) {
+            return .conditional(if: condition, then: then, else: operand(SHNEX.else.iri!))
         }
-        if let pathNode = value(SHNEX.pathValues.metadata.id), let path = SHACLPropertyPath(pathNode, in: graph) {
-            return .pathValues(path, focusNode: operand(SHNEX.focusNode.metadata.id))
+        if let pathNode = value(SHNEX.pathValues.iri!), let path = SHACLPropertyPath(pathNode, in: graph) {
+            return .pathValues(path, focusNode: operand(Self.focusNodeParameter))
         }
         return node.isBlankNode ? .empty : .constant(node)
     }

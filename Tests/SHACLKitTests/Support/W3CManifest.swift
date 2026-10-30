@@ -2,14 +2,18 @@ import Foundation
 import IRIKit
 import RDFCore
 import Testing
+import RDF
+import SHACL
+import struct RDFCore.Literal
+import struct RDFCore.Graph
 @testable import SHACLKit
 
 /// The terms of the W3C test manifest vocabularies the suites use, read
 /// from manifests as RDF graphs.
 enum W3CManifest {
-    static let type: IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-    static let first: IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first"
-    static let rest: IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"
+    static var type: IRI { RDF.type.iri! }
+    static var first: IRI { RDF.first.iri! }
+    static var rest: IRI { RDF.rest.iri! }
     static let action: IRI = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action"
     static let result: IRI = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result"
     static let include: IRI = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include"

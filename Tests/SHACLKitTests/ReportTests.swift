@@ -3,6 +3,10 @@ import IRIKit
 import RDFCore
 import RDFKit
 import Testing
+import RDF
+import struct RDFCore.Literal
+import SHACL
+import struct RDFCore.Graph
 @testable import SHACLKit
 
 @Suite("Validation reports as RDF", .tags(.report, .w3c))
@@ -42,8 +46,8 @@ struct ReportTests {
     func reportGraphMatchesExpectedResult(fixture: String) throws {
         let graph = try Fixtures.graph("W3CDataShapes/\(fixture)")
         let report = try SHACLValidator().validate(graph, against: SHACLShapesGraph(graph))
-        let written = Graph(report.graph.filter { $0.predicate != SHACL.resultMessage.metadata.id })
-        let expected = Graph(try expectedReport(in: graph).filter { $0.predicate != SHACL.resultMessage.metadata.id })
+        let written = Graph(report.graph.filter { $0.predicate != SHACL.resultMessage.iri! })
+        let expected = Graph(try expectedReport(in: graph).filter { $0.predicate != SHACL.resultMessage.iri! })
         #expect(written.isIsomorphic(to: expected), "Report of \(fixture):\n\(written)\nexpected:\n\(expected)")
     }
 
@@ -52,8 +56,8 @@ struct ReportTests {
         let report = SHACLValidationReport(conforms: true)
         let report1 = try BlankNode("report")
         #expect(report.graph == [
-            Graph.Element(subject: .blankNode(report1), predicate: RDF.type.metadata.id, object: .iri(SHACL.ValidationReportIndividual.metadata.id)),
-            Graph.Element(subject: .blankNode(report1), predicate: SHACL.conforms.metadata.id, object: term("true")),
+            Graph.Element(subject: .blankNode(report1), predicate: RDF.type.iri!, object: .iri(SHACL.ValidationReportIndividual.iri!)),
+            Graph.Element(subject: .blankNode(report1), predicate: SHACL.conforms.iri!, object: term("true")),
         ])
     }
 }

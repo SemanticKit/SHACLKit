@@ -1,6 +1,8 @@
 import IRIKit
 import RDFCore
-import RDFKit
+import SHACL
+import struct RDFCore.Literal
+import struct RDFCore.Graph
 
 /// A SPARQL-based constraint or target of a shapes graph (SHACL 1.2 SPARQL
 /// Extensions §5 and §6): SPARQL text, and the prefixes its `sh:prefixes`
@@ -49,20 +51,20 @@ public struct SHACLSPARQLQuery: Sendable, Hashable {
     /// Decodes the SPARQL-based constraint or target whose node is `node`.
     init(_ node: ObjectTerm, in graph: Graph) {
         var prefixes: [String: IRI] = [:]
-        for declarations in graph.objects(of: node, SHACL.prefixes.metadata.id) {
-            for declaration in graph.objects(of: declarations, SHACL.declare.metadata.id) {
-                guard let prefix = graph.object(of: declaration, SHACL.prefix.metadata.id)?.stringValue,
-                      let namespace = graph.object(of: declaration, SHACL.namespace.metadata.id)?.stringValue,
+        for declarations in graph.objects(of: node, SHACL.prefixes.iri!) {
+            for declaration in graph.objects(of: declarations, SHACL.declare.iri!) {
+                guard let prefix = graph.object(of: declaration, SHACL.prefix.iri!)?.stringValue,
+                      let namespace = graph.object(of: declaration, SHACL.namespace.iri!)?.stringValue,
                       let iri = IRI(rawValue: namespace) else { continue }
                 prefixes[prefix] = iri
             }
         }
         self.init(
             node: node,
-            select: graph.object(of: node, SHACL.select.metadata.id)?.stringValue,
-            ask: graph.object(of: node, SHACL.ask.metadata.id)?.stringValue,
-            message: graph.object(of: node, SHACL.message.metadata.id)?.stringValue,
-            isDeactivated: graph.object(of: node, SHACL.deactivated.metadata.id)?.literal?.isTrue ?? false,
+            select: graph.object(of: node, SHACL.select.iri!)?.stringValue,
+            ask: graph.object(of: node, SHACL.ask.iri!)?.stringValue,
+            message: graph.object(of: node, SHACL.message.iri!)?.stringValue,
+            isDeactivated: graph.object(of: node, SHACL.deactivated.iri!)?.literal?.isTrue ?? false,
             prefixes: prefixes
         )
     }

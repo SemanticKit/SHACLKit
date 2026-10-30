@@ -1,5 +1,7 @@
 import RDFCore
-import RDFKit
+import SHACL
+import struct RDFCore.Literal
+import struct RDFCore.Graph
 
 /// Validates data graphs against shapes graphs (SHACL 1.2 Core §3).
 ///

@@ -1,7 +1,9 @@
 import Foundation
 import IRIKit
 import RDFCore
-import RDFKit
+import SHACL
+import struct RDFCore.Literal
+import struct RDFCore.Graph
 
 extension SHACLConstraint {
     /// The results of the constraint for `focusNode` and its value nodes
@@ -54,7 +56,7 @@ extension SHACLConstraint {
         case .nodeKind(let kinds):
             return each { value in
                 kinds.contains { $0.admits(value) }
-                    ? nil : "Value \(value) does not have node kind \(kinds.map { type(of: $0).metadata.name }.joined(separator: " or "))"
+                    ? nil : "Value \(value) does not have node kind \(kinds.compactMap { $0.iri.map { "<\($0)>" } }.joined(separator: " or "))"
             }
 
         case .minCount(let minimum):

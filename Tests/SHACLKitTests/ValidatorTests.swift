@@ -1,8 +1,12 @@
 import IRIKit
 import RDFCore
+import RDF
 import RDFFormats
 import RDFKit
 import Testing
+import SHACL
+import struct RDFCore.Literal
+import struct RDFCore.Graph
 @testable import SHACLKit
 
 @Suite("Validating a data graph", .tags(.report))
@@ -53,7 +57,7 @@ struct ValidatorTests {
               sh:minInclusive 18 ;
               sh:maxInclusive 90 .
             """))
-        let type: IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+        let type = RDF.type.iri!
         let age: IRI = "http://example.com/age"
         let person = term("ex:Person")
         let integer = term("25")
@@ -100,8 +104,9 @@ struct ValidatorTests {
             """))
         let report = try SHACLValidator().validate([], against: shapes)
         #expect(report.results.count == 2)
-        let severity = try #require(report.results.first?.severity as? SHACLDeclaredSeverity)
-        #expect(severity.id == term("ex:MySeverity"))
+        let severity = try #require(report.results.first?.severity)
+        #expect(![SHACL.Violation, SHACL.Warning, SHACL.Info, SHACL.Debug, SHACL.Trace].contains { $0 === severity })
+        #expect(report.graph.contains { $0.predicate == SHACL.resultSeverity.iri! && $0.object == term("ex:MySeverity") })
         #expect(report.results.last?.severity === severity)
     }
 }

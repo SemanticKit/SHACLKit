@@ -51,7 +51,6 @@ Requirements are tracked in:
 
 - ``SHACL``
 - ``SHNEX``
-- ``SHACLDeclaredSeverity``
 
 ### SPARQL
 

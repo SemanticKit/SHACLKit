@@ -1,7 +1,10 @@
 import IRIKit
 import RDFCore
-import RDFKit
 import Synchronization
+import RDF
+import struct RDFCore.Literal
+import SHACL
+import struct RDFCore.Graph
 
 /// A shape of a shapes graph (SHACL 1.2 Core §2.1).
 ///
@@ -103,17 +106,17 @@ extension SHACLShape.Definition {
     ///   value is ill-formed.
     init(_ node: ObjectTerm, in nodes: SHACLShapesGraph.Nodes) throws {
         let graph = nodes.graph
-        let types = graph.objects(of: node, RDF.type.metadata.id)
-        let typedNodeShape = types.contains(.iri(SHACL.NodeShapeIndividual.metadata.id))
-        let typedPropertyShape = types.contains(.iri(SHACL.PropertyShapeIndividual.metadata.id))
+        let types = graph.objects(of: node, RDF.type.iri!)
+        let typedNodeShape = types.contains(.iri(SHACL.NodeShapeIndividual.iri!))
+        let typedPropertyShape = types.contains(.iri(SHACL.PropertyShapeIndividual.iri!))
 
-        if let pathNode = graph.object(of: node, SHACL.path.metadata.id) {
+        if let pathNode = graph.object(of: node, SHACL.path.iri!) {
             guard let path = SHACLPropertyPath(pathNode, in: graph) else {
                 throw SHACLError.invalidShapesGraph("Shape \(node) has an ill-formed sh:path \(pathNode)")
             }
             self.path = path
         }
-        let expression = graph.object(of: node, SHACL.expression.metadata.id).map { SHACLNodeExpression($0, in: nodes) }
+        let expression = graph.object(of: node, SHACL.expression.iri!).map { SHACLNodeExpression($0, in: nodes) }
         if path == nil, let expression, !typedNodeShape {
             valueExpression = expression
         }
@@ -122,20 +125,20 @@ extension SHACLShape.Definition {
         }
 
         targets = try SHACLTarget.targets(of: node, in: nodes)
-        isClass = graph.isInstance(node, of: .iri(RDFS.ClassIndividual.metadata.id))
-            || types.contains(.iri(SHACL.ShapeClassIndividual.metadata.id))
-        isDeactivated = graph.object(of: node, SHACL.deactivated.metadata.id)?.literal?.isTrue ?? false
-        if let value = graph.object(of: node, SHACL.severity.metadata.id) {
+        isClass = graph.isInstance(node, of: .iri(RDF.ClassIndividual.iri!))
+            || types.contains(.iri(SHACL.ShapeClassIndividual.iri!))
+        isDeactivated = graph.object(of: node, SHACL.deactivated.iri!)?.literal?.isTrue ?? false
+        if let value = graph.object(of: node, SHACL.severity.iri!) {
             severity = try nodes.severity(value)
         }
-        messages = graph.objects(of: node, SHACL.message.metadata.id).compactMap(\.literal)
+        messages = graph.objects(of: node, SHACL.message.iri!).compactMap(\.literal)
         constraints = try SHACLConstraint.constraints(
             of: node,
             in: nodes,
             isPropertyShape: path != nil || valueExpression != nil,
             expression: valueExpression == nil ? expression : nil
         )
-        rules = try graph.objects(of: node, SHACL.rule.metadata.id)
+        rules = try graph.objects(of: node, SHACL.rule.iri!)
             .flatMap(graph.listOrValue)
             .map { try SHACLTripleRule($0, in: nodes) }
     }

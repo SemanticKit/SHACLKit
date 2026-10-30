@@ -1,5 +1,8 @@
 import IRIKit
+import RDF
 import RDFCore
+import struct RDFCore.Literal
+import struct RDFCore.Graph
 @testable import SHACLKit
 
 /// An executor that answers the queries it is given answers for, by query
@@ -71,7 +74,7 @@ struct W3CSPARQLFixtureSubsetExecutor: SHACLSPARQLExecutor {
 
     func select(query: String, bindings: SHACLSPARQLSolution, dataGraph: Graph, shapesGraph: SHACLShapesGraph) throws -> [SHACLSPARQLSolution] {
         let query = query.lowercased()
-        let label: IRI = "http://www.w3.org/2000/01/rdf-schema#label"
+        let label = RDF.label.iri!
         if query.contains("filter (?path = <http://www.w3.org/2000/01/rdf-schema#label>)"), let this = bindings["this"], let subject = this.subject {
             return dataGraph.triples(subject: subject, predicate: label).map { ["this": this, "path": .iri(label), "value": $0.object] }
         }

@@ -1,6 +1,9 @@
 import IRIKit
 import RDFCore
-import RDFKit
+import RDF
+import struct RDFCore.Literal
+import SHACL
+import struct RDFCore.Graph
 
 /// A shapes graph (SHACL 1.2 Core §1.4): an RDF graph and the shapes it
 /// describes.
@@ -55,12 +58,12 @@ public struct SHACLShapesGraph: Sendable {
 
     /// The nodes of `graph` that are shapes (§2.1), in first order.
     private static func shapeNodes(in graph: Graph) -> [ObjectTerm] {
-        let type = RDF.type.metadata.id
+        let type = RDF.type.iri!
         let shapeClasses: Set<ObjectTerm> = [
-            .iri(SHACL.NodeShapeIndividual.metadata.id),
-            .iri(SHACL.PropertyShapeIndividual.metadata.id),
-            .iri(SHACL.ShapeIndividual.metadata.id),
-            .iri(SHACL.ShapeClassIndividual.metadata.id),
+            .iri(SHACL.NodeShapeIndividual.iri!),
+            .iri(SHACL.PropertyShapeIndividual.iri!),
+            .iri(SHACL.ShapeIndividual.iri!),
+            .iri(SHACL.ShapeClassIndividual.iri!),
         ]
         let parameters = SHACLConstraint.parameters.union(SHACLTarget.parameters)
         var nodes: [ObjectTerm] = []
@@ -89,7 +92,7 @@ public struct SHACLShapesGraph: Sendable {
 extension SHACLShapesGraph {
     /// The objects the nodes of a shapes graph decode into, while it is
     /// decoded: one ``SHACLShape`` for each shape node, and one
-    /// ``SHACLDeclaredSeverity`` for each severity SHACL does not declare.
+    /// `sh:Severity` individual for each severity SHACL does not declare.
     ///
     /// A shape is made the first time a node is read as one, so shapes that
     /// refer to each other in a cycle are each made once, and decoded after
@@ -102,7 +105,7 @@ extension SHACLShapesGraph {
 
         private var shapesByNode: [ObjectTerm: SHACLShape] = [:]
         private var pending: [SHACLShape] = []
-        private var severities: [ObjectTerm: SHACLDeclaredSeverity] = [:]
+        private var severities: [IRI: SHACL.SeverityIndividual] = [:]
 
         init(_ graph: Graph, shapes: [SHACLShape] = []) {
             self.graph = graph
@@ -125,15 +128,15 @@ extension SHACLShapesGraph {
         /// graph's own when it is any other IRI.
         func severity(_ node: ObjectTerm) throws -> any SHACL.Severity {
             if let severity = [SHACL.Violation, SHACL.Warning, SHACL.Info, SHACL.Debug, SHACL.Trace]
-                .first(where: { node == .iri(type(of: $0).metadata.id) }) {
+                .first(where: { node == .iri($0.iri!) }) {
                 return severity
             }
-            guard node.isIRI else {
+            guard let iri = node.iri else {
                 throw SHACLError.invalidShapesGraph("The severity \(node) is not an IRI")
             }
-            if let severity = severities[node] { return severity }
-            let severity = SHACLDeclaredSeverity(node)
-            severities[node] = severity
+            if let severity = severities[iri] { return severity }
+            let severity = SHACL.SeverityIndividual(iri: iri)
+            severities[iri] = severity
             return severity
         }
 

@@ -1,6 +1,9 @@
 import IRIKit
 import RDFCore
-import RDFKit
+import RDF
+import struct RDFCore.Literal
+import SHACL
+import struct RDFCore.Graph
 
 /// A validation report (SHACL 1.2 Core §3.6.1): whether the data graph
 /// conforms to the shapes graph, and its results.
@@ -37,32 +40,32 @@ public struct SHACLValidationReport: Sendable, Equatable {
         }
         func encode(_ result: SHACLValidationResult) -> BlankNode {
             let node = blankNode("result")
-            insert(node, RDF.type.metadata.id, .iri(SHACL.ValidationResultIndividual.metadata.id))
-            insert(node, SHACL.resultSeverity.metadata.id, (result.severity as? SHACLDeclaredSeverity)?.id ?? .iri(type(of: result.severity).metadata.id))
-            insert(node, SHACL.sourceShape.metadata.id, result.sourceShape.id)
-            insert(node, SHACL.focusNode.metadata.id, result.focusNode)
+            insert(node, RDF.type.iri!, .iri(SHACL.ValidationResultIndividual.iri!))
+            insert(node, SHACL.resultSeverity.iri!, .iri(result.severity.iri!))
+            insert(node, SHACL.sourceShape.iri!, result.sourceShape.id)
+            insert(node, SHACL.focusNode.iri!, result.focusNode)
             if let path = result.resultPath {
-                insert(node, SHACL.resultPath.metadata.id, path.encode(into: &graph) { blankNode("path") })
+                insert(node, SHACL.resultPath.iri!, path.encode(into: &graph) { blankNode("path") })
             }
             if let value = result.value {
-                insert(node, SHACL.value.metadata.id, value)
+                insert(node, SHACL.value.iri!, value)
             }
-            insert(node, SHACL.sourceConstraintComponent.metadata.id, .iri(type(of: result.sourceConstraintComponent).metadata.id))
+            insert(node, SHACL.sourceConstraintComponent.iri!, .iri(result.sourceConstraintComponent.iri!))
             if let constraint = result.sourceConstraint {
-                insert(node, SHACL.sourceConstraint.metadata.id, constraint)
+                insert(node, SHACL.sourceConstraint.iri!, constraint)
             }
-            insert(node, SHACL.resultMessage.metadata.id, .literal(Literal(result.message)))
+            insert(node, SHACL.resultMessage.iri!, .literal(Literal(result.message)))
             for detail in result.details {
-                insert(node, SHACL.detail.metadata.id, .blankNode(encode(detail)))
+                insert(node, SHACL.detail.iri!, .blankNode(encode(detail)))
             }
             return node
         }
         // A non-empty identifier is always a blank node.
         let report = try! BlankNode("report")
-        insert(report, RDF.type.metadata.id, .iri(SHACL.ValidationReportIndividual.metadata.id))
-        insert(report, SHACL.conforms.metadata.id, .literal(Literal(conforms)))
+        insert(report, RDF.type.iri!, .iri(SHACL.ValidationReportIndividual.iri!))
+        insert(report, SHACL.conforms.iri!, .literal(Literal(conforms)))
         for result in results {
-            insert(report, SHACL.result.metadata.id, .blankNode(encode(result)))
+            insert(report, SHACL.result.iri!, .blankNode(encode(result)))
         }
         return graph
     }

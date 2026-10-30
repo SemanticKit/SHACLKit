@@ -1,6 +1,8 @@
 import IRIKit
 import RDFCore
-import RDFKit
+import SHACL
+import struct RDFCore.Literal
+import struct RDFCore.Graph
 
 /// One validation of a data graph against a shapes graph (SHACL 1.2 Core
 /// §3.4): the graphs, the SPARQL executor, and the shapes being validated
@@ -72,7 +74,7 @@ final class Validation {
         if shape.isClass {
             nodes += dataGraph.instances(of: shape.id)
         }
-        nodes += dataGraph.subjects(SHACL.shape.metadata.id, shape.id)
+        nodes += dataGraph.subjects(SHACL.shape.iri!, shape.id)
         return nodes.uniqued().sorted()
     }
 

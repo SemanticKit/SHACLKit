@@ -2,6 +2,9 @@ import IRIKit
 import RDFCore
 import RDFKit
 import Testing
+import SHACL
+import struct RDFCore.Literal
+import struct RDFCore.Graph
 @testable import SHACLKit
 
 @Suite("Triple rules", .tags(.rules))

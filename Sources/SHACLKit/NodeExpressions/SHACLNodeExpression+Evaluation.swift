@@ -1,6 +1,5 @@
 import Foundation
 import RDFCore
-import RDFKit
 
 extension SHACLNodeExpression {
     /// The output of the expression for `focusNode` over `dataGraph`, with
@@ -128,7 +127,7 @@ extension SHACLNodeExpression {
         if lexical.contains("."), !lexical.hasSuffix(".0") {
             while lexical.last == "0" { lexical.removeLast() }
         }
-        return try! Literal(lexical, datatype: XSD.decimal.metadata.id)
+        return try! Literal(lexical, datatype: XSDDatatypes.decimalIndividual.iri!)
     }
 
     /// Orders two keys: numbers by value, other terms by their string.

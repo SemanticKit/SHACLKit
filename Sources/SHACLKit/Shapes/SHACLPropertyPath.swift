@@ -1,6 +1,9 @@
 import IRIKit
 import RDFCore
-import RDFKit
+import RDF
+import struct RDFCore.Literal
+import SHACL
+import struct RDFCore.Graph
 
 /// A SHACL property path (SHACL 1.2 Core §2.3.1).
 ///
@@ -54,13 +57,13 @@ public indirect enum SHACLPropertyPath: Sendable, Hashable {
         if graph.isList(node) {
             return members(node).map { $0.count == 1 ? $0[0] : .sequence($0) }
         }
-        if let inverse = nested(SHACL.inversePath.metadata.id) { return inverse.map(SHACLPropertyPath.inverse) }
-        if let list = graph.object(of: node, SHACL.alternativePath.metadata.id) {
+        if let inverse = nested(SHACL.inversePath.iri!) { return inverse.map(SHACLPropertyPath.inverse) }
+        if let list = graph.object(of: node, SHACL.alternativePath.iri!) {
             return members(list).map(SHACLPropertyPath.alternative)
         }
-        if let path = nested(SHACL.zeroOrMorePath.metadata.id) { return path.map(SHACLPropertyPath.zeroOrMore) }
-        if let path = nested(SHACL.oneOrMorePath.metadata.id) { return path.map(SHACLPropertyPath.oneOrMore) }
-        if let path = nested(SHACL.zeroOrOnePath.metadata.id) { return path.map(SHACLPropertyPath.zeroOrOne) }
+        if let path = nested(SHACL.zeroOrMorePath.iri!) { return path.map(SHACLPropertyPath.zeroOrMore) }
+        if let path = nested(SHACL.oneOrMorePath.iri!) { return path.map(SHACLPropertyPath.oneOrMore) }
+        if let path = nested(SHACL.zeroOrOnePath.iri!) { return path.map(SHACLPropertyPath.zeroOrOne) }
         return nil
     }
 
@@ -136,11 +139,11 @@ extension SHACLPropertyPath {
             return .blankNode(subject)
         }
         func list(_ paths: [SHACLPropertyPath]) -> ObjectTerm {
-            var head = ObjectTerm.iri(type(of: RDF.nil).metadata.id)
+            var head = ObjectTerm.iri(RDF.nil.iri!)
             for path in paths.reversed() {
                 let cell = blankNode()
-                graph.insert(Graph.Element(subject: .blankNode(cell), predicate: RDF.first.metadata.id, object: path.encode(into: &graph, blankNode: blankNode)))
-                graph.insert(Graph.Element(subject: .blankNode(cell), predicate: RDF.rest.metadata.id, object: head))
+                graph.insert(Graph.Element(subject: .blankNode(cell), predicate: RDF.first.iri!, object: path.encode(into: &graph, blankNode: blankNode)))
+                graph.insert(Graph.Element(subject: .blankNode(cell), predicate: RDF.rest.iri!, object: head))
                 head = .blankNode(cell)
             }
             return head
@@ -149,19 +152,19 @@ extension SHACLPropertyPath {
         case .predicate(let iri):
             return .iri(iri)
         case .inverse(let path):
-            return node(SHACL.inversePath.metadata.id, path)
+            return node(SHACL.inversePath.iri!, path)
         case .sequence(let paths):
             return list(paths)
         case .alternative(let paths):
             let subject = blankNode()
-            graph.insert(Graph.Element(subject: .blankNode(subject), predicate: SHACL.alternativePath.metadata.id, object: list(paths)))
+            graph.insert(Graph.Element(subject: .blankNode(subject), predicate: SHACL.alternativePath.iri!, object: list(paths)))
             return .blankNode(subject)
         case .zeroOrMore(let path):
-            return node(SHACL.zeroOrMorePath.metadata.id, path)
+            return node(SHACL.zeroOrMorePath.iri!, path)
         case .oneOrMore(let path):
-            return node(SHACL.oneOrMorePath.metadata.id, path)
+            return node(SHACL.oneOrMorePath.iri!, path)
         case .zeroOrOne(let path):
-            return node(SHACL.zeroOrOnePath.metadata.id, path)
+            return node(SHACL.zeroOrOnePath.iri!, path)
         }
     }
 }
