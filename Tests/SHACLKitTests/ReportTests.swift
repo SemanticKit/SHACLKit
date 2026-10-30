@@ -54,10 +54,32 @@ struct ReportTests {
     @Test("A conforming report is one sh:ValidationReport with sh:conforms true")
     func conformingReportGraph() throws {
         let report = SHACLValidationReport(conforms: true)
-        let report1 = try BlankNode("report")
-        #expect(report.graph == [
-            Graph.Element(subject: .blankNode(report1), predicate: IRIKit.IRI(of: RDF.type)!, object: .iri(IRIKit.IRI(of: SHACL.ValidationReportIndividual.self)!)),
-            Graph.Element(subject: .blankNode(report1), predicate: IRIKit.IRI(of: SHACL.conforms)!, object: term("true")),
-        ])
+        let expected = try TurtleDecoder().decode("""
+            PREFIX sh: <http://www.w3.org/ns/shacl#>
+            [] a sh:ValidationReport ; sh:conforms true .
+            """)
+        #expect(report.graph.isIsomorphic(to: expected), "Report:\n\(report.graph)")
+    }
+
+    @Test("A severity made in Swift with no declaration is written as one blank node")
+    func undeclaredSeverityIsWrittenAsBlankNode() throws {
+        let graph = try Fixtures.graph("severityWarningData.ttl")
+        let validated = try SHACLValidator().validate(graph, against: Fixtures.shapes("severityWarningShapes.ttl"))
+        let result = try #require(validated.results.first)
+        let severity = SHACL.SeverityIndividual()
+        let undeclared = SHACLValidationResult(
+            severity: severity,
+            sourceShape: result.sourceShape,
+            focusNode: result.focusNode,
+            resultPath: result.resultPath,
+            value: result.value,
+            sourceConstraintComponent: result.sourceConstraintComponent,
+            sourceConstraint: result.sourceConstraint,
+            message: result.message
+        )
+        let report = SHACLValidationReport(conforms: false, results: [undeclared, undeclared])
+        let severities = Set(report.graph.filter { $0.predicate == IRIKit.IRI(of: SHACL.resultSeverity)! }.map(\.object))
+        #expect(severities.count == 1)
+        #expect(severities.first?.isBlankNode == true)
     }
 }

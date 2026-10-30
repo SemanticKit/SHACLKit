@@ -44,7 +44,7 @@ struct ValidatorTests {
         #expect(fromGraph == fromSource)
     }
 
-    @Test("A data graph made from typed values validates without any text")
+    @Test("A Turtle data graph of 500 conforming nodes validates with no results")
     func coreValidatorLargeGraphSmokeTest() throws {
         let shapes = try SHACLShapesGraph(TurtleDecoder().decode("""
             PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -57,16 +57,9 @@ struct ValidatorTests {
               sh:minInclusive 18 ;
               sh:maxInclusive 90 .
             """))
-        let type = IRIKit.IRI(of: RDF.type)!
-        let age = term("ex:age").iri!
-        let person = term("ex:Person")
-        let integer = term("25")
-        var data = Graph()
-        for index in 0..<500 {
-            let subject = term("ex:person\(index)").subject!
-            data.insert(Graph.Element(subject: subject, predicate: type, object: person))
-            data.insert(Graph.Element(subject: subject, predicate: age, object: integer))
-        }
+        let people = (0..<500).map { "ex:person\($0) a ex:Person ; ex:age 25 .\n" }.joined()
+        let data = try TurtleDecoder().decode("PREFIX ex: <http://example.com/>\n" + people)
+        #expect(data.count == 1000)
         let report = try SHACLValidator().validate(data, against: shapes)
         #expect(report.conforms)
         #expect(report.results.isEmpty)
